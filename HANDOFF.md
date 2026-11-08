@@ -157,7 +157,36 @@ merge dans dev quand utilisable ; master ne bouge qu'aux jalons (11/13/14 nov.).
   leçon 6 (gestes) reconnue comme le pont LLM↔rendu ; spike natif prouvé ; repo Git
   d'équipe structuré (master/dev/perso).
 
-## 9. Prochaines actions (dans l'ordre)
+## 9. MOTEUR-RENDU-IA (référence complète, branche `ia/moteur-rendu`)
+
+Le 9 nov., une implémentation **complète et validée sur Infinix** du M1+M4 existe dans
+`moteur-rendu-ia/` (branche Git `ia/moteur-rendu`, validée sur les parcours P1/P2/P3,
+captures dans `captures/engine-kotlin-*.png`) :
+
+- `core/` (Kotlin pur, testable) : protocole 9 actions + ScreenContext (parsing défensif),
+  géométrie manuscrite déterministe (tremblé seedé, tracé progressif via PathMeasure),
+  règles de composition (≤ 3 marques via LiveMarks, AmountGuard qui rejette tout
+  montant altéré — il a déjà bloqué des actions en conditions réelles).
+- `service/ScreenReaderService` : M4 (dump arbre → ScreenContext, filtre PIN/EditText,
+  snapshot périodique + événements) + gestion des 3 couches overlay (marks/captions/bulle).
+- `overlay/` : OverlaySurface (tracé progressif double-contour, write papier lettre par
+  lettre, frame coins + étiquette, captions Andika avec fondu), CaptionLayer,
+  AssistantBubble (SEULE couche tactile, 140 px bas-droite).
+- `session/WsSession` : protocole WS du contrat (hello, screen_context, ask audio b64,
+  action, turn_end) — URL configurable dans les prefs (`nkap` → `ws_url`).
+- `demo/` : DemoDirector (fixtures embarquées, cibles par `match_text` — extension
+  offline documentée) + DemoFintechActivity (écran KwikPay simulé, parcours imposé).
+- **Mode démo OFFLINE** : P1→P5 jouables sans serveur ni internet via la bulle
+  (un tap = annule le tour courant et joue le suivant). Mode serveur prêt pour M2.
+- Pièges déjà corrigés dedans : unités safeBottom (dp vs px), margins sur ancres,
+  champ self-exclusion (l'écran démo doit être lisible), active l'accessibilité
+  via adb = nom de composant COMPLET obligatoire sur XOS.
+
+Le membre 1 (LEARN.md) reconstruit son propre moteur pédagogique dans `moteur-rendu/` ;
+`moteur-rendu-ia/` est la **référence production** prête pour le 14 (et la base de
+l'intégration avec M2/M3). Fusion sur `dev` à la validation de l'équipe.
+
+## 10. Prochaines actions (dans l'ordre)
 
 **Membre 1 (utilisateur) — cette semaine :**
 - [ ] Leçons 1→3 de LEARN.md (app Android, filtre sécurité, ScreenContext)
@@ -181,7 +210,7 @@ merge dans dev quand utilisable ; master ne bouge qu'aux jalons (11/13/14 nov.).
 - [ ] Intégration complète P1-P5 en français le 11 nov. · ewondo le 11-12 · vidéo le 12-13
 - [ ] Gel le 13 soir : dev → master, tag `preselection`
 
-## 10. Conventions de session ZCode
+## 11. Conventions de session ZCode
 
 - Le membre 1 parle français ; réponses en français.
 - Brainstorm cadrage = back-and-forth (poser des questions plutôt que supposer).
