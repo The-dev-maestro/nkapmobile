@@ -1,0 +1,25 @@
+# ── Android / Gradle / Kotlin ──
+*.iml
+.gradle/
+build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# ── IDE ──
+.idea/
+*.swp
+.vscode/launch.json
+
+# ── OS ──
+Thumbs.db
+.DS_Store
+
+# ── secrets / locaux ──
+*.keystore
+!debug.keystore
+.env
+secrets/
