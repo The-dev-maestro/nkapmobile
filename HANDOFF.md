@@ -33,11 +33,14 @@
 |---|---|---|
 | **membre 1 (utilisateur, GitHub `deiryl237`)** | M1 moteur de rendu + M4 contexte + vision artistique (les deux hôtes) | apprend Kotlin via Antigravity + toolkit Manware (LEARN.md) — **Leçon 1 en cours** (moteur-rendu/) |
 | membre 2 | M2 cerveau (harnais LLM) + M5 KB/RAG + AWS | nom inconnu — à confirmer |
-| membre 3 | M3 voix (STT/TTS) + fixtures + recrutement locuteur | nom inconnu — à confirmer |
+| membre 3 | chaîne linguistique : lexique + banque voix + fixtures | nom inconnu — à confirmer |
+| **le père du membre 1** | **locuteur douala natif : relecteur + voix** | VALIDÉ 9 nov. — 3 sessions prévues (lexique, relecture, enregistrement) |
 
-**Aucun locuteur ewondo dans l'équipe** — recrutement d'un relecteur à distance en cours
-(NABU/IHS Cameroon, Université de Yaoundé I, ANACLAC/CABTAL, paroisses).
-Règle absolue : **aucune phrase ewondo non validée ne sort en démo** (facteur éliminatoire).
+**Décision 9 nov. : la langue du projet = DOUALA** (plus ewondo). Raison : locuteur
+natif dans l'équipe ; données équivalentes (Common Voice dua 14,4 h = ewo, Bible dua
+complète). Règle absolue : **aucune phrase douala non validée ne sort en démo**
+(facteur éliminatoire). Chaîne : papa est l'AUTEUR du lexique (la machine ne fait que
+préparer la liste fr + pistes dictionnaire) — voir docs/02 v1.1 §7.2.
 
 ## 3. Décisions actées (avec les débats tranchés)
 
@@ -51,15 +54,29 @@ Règle absolue : **aucune phrase ewondo non validée ne sort en démo** (facteur
 5. **Moteur Android** : AccessibilityService + overlay `TYPE_ACCESSIBILITY_OVERLAY`
    (prouvé par spike, implémenté §9). **Extension web** : MV3, content script +
    MutationObserver (§9bis).
-6. **Ewondo complet** : STT = fine-tune Whisper sur Common Voice v27 ewo (14,4 h CC0) ;
-   TTS = banque ~60 phrases validées (primaire) + `mms-tts-ewo` (repli libre, CC-BY-NC) ;
-   cerveau contraint par lexique verrouillé (le LLM compose, n'invente pas).
-7. **Cloud AWS** (crédits équipe) : Bedrock + EC2 GPU spot. Règles : aucune instance
-   laissée allumée, alarmes 60/80 $, vérifier éligibilité Bedrock + expiration.
-   Laptop local = repli complet (le cloud n'est pas un chemin critique).
+6. **Douala complet** : STT = fine-tune Whisper sur Common Voice v27 dua (14,4 h CC0,
+   12,5 h validées) — FINALE ; TTS neural = entraînement maison sur la voix du locuteur
+   — FINALE. **Pour le 14 : banque audio embarquée dans l'extension + STT navigateur
+   (Web Speech, français)**. Le LLM sélectionne des `phrase_key` validés, il ne compose
+   jamais de douala libre (harnais : chaque mot ∈ lexique validé).
+   ⚠ **ERRATUM vérifié le 9 nov. : `mms-tts-dua` et `mms-tts-ewo` N'EXISTENT PAS** —
+   MMS ne couvre `dua`/`ewo` qu'en LID (ni ASR, ni TTS). La v1 de ce HANDOFF promettait
+   « mms-tts-ewo en repli » : faux, à ne plus jamais citer.
+7. **Cloud AWS** (crédits équipe) : **API payantes INTERDITES par le comité** (9 nov.).
+   LLM = API gratuite de modèles ouverts (type Groq — vérifier l'orthographe avec le
+   comité : Groq avec q ≠ Grok avec k) ou modèle ouvert auto-hébergé (EC2, crédits) =
+   repli obligatoire prêt le 11. **Clé API jamais dans l'extension** (serveur only).
+   Règles : aucune instance laissée allumée, alarmes 60/80 $. Laptop local = repli.
 8. **Git** : UN repo `deiryl237/nkapmobile` — `master` (livrables) / `dev` (intégration) /
    `perso/<pseudo>-<module>` / `ia/*` (références ZCode). Jamais de push direct master.
    ≤ 3 marques simultanées, montants jamais reformulés (harnais).
+9. **Contrat v1.1 (9 nov., docs/02 §12 = changelog complet)** : transport web = HTTP
+   `POST /answer` (WS = finale) ; cibles = `node_id` via `data-nkap-id` (`match_text`
+   réservé aux fixtures offline) ; traduction d'interface = LOCALE par lexique
+   verrouillé avec garde `validated` codé ; **P6 = 3 niveaux** (lexique domaine →
+   composition LLM contrainte → gabarit airbag « Attention : {message} ») ;
+   dégradation gracieuse obligatoire (serveur mort → fixtures locales, jamais d'écran
+   muet). La voix ne lit jamais les montants : le montant s'écrit à l'écran.
 
 ## 4. Carte des fichiers
 
@@ -135,18 +152,25 @@ les références sur `ia/*` ; merge sur `dev` à la validation de l'équipe.
 - Identité visuelle « le tableau » (analyse frames des démos heyclicky, `~/heyclicky-frames/`) :
   6 gestes, 3 encres (ink=expliquer, yellow=souligner, red=agir), ≤ 3 marques, tracé
   progressif, sous-titres, police **Andika** (SIL, ɓ/ə/ɔ/ŋ/tons).
-- **Corpus** : Common Voice v27 ewo 14,4 h CC0 ; cameroon_bibles 60 langues CC-BY ;
-  JW300 = risque droits ; MMS = CC-BY-NC ; Whisper sans ewo (fine-tune obligatoire) ;
-  aucun TTS commercial ewo ; **aucun lexique financier ewondo existant** (à créer =
-  contribution différenciante). Précédent : MTN Ouganda (USSD luganda).
+- **Corpus** : Common Voice v27 **dua 14,4 h CC0** (12,5 h validées, 13 locuteurs ;
+  ewo identique) ; **Bible douala complète** (édition 2006 — corpus parallèle FR↔dua) ;
+  Banen/Tunen : NT seul (2019), pas de CV → écarté. Dictionnaire **Helmlinger 1972**
+  (688 p., archive.org, téléchargeable) + Glosbe dua↔fr = pistes pour papa.
+  ⚠ MMS : `dua`/`ewo` en **LID seulement** (ni ASR ni TTS — erratum §3.6).
+  Whisper sans dua → fine-tune obligatoire. Aucun TTS commercial douala.
+  **Aucun lexique financier douala existant** (à créer par papa = contribution
+  différenciante). Précédent : MTN Ouganda (USSD luganda).
 
-## 7. Contrats (docs/02 = référence)
+## 7. Contrats (docs/02 **v1.1** = référence, §12 = changelog)
 
-- I1 STT · I2 TTS (banque phrase_key + neural repli) · I3 ActionStream (9 types,
-  cibles node_id/match_text-offline, run_after_ms) · I4 rendu (tracé progressif,
-  sync, pas de crash) · I5 ScreenContext (≤ 200 nœuds, PIN exclu, ≤ 30 Ko).
-- **fixtures/** partagées : les 4 parcours en JSON (steps/do, cibles match_text en
-  offline, node_id en serveur) — consommées par M1-web, M1-android ET M2 pour tests.
+- **Web v1 (le 14)** : I1 = STT navigateur (fr) · I2 = banque audio embarquée
+  (phrase_key + vars, jamais de douala libre) · I3 = réponse HTTP `POST /answer`
+  {actions} (9 types, cibles `node_id`/`data-nkap-id`, match_text = fixtures offline
+  seulement) · I5-web = extraction DOM (page/tag/bounds/tone calculé, saisies exclues).
+- **Finale (Android)** : payloads v1 §1-§5 inchangés (WS, /stt dua Whisper, /tts).
+- **P6 = 3 niveaux** (docs/02 §7.3) ; dégradation gracieuse obligatoire.
+- **fixtures/** partagées : parcours JSON + **lexique-douala.csv** (feuille papa) +
+  **phrases-banque.csv** (script vocal) — consommées par M1-web, M1-android ET M2.
 
 ## 8. Historique rapide
 
@@ -159,6 +183,10 @@ les références sur `ia/*` ; merge sur `dev` à la validation de l'équipe.
   l'outil interne parle d'extension et de « sans hook dédié ») → pivot extension ;
   moteur Android complet validé (P1/P2/P3 capturés, AmountGuard actif) ; extension MV3
   v1 construite ; AGENTS.md adopté (pattern clicky) ; membre 1 démarre la Leçon 1.
+- 9 nov. (soir) : **langue → douala** (papa = locuteur natif validé) ; erratum
+  mms-tts-ewo/dua ; API payantes interdites par le comité (Groq/modèle ouvert OK) ;
+  contract **docs/02 v1.1** écrit ; overlays corrigés + vérifiés en navigateur
+  (16590ba) ; lexique douala (95 entrées) + script phrases vocales (36) générés.
 
 ## 9. MOTEUR-RENDU-IA Android (référence complète, branche `ia/moteur-rendu`)
 
@@ -192,8 +220,9 @@ Implémentation complète et **validée sur Infinix** dans `moteur-rendu-ia/` :
 - **assistant.js** : fixtures P1/P2/P3/P5 embarquées (fetch runtime,
   `fixtures/actions-<id>.json`) + intégration cerveau via `POST /answer`
   (contexte = URL + textes visibles).
-- **lexicon.js** : lexique verrouillé — **placeholders `status:"demo"`**, toggle ewondo
-  OFF par défaut ; le relecteur ewondo remplit + passe `validated:true`.
+- **lexicon.js** : lexique verrouillé — **placeholders `status:"demo"`**, toggle OFF
+  par défaut ; **garde à coder (10 nov.)** : le toggle refuse de s'activer tant qu'une
+  entrée n'est pas `validated` ; papa remplit + passe `status:"validated"`.
 - **mock/kwikpay.html** : maquette locale de l'env Safinum (frais 1,5 %/2 %, formulaire
   bénéficiaire, récap, erreurs, boutons « injecter contenu inédit / erreurs / reset »
   simulant l'outil interne du comité).
@@ -201,33 +230,46 @@ Implémentation complète et **validée sur Infinix** dans `moteur-rendu-ia/` :
   `mock/kwikpay.html` (**si file:// : activer « Autoriser l'accès aux URL des
   fichiers »**, sinon pas d'injection) → recharger l'onglet → appuyer sur la
   **bulle nkap** bas-droite ×4 (ou console : `NKAP_ASSISTANT.next()`) →
-  toggle ewondo → bouton inject → vérifier traduction à la volée.
-  (9 nov. : bulle ajoutée + fix chemin fixtures + fix pont content↔assistant.)
+  toggle douala → bouton inject → vérifier traduction à la volée.
+  (9 nov. : bulle ajoutée + fix chemin fixtures + fix pont content↔assistant +
+  **commit 16590ba** : marques ancrées au DOM — suivent scroll/resize, cible disparue
+  → marque retirée ; `NKAP_QUERY` = correspondance exacte puis conteneur le plus
+  court, cherche aussi sur `data-nkap-orig` → cibles survivent à la traduction ;
+  `write` respecte `target.dy`. **Vérifié en navigateur** : positionnement des 4
+  gestes + suivi scroll 300 px + résistance à la traduction, captures d'écran ok.)
 
-## 10. Prochaines actions (dans l'ordre)
+## 10. Prochaines actions (dans l'ordre — plan des 5 jours)
 
 **Membre 1 (utilisateur) :**
-- [ ] Leçons 1→3 de LEARN.md (app Android, filtre sécurité, ScreenContext)
-- [ ] Tester l'extension sur la maquette (2 min, §9bis)
-- [ ] Protection de `master` sur GitHub web (docs/03 §4)
-- [ ] **Poser au comité** : protocole de soumission du journal d'intégrité +
-      l'environnement de test sera-t-il accessible pendant la démo (URL publique) ?
+- [ ] **Session papa n°1 (10 nov.)** : `fixtures/lexique-douala.csv` dans Google
+      Sheets → il remplit la colonne `douala_valide_papa` (les mots généraux vont
+      vite ; le temps réel = les créations financières, laisser vide si incertain)
+- [ ] **Session papa n°2 (11)** : `fixtures/phrases-banque.csv` (36 phrases) →
+      validation ; **Session n°3 (12)** : enregistrement → `voice-bank/<cle>.m4a`
+- [ ] Gardes du lexique : toggle refuse si une entrée n'est pas `validated` (10 nov.)
+- [ ] Briefs envoyés aux membres 2 et 3 ; protection de `master` (docs/03 §4)
+- [ ] **Poser au comité** : protocole NKAP_SUBMIT (journal attendu/affiché/soumis) ;
+      URL de test accessible avant le 13 ? livraison de l'extension (zip/store) ?
+      navigateur imposé ? voix attendue pendant le test ? Groq ou Grok ?
 
 **Membre 2 (dès identification) :**
-- [ ] Activer AWS (vérifier crédits Bedrock/EC2 + expiration) + alarmes 60/80 $
-- [ ] Gateway + harnais validateur + Bedrock prompt v1 (test sur fixtures)
-- [ ] KB : `kb/demo-fintech/` (ui_inventory depuis la maquette, lexique v1, phrases v0)
+- [ ] Activer AWS + alarmes 60/80 $ ; vérifier expiration des crédits
+- [ ] Serveur `POST /answer` (docs/02 v1.1 §5) + harnais validateur + LLM gratuit
+      (Groq ou équiv.) ; **modèle ouvert auto-hébergé de repli PRÊT le 11**
+- [ ] KB : `kb/demo-fintech/` (ui_inventory depuis la maquette, lexique papa, phrases)
+- [ ] Test de coupure : serveur coupé en pleine démo → repli fixtures sans erreur
 
 **Membre 3 (dès identification) :**
-- [ ] Fine-tune STT (EC2 spot ou Kaggle) sur Common Voice ewo
-- [ ] 60 phrases ewondo écrites + validées (relecteur dès recruté) → phrases.json
-- [ ] fixtures/stt-test-30.ewo (30 phrases enregistrées → WER)
+- [ ] Accompagner les sessions papa (transcription → lexicon.json/phrases.json)
+- [ ] Enregistrer la banque voix (36 phrases → voice-bank/) le 12
+- [ ] Finale : fine-tune Whisper dua (EC2 spot) + TTS maison sur la voix de papa
 
 **Équipe :**
-- [ ] Valider cadrage + contrat ensemble
-- [ ] Intégration P1-P6 extension ↔ cerveau ↔ voix en français le 11-12
-- [ ] Ewondo : traduction interface (lexique validé) + voix sur banque le 12-13
-- [ ] Vidéo 3 min le 12-13 · gel le 13 soir : dev → master, tag `preselection`
+- [ ] Valider docs/02 v1.1 ensemble (§12 = les 10 décisions avec leurs raisons)
+- [ ] **11 nov. : P1-P6 intégrés EN FRANÇAIS** (extension ↔ cerveau, preuves capturées)
+- [ ] **12 nov. : bascule douala** (lexique validé + banque audio) + P6 inédit testé
+- [ ] 12-13 : vidéo 3 min + note technique (§7.2 = méthode de validation) + méthode
+- [ ] **Gel le 13 soir** : dev → master, tag `preselection`
 
 ## 11. Conventions de session ZCode
 
