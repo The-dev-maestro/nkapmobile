@@ -26,6 +26,7 @@ window.NKAP_OVERLAY = (() => {
     host.appendChild(svg);
 
     capLayer = document.createElement("div");
+    capLayer.id = "nkap-caption";
     capLayer.style.cssText =
       "position:fixed;left:24px;bottom:120px;max-width:70%;z-index:2147483647;" +
       "background:rgba(255,255,255,0.95);border:1px solid #E2EEF5;border-radius:14px;" +
@@ -33,6 +34,43 @@ window.NKAP_OVERLAY = (() => {
       "box-shadow:0 4px 14px rgba(11,27,43,0.18);";
     document.documentElement.appendChild(host);
     document.documentElement.appendChild(capLayer);
+    // les marques suivent leur cible (scroll, resize) — ancrage DOM
+    window.addEventListener("scroll", repositionAll, { passive: true, capture: true });
+    window.addEventListener("resize", repositionAll, { passive: true });
+  }
+
+  /** Recale chaque marque sur son ancre ; cible disparue → marque retirée (I4). */
+  function repositionAll() {
+    for (const [id, m] of marks) {
+      if (!m.anchorEl) continue;
+      if (!m.anchorEl.isConnected) { removeMark(id, m); continue; }
+      const r = m.anchorEl.getBoundingClientRect();
+      const dx = r.left - m.baseRect.left, dy = r.top - m.baseRect.top;
+      if (m.group) m.group.setAttribute("transform", `translate(${dx.toFixed(1)} ${dy.toFixed(1)})`);
+      else if (m.dom) m.node.forEach((n) => {
+        if (n.style) {
+          n.style.left = (m.baseX + dx).toFixed(1) + "px";
+          n.style.top = (m.baseY + dy).toFixed(1) + "px";
+        }
+      });
+    }
+  }
+
+  function removeMark(id, m) {
+    m.node.forEach((n) => n.remove && n.remove());
+    if (m.group) m.group.remove();
+    marks.delete(id);
+    marks.delete(id + "::head");
+  }
+
+  /** Amène la cible dans le viewport si besoin puis dessine (le tracé suivra le scroll). */
+  function anchored(el, draw) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top < 8 || r.bottom > innerHeight - 8 || r.left < 8 || r.right > innerWidth - 8) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      setTimeout(draw, 340);
+    } else draw();
   }
 
   function seeded(seed) {
@@ -106,8 +144,8 @@ window.NKAP_OVERLAY = (() => {
     return n;
   }
 
-  /** Ajoute un trait animé (tracé progressif par dashoffset). */
-  function addStroke(id, pathData, headData, color, drawMs) {
+  /** Ajoute un trait animé (tracé progressif par dashoffset), ancré à sa cible. */
+  function addStroke(id, pathData, headData, color, drawMs, anchorEl = null, baseRect = null) {
     ensureLayers();
     const NS = "http://www.w3.org/2000/svg";
     const group = el("g", { "data-nkap": id });
@@ -139,7 +177,7 @@ window.NKAP_OVERLAY = (() => {
       marks.set(id + "::head", { node: [ho, hm], startedAt: performance.now() + drawMs, drawMs: 180, len: headData.len });
     }
     svg.appendChild(group);
-    marks.set(id, { node: [outline, main], startedAt: performance.now(), drawMs, len });
+    marks.set(id, { node: [outline, main], group, startedAt: performance.now(), drawMs, len, anchorEl, baseRect });
     animate();
   }
 
@@ -178,22 +216,29 @@ window.NKAP_OVERLAY = (() => {
   return {
     rectOf,
     circle(el, color = "ink", drawMs = 700, id = "c_" + Date.now()) {
-      const r = rectOf(el);
-      const p = handCircle(r.cx, r.cy, r.w / 2 + 18, r.h / 2 + 16, id);
-      addStroke(id, p, null, INK[color], drawMs);
+      anchored(el, () => {
+        const r = rectOf(el);
+        const p = handCircle(r.cx, r.cy, r.w / 2 + 18, r.h / 2 + 16, id);
+        addStroke(id, p, null, INK[color], drawMs, el, el.getBoundingClientRect());
+      });
     },
     underline(el, color = "yellow", drawMs = 450, id = "u_" + Date.now()) {
-      const r = rectOf(el);
-      const p = handUnderline(r.x - 9, r.y + r.h + 8, r.w + 18, id);
-      addStroke(id, p, null, INK[color], drawMs);
+      anchored(el, () => {
+        const r = rectOf(el);
+        const p = handUnderline(r.x - 9, r.y + r.h + 8, r.w + 18, id);
+        addStroke(id, p, null, INK[color], drawMs, el, el.getBoundingClientRect());
+      });
     },
     arrow(elFrom, elTo, color = "ink", drawMs = 800, id = "a_" + Date.now()) {
-      const a = rectOf(elFrom), b = rectOf(elTo);
-      const p = handArrow(a.cx, a.cy, b.cx, b.cy, id);
-      addStroke(id, p.main, p.head, INK[color], drawMs);
+      anchored(elFrom, () => anchored(elTo, () => {
+        const a = rectOf(elFrom), b = rectOf(elTo);
+        const p = handArrow(a.cx, a.cy, b.cx, b.cy, id);
+        addStroke(id, p.main, p.head, INK[color], drawMs, elFrom, elFrom.getBoundingClientRect());
+      }));
     },
     frame(el, label = "Appuie ici", id = "f_" + Date.now()) {
       ensureLayers();
+      anchored(el, () => {
       const r = rectOf(el);
       const pad = 8;
       const div = document.createElement("div");
@@ -229,23 +274,27 @@ window.NKAP_OVERLAY = (() => {
         div.appendChild(chip);
       }
       document.documentElement.appendChild(div);
-      marks.set(id, { node: [div], startedAt: performance.now(), drawMs: 120, len: 0, dom: true });
+      marks.set(id, { node: [div], startedAt: performance.now(), drawMs: 120, len: 0, dom: true, anchorEl: el, baseRect: el.getBoundingClientRect(), baseX: r.x - pad, baseY: r.y - pad });
       animate();
+      });
     },
     write(text, el, opts = {}, id = "w_" + Date.now()) {
       ensureLayers();
+      anchored(el, () => {
       const r = rectOf(el);
+      const top = r.y + (opts.dy !== undefined ? opts.dy : -56);
       const div = document.createElement("div");
       div.setAttribute("data-nkap", id);
       div.textContent = text;
-      div.style.cssText = `position:fixed;left:${r.cx}px;top:${r.y - 56}px;transform:translate(-50%,0);` +
+      div.style.cssText = `position:fixed;left:${r.cx}px;top:${top}px;transform:translate(-50%,0);` +
         `background:rgba(255,255,255,0.94);border-radius:12px;padding:8px 14px;` +
         `font-family:'Andika',system-ui,sans-serif;font-weight:700;color:#12233A;font-size:${opts.size || 22}px;` +
         `white-space:nowrap;z-index:2147483647;pointer-events:none;` +
         `box-shadow:0 3px 10px rgba(11,27,43,0.2);`;
       document.documentElement.appendChild(div);
-      marks.set(id, { node: [div], startedAt: performance.now(), drawMs: (text.length * (opts.perLetterMs || 55)), len: 0, dom: true });
+      marks.set(id, { node: [div], startedAt: performance.now(), drawMs: (text.length * (opts.perLetterMs || 55)), len: 0, dom: true, anchorEl: el, baseRect: el.getBoundingClientRect(), baseX: r.cx, baseY: top });
       animate();
+      });
     },
     caption(text, subFr = null) {
       ensureLayers();
@@ -262,12 +311,8 @@ window.NKAP_OVERLAY = (() => {
     },
     hide(id) {
       const m = marks.get(id);
-      if (m) {
-        m.node.forEach((n) => n.remove());
-        marks.delete(id);
-      }
-      const dom = document.querySelectorAll(`[data-nkap="${id}"]`);
-      dom.forEach((n) => n.remove());
+      if (m) removeMark(id, m);
+      document.querySelectorAll(`[data-nkap="${id}"]`).forEach((n) => n.remove());
     },
     clear() {
       ensureLayers();

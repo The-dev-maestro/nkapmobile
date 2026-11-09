@@ -32,7 +32,10 @@
     if (window.NKAP_LEXICON.hasDigits(text)) return false; // montants intacts
     const entry = window.NKAP_LEXICON.exactMatch(text);
     if (!entry) return false;
-    if (!restored.has(el)) restored.set(el, el.textContent);
+      if (!restored.has(el)) {
+        restored.set(el, el.textContent);
+        el.setAttribute("data-nkap-orig", el.textContent.trim());
+      }
     el.textContent = entry.ewo;
     el.setAttribute("data-nkap-translated", entry.key);
     return true;
@@ -50,7 +53,11 @@
 
   function restoreAll() {
     restored.forEach((orig, el) => {
-      if (el.isConnected) el.textContent = orig;
+      if (el.isConnected) {
+        el.textContent = orig;
+        el.removeAttribute("data-nkap-translated");
+        el.removeAttribute("data-nkap-orig");
+      }
     });
     restored.clear();
     window.NKAP_OVERLAY.clear();
@@ -91,10 +98,28 @@
   };
 
   window.NKAP_QUERY = function (textFragment) {
-    const els = Array.from(document.querySelectorAll("*")).filter(
-      (el) => trackable(el) && el.textContent.includes(textFragment)
+    const frag = String(textFragment || "").trim();
+    if (!frag) return null;
+    const norm = (s) => s.trim().replace(/\s+/g, " ");
+    const target = norm(frag);
+    // Cherche aussi sur le texte ORIGINAL (data-nkap-orig) : la cible reste
+    // trouvable même après traduction de l'écran en douala/ewondo.
+    const all = Array.from(document.querySelectorAll("*")).filter(
+      (el) =>
+        trackable(el) &&
+        !el.closest("#nkap-overlay-host, #nkap-caption, #nkap-bubble") &&
+        !el.closest("[data-nkap]") &&
+        (norm(el.textContent).includes(target) ||
+          norm(el.getAttribute("data-nkap-orig") || "").includes(target))
     );
-    return els[0] || null;
+    if (!all.length) return null;
+    // 1) correspondance exacte, 2) le conteneur le plus court (le plus précis)
+    const exact = all.find(
+      (el) => norm(el.textContent) === target ||
+             norm(el.getAttribute("data-nkap-orig") || "") === target
+    );
+    if (exact) return exact;
+    return all.sort((a, b) => a.textContent.length - b.textContent.length)[0];
   };
 
   window.NKAP_SETTINGS = {

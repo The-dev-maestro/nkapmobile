@@ -64,7 +64,8 @@ window.NKAP_ASSISTANT = (() => {
         }
         case "write": {
           const el = resolveTarget(action.target);
-          if (el) O().write(action.text, el, { size: action.size, perLetterMs: action.per_letter_ms }, action.id);
+          const dy = (action.target && action.target.dy !== undefined) ? action.target.dy : action.dy;
+          if (el) O().write(action.text, el, { size: action.size, perLetterMs: action.per_letter_ms, dy }, action.id);
           break;
         }
         case "caption":
