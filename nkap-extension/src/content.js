@@ -67,8 +67,7 @@
         if (trackable(n)) {
           if (translateNode(n)) newNodes++;
           // contenu inédit → prévenir le cerveau (I3) pour l'explication vocale
-          if (window.__NKAP_ASSISTANT__)
-            window.__NKAP_ASSISTANT__.onUnseenContent(n.textContent.trim());
+          window.NKAP_ASSISTANT?.onUnseenContent(n.textContent.trim());
         }
         n.querySelectorAll?.("h1,h2,h3,p,span,label,button,td,div").forEach((c) => {
           if (trackable(c)) {
@@ -113,8 +112,7 @@
     if (msg.type === "settings") {
       ewondoOn = !!msg.ewondoOn;
       if (!ewondoOn) restoreAll(); else translateVisible();
-      if (window.__NKAP_ASSISTANT__ && msg.brainUrl)
-        window.__NKAP_ASSISTANT__.setBrainUrl(msg.brainUrl);
+      if (msg.brainUrl) window.NKAP_ASSISTANT?.setBrainUrl(msg.brainUrl);
     }
   });
 
@@ -125,8 +123,9 @@
       ewondoOn = !!cfg.ewondoOn;
       if (ewondoOn) translateVisible();
       mo.observe(document.body, { childList: true, subtree: true });
-      if (window.__NKAP_ASSISTANT__ && cfg.brainUrl)
-        window.__NKAP_ASSISTANT__.setBrainUrl(cfg.brainUrl);
+      if (cfg.brainUrl) window.NKAP_ASSISTANT?.setBrainUrl(cfg.brainUrl);
+      // la bulle assistant — SEULE couche tactile de l'overlay (équivalent Android)
+      window.NKAP_OVERLAY?.bubble?.(() => window.NKAP_ASSISTANT?.next());
       console.log("[nkap] content script prêt — ewondo:", ewondoOn);
     });
   }

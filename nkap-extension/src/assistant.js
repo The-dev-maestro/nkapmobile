@@ -14,7 +14,7 @@ window.NKAP_ASSISTANT = (() => {
   const ok = (el) => !!el;
 
   async function loadFixture(id) {
-    const url = chrome.runtime.getURL(`fixtures/${id}.json`);
+    const url = chrome.runtime.getURL(`fixtures/actions-${id}.json`);
     const res = await fetch(url);
     return res.json();
   }

@@ -29,12 +29,19 @@
 
 1. `chrome://extensions` → Mode développeur → *Charger l'extension non empaquetée* →
    sélectionner le dossier `nkap-extension/`
-2. Ouvrir `mock/kwikpay.html` dans Chrome (double-clic ou serveur statique)
-3. Icône nkapmobile → **taper sur l'onglet** → la bulle/parcours : taper dans la page
-   ou utiliser la console : `NKAP_ASSISTANT.next()` (P1 solde), puis P2, P3, P5
-4. Toggle « Traduire l'interface » → les textes du lexique passent en ewondo
+2. Ouvrir `mock/kwikpay.html` dans Chrome. **Si tu l'ouvres par double-clic** (URL
+   `file://…`), il faut d'abord activer « **Autoriser l'accès aux URL des fichiers** »
+   dans les détails de l'extension — sinon Chrome n'injecte PAS les content scripts
+   (piège classique). Alternative : servir le dossier en local
+   (`python -m http.server` → `http://localhost:8000/mock/kwikpay.html`).
+3. **Recharger l'onglet** (F5) si la page était déjà ouverte avant le chargement de
+   l'extension. Console : `[nkap] content script prêt — ewondo: false` doit apparaître.
+4. La **bulle nkap** apparaît en bas à droite → chaque appui joue le parcours
+   suivant (P1 solde → P2 frais → P3 transfert → P5 erreur), captions en bas à
+   gauche + gestes manuscrits. Équivalent console : `NKAP_ASSISTANT.next()`.
+5. Toggle « Traduire l'interface » → les textes du lexique passent en ewondo
    (placeholders démo) — les montants restent intacts
-5. Bouton « Injecter du contenu inédit » de la maquette → le MutationObserver traduit
+6. Bouton « Injecter du contenu inédit » de la maquette → le MutationObserver traduit
    et annote sans rechargement (« sans hook dédié »)
 
 ## Intégration cerveau (M2)

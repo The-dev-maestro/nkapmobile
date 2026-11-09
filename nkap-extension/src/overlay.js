@@ -7,6 +7,7 @@
 window.NKAP_OVERLAY = (() => {
   let svg = null;
   let capLayer = null;
+  let bubbleEl = null;
   const marks = new Map(); // id → {node: SVG node, startedAt, drawMs, len, seg}
 
   const INK = { ink: "#12233A", yellow: "#F5B700", red: "#E23B3B" };
@@ -274,6 +275,36 @@ window.NKAP_OVERLAY = (() => {
       marks.clear();
       capLayer.innerHTML = "";
       document.querySelectorAll("[data-nkap]").forEach((n) => n.remove());
+    },
+
+    // ---- bulle assistant (SEULE couche tactile, équivalent Android 140px) ---
+    bubble(onTap) {
+      if (bubbleEl) {
+        if (onTap) bubbleEl.__nkapTap = onTap;
+        return bubbleEl;
+      }
+      bubbleEl = document.createElement("div");
+      bubbleEl.id = "nkap-bubble";
+      bubbleEl.textContent = "nkap";
+      bubbleEl.title = "nkapmobile — appuie : parcours suivant (P1 → P2 → P3 → P5)";
+      bubbleEl.style.cssText =
+        "position:fixed;right:18px;bottom:18px;width:62px;height:62px;border-radius:50%;" +
+        "background:#0AB4FF;color:#fff;display:flex;align-items:center;justify-content:center;" +
+        "font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:15px;" +
+        "border:3px solid rgba(255,255,255,0.92);box-shadow:0 6px 18px rgba(11,120,180,0.45);" +
+        "z-index:2147483647;pointer-events:auto;cursor:pointer;user-select:none;transition:transform 0.14s;";
+      bubbleEl.__nkapTap = onTap || (() => {});
+      bubbleEl.addEventListener("click", () => {
+        bubbleEl.style.transform = "scale(0.9)";
+        setTimeout(() => (bubbleEl.style.transform = "scale(1)"), 140);
+        try {
+          bubbleEl.__nkapTap();
+        } catch (e) {
+          console.log("[nkap] bulle:", e.message);
+        }
+      });
+      document.documentElement.appendChild(bubbleEl);
+      return bubbleEl;
     },
   };
 })();

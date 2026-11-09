@@ -187,17 +187,22 @@ Implémentation complète et **validée sur Infinix** dans `moteur-rendu-ia/` :
   notifie le cerveau), `window.NKAP_SUBMIT` (adaptateur soumission comité — protocole
   à confirmer), `NKAP_QUERY` (text → élément DOM, équivalent node_id).
 - **overlay.js** : SVG manuscrits injectés (mêmes gestes, dashoffset progressif,
-  double contour), frame DOM à coins + étiquette, write papier, captions fixes.
-- **assistant.js** : fixtures P1/P2/P3/P5 embarquées (fetch runtime) + intégration
-  cerveau via `POST /answer` (contexte = URL + textes visibles).
+  double contour), frame DOM à coins + étiquette, write papier, captions fixes,
+  **bulle assistant bas-droite (seule couche tactile)** — appui = parcours suivant.
+- **assistant.js** : fixtures P1/P2/P3/P5 embarquées (fetch runtime,
+  `fixtures/actions-<id>.json`) + intégration cerveau via `POST /answer`
+  (contexte = URL + textes visibles).
 - **lexicon.js** : lexique verrouillé — **placeholders `status:"demo"`**, toggle ewondo
   OFF par défaut ; le relecteur ewondo remplit + passe `validated:true`.
 - **mock/kwikpay.html** : maquette locale de l'env Safinum (frais 1,5 %/2 %, formulaire
   bénéficiaire, récap, erreurs, boutons « injecter contenu inédit / erreurs / reset »
   simulant l'outil interne du comité).
 - **À tester** : chrome://extensions → charger `nkap-extension/` → ouvrir
-  `mock/kwikpay.html` → console : `NKAP_ASSISTANT.next()` ×4 → toggle ewondo →
-  bouton inject → vérifier traduction à la volée.
+  `mock/kwikpay.html` (**si file:// : activer « Autoriser l'accès aux URL des
+  fichiers »**, sinon pas d'injection) → recharger l'onglet → appuyer sur la
+  **bulle nkap** bas-droite ×4 (ou console : `NKAP_ASSISTANT.next()`) →
+  toggle ewondo → bouton inject → vérifier traduction à la volée.
+  (9 nov. : bulle ajoutée + fix chemin fixtures + fix pont content↔assistant.)
 
 ## 10. Prochaines actions (dans l'ordre)
 
