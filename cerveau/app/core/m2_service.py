@@ -1447,13 +1447,17 @@ class M2Service:
             elif "solde" in q_norm and not is_action_q:
                 snapped_pair = _find_pair(lambda lbl: "solde" in lbl and "apres" not in lbl)
 
-            if snapped_pair and all(h["node_id"] != snapped_pair["value_id"] for h in valid_highlights):
+            if snapped_pair and (
+                len(valid_highlights) != 1 or valid_highlights[0]["node_id"] != snapped_pair["value_id"]
+            ):
                 is_free_val = "0 fcfa" in snapped_pair["raw_value"].lower() or "gratuit" in snapped_pair["raw_value"].lower()
                 valid_highlights = [{
                     "node_id": snapped_pair["value_id"],
                     "style": "box",
                     "color": "green" if is_free_val else "yellow",
                 }]
+            else:
+                snapped_pair = None
 
         # Ajuste intelligemment le geste HeyClicky sur chaque cible (jamais de simple underline sur un champ/bouton/alerte)
         for h in valid_highlights:

@@ -497,4 +497,15 @@ def test_http_answer_guards_greeting_transfer_arrow_and_fees_confusion(monkeypat
     box_act = next(a["action"] for a in fee_acts if a["action"]["t"] == "box")
     assert box_act["target"]["node_id"] == "n_fval"
 
+    # 4. Question sur les frais mais le LLM renvoie les 2 cibles ("0 FCFA" ET "25 000 FCFA") -> garde uniquement "0 FCFA"
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResponse({"spoken": "Les frais sont de 0 FCFA.", "targets": ["0 FCFA", "25 000 FCFA"]}),
+    )
+    resp_fee2 = client.post("/answer", json={"transcript": "quels sont les frais ?", "lang_hint": "fr", "context": fees_ctx})
+    assert resp_fee2.status_code == 200
+    fee_boxes2 = [a["action"] for a in resp_fee2.json()["actions"] if a["action"]["t"] == "box"]
+    assert len(fee_boxes2) == 1
+    assert fee_boxes2[0]["target"]["node_id"] == "n_fval"
+
 
