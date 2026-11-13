@@ -474,4 +474,67 @@ def test_http_answer_groups_stacked_transactions_and_avoids_amount_footer_on_non
     assert "montant" not in spoken_app.lower()
 
 
+def test_http_answer_refuses_out_of_context_and_insufficient_info_queries(monkeypatch):
+    import json
+    client = TestClient(app)
+    llm_calls = []
+
+    class _FakeResp:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    def fake_ollama_oos(url, json=None, timeout=None, **kwargs):
+        llm_calls.append(json)
+        return _FakeResp({"out_of_scope": True, "spoken": "Je suis incapable de répondre."})
+
+    monkeypatch.setattr("app.llm.requests.post", fake_ollama_oos)
+    home_ctx = {
+        "type": "screen_context",
+        "page": {"url": "https://safinum.cm/hackathon-test", "title": "Safinum Pay"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "n_title", "tag": "p", "text": "Safinum Pay", "clickable": False, "bounds": [157, 81, 275, 109], "tone": "dark"},
+            {"node_id": "n_bal", "tag": "p", "text": "250 000 FCFA", "clickable": False, "bounds": [137, 403, 740, 439], "tone": "dark"},
+            {"node_id": "n_cta", "tag": "button", "text": "Effectuer un transfert", "clickable": True, "bounds": [113, 523, 338, 569], "tone": "light"},
+        ],
+    }
+
+    off_topic_questions = [
+        "Comment acheter des actions dans l'entreprise safinum ?",
+        "Comment doubler mon argent ?",
+        "Comment pirater un compte ?",
+        "Comment acheter une voiture ?",
+        "Quelle est la capitale du Japon ?",
+    ]
+    for q in off_topic_questions:
+        resp = client.post("/answer", json={"transcript": q, "lang_hint": "fr", "context": home_ctx})
+        assert resp.status_code == 200
+        acts = resp.json()["actions"]
+        spoken = " ".join(a["action"].get("text", "") for a in acts if a["action"]["t"] == "speak").lower()
+        assert "incapable" in spoken
+        assert "support" in spoken
+        assert not any(a["action"]["t"] in {"box", "circle", "frame", "underline", "arrow"} for a in acts)
+
+    assert len(llm_calls) == 0
+
+    # Si une question ambiguë passe au LLM et que celui-ci répond out_of_scope=true :
+    resp_llm_oos = client.post(
+        "/answer",
+        json={"transcript": "Est-ce que ce transfert est remboursable demain ?", "lang_hint": "fr", "context": home_ctx},
+    )
+    assert resp_llm_oos.status_code == 200
+    assert len(llm_calls) == 1
+    acts_llm = resp_llm_oos.json()["actions"]
+    spoken_llm = " ".join(a["action"].get("text", "") for a in acts_llm if a["action"]["t"] == "speak").lower()
+    assert "incapable" in spoken_llm
+    assert "support" in spoken_llm
+
+
+
 

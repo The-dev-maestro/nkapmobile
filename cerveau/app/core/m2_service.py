@@ -994,6 +994,7 @@ class M2Service:
             + "\n\nRègles strictes:\n"
             "- TUTOIEMENT OBLIGATOIRE partout (« tu », « ton », « ta », « tes », « vérifie », JAMAIS « vous/votre/vérifiez », et JAMAIS « mon/ma/mes » pour le solde ou les transactions).\n"
             "- Base-toi UNIQUEMENT sur les valeurs exactes affichées ci-dessus ; n'invente ni alerte, ni frais, ni bouton absent.\n"
+            "- HORS CONTEXTE / INFO MANQUANTE : si la question sort de ce qui est affiché sur l'écran (ex: acheter des actions, doubler son argent, pirater, acheter un bien, crédit absent...) ou manque d'informations pour répondre avec certitude, N'INVENTE RIEN : mets \"out_of_scope\": true, \"spoken\": \"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\", \"targets\": [].\n"
             "- Lis chaque chiffre sur SA PROPRE LIGNE sans jamais le confondre avec la ligne du dessus ou du dessous.\n"
             "- Réponds en JSON strict sur UNE seule ligne avec exactement ces clés :\n"
             '  "spoken" (string, 1 à 2 phrases simples en « tu » avec les valeurs exactes de l\'écran),\n'
@@ -1224,10 +1225,131 @@ class M2Service:
             sb.write("w_1", amount, target_node_id, dy=-66, size=27, per_letter_ms=55, run_after_ms=900)
         return sb.actions
 
+    @classmethod
+    def _is_out_of_scope_question(cls, question_text: str, screen_context: ScreenContext) -> bool:
+        """Détecte les questions hors-sujet, malveillantes ou impossibles à résoudre avec l'écran actuel."""
+        q_n = cls._norm(question_text)
+        if not q_n:
+            return False
+
+        screen_parts: list[str] = []
+        if screen_context.page and screen_context.page.title:
+            screen_parts.append(cls._to_french_text(screen_context.page.title))
+        for n in screen_context.nodes[:120]:
+            if n.password:
+                continue
+            if n.text:
+                screen_parts.append(cls._to_french_text(n.text))
+            if n.content_desc:
+                screen_parts.append(cls._to_french_text(n.content_desc))
+        screen_corpus_n = cls._norm(" ".join(screen_parts))
+
+        # 1. Sujets explicitement hors contexte ou frauduleux (sauf s'ils figurent réellement à l'écran)
+        off_topic_keywords = (
+            "actionnaire", "actions", "bourse", "investir", "investissement", "dividende",
+            "trading", "forex", "crypto", "bitcoin", "ethereum", "doubler", "tripler",
+            "multiplier", "argent facile", "gagner vite", "entreprise safinum", "pdg",
+            "fondateur", "recrutement", "emploi", "stage", "pirater", "piratage", "hacker",
+            "hack", "cracker", "craquer", "contourner", "voler", "frauder", "usurper",
+            "voiture", "maison", "appartement", "terrain", "meteo", "recette", "cuisine",
+            "football", "billet d'avion", "hotel", "restaurant", "medicament", "hopital",
+            "ecole", "universite", "acheter", "credit", "pret", "emprunt", "hypotheque",
+            "carte bancaire", "carte visa", "mastercard", "cheque", "taux d'interet",
+            "cloturer", "fermer mon compte", "ouvrir un compte", "mot de passe", "code pin",
+            "changer mon code", "support client", "service client", "contacter le support",
+        )
+        for kw in off_topic_keywords:
+            if kw in q_n and kw not in screen_corpus_n:
+                return True
+
+        # 2. Vérification de recouvrement minimal avec l'écran ou le vocabulaire bancaire de l'app
+        stopwords = {
+            "alors", "apres", "avant", "avec", "avoir", "beaucoup", "besoin", "bien", "bonjour",
+            "bonsoir", "cela", "celle", "celles", "celui", "cest", "cette", "ceux", "chez",
+            "chose", "combien", "comme", "comment", "dans", "depuis", "dois", "doit", "donc",
+            "ecran", "elle", "encore", "entre", "etre", "explique", "expliquer", "faire",
+            "fais", "faut", "info", "infos", "information", "informations", "juste", "leur",
+            "leurs", "lire", "mais", "merci", "moins", "notre", "nous", "page", "parle",
+            "peut", "peux", "plus", "pour", "pourquoi", "puis", "quand", "quel", "quelle",
+            "quelles", "quels", "quelqu", "quelque", "question", "quoi", "regarde", "rien",
+            "salut", "sans", "savoir", "sera", "sont", "sous", "suis", "tout", "tous",
+            "toute", "toutes", "tres", "truc", "veux", "voici", "voir", "votre", "vous",
+            "aide", "aider",
+        }
+        q_tokens = [t for t in re.findall(r"[a-z0-9]{4,}", q_n) if t not in stopwords]
+        if not q_tokens:
+            return False
+
+        app_vocab = {
+            "application", "safinum", "solde", "argent", "compte", "frais", "transfert",
+            "transfe", "envoi", "envoyer", "envoie", "beneficiaire", "destinataire",
+            "numero", "telephone", "transaction", "transactions", "operation", "operations",
+            "historique", "paiement", "salaire", "recap", "recapitulatif", "confirmer",
+            "confirmation", "recu", "reference", "alerte", "avertissement", "erreur",
+            "securite", "arnaque", "arnaquer", "fraude", "mefier", "cocher", "case",
+            "continuer", "etape", "etapes", "bouton", "montant", "montants", "reste",
+            "restera", "debite", "debiter", "payer", "marchand", "facture", "electricite",
+            "disponible", "fcfa", "message", "nouveau", "courant", "nom",
+        }
+        screen_words = set(re.findall(r"[a-z0-9]{3,}", screen_corpus_n))
+        for tok in q_tokens:
+            if tok in app_vocab or tok in screen_words or tok in screen_corpus_n:
+                return False
+            # Tolère les formes fléchies (ex: "arnaquer" ~ "arnaque", "transactions" ~ "transaction")
+            stem = tok[:5] if len(tok) >= 5 else tok
+            if any(w.startswith(stem) for w in (app_vocab | screen_words)):
+                return False
+        return True
+
+    def _build_out_of_scope_actions(
+        self, transcript: Transcript, screen_context: ScreenContext
+    ) -> list[ActionMessage]:
+        """Réponse sûre et concise lorsque la demande sort du contexte de l'écran."""
+        lang = transcript.lang or "fr"
+        sb = _StreamBuilder(transcript, transcript.ts or 0)
+        refusal_spoken = (
+            "Je suis incapable de répondre à cette demande : je n'ai pas ces informations dans cet écran. "
+            "Veuillez contacter le support."
+        )
+        sb.speak("out_of_scope", refusal_spoken, lang, 0)
+        sb.notebook(
+            "nb-guide",
+            "Hors contexte",
+            [
+                NotebookLine(id="nb-l1", text="• Information absente de cet écran", color="yellow"),
+                NotebookLine(divider=True),
+                NotebookLine(
+                    id="nb-l-act",
+                    text="→ Veuillez contacter le support",
+                    color="yellow",
+                    bold=True,
+                    underline=True,
+                ),
+            ],
+            anchor_id=None,
+            run_after_ms=0,
+        )
+        sb.clear(6200)
+        return sb.actions
+
     def _compile_llm_plan(
         self, llm_payload: dict[str, Any], transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
         """Compile la décision du LLM en chorégraphie HeyClicky fidèle (carnet structuré, gestes typés, voix 2 temps, <= 3 marques)."""
+        raw_spoken = str(llm_payload.get("spoken") or "").strip()
+        raw_spoken_n = self._norm(raw_spoken)
+        if bool(llm_payload.get("out_of_scope")) or any(
+            marker in raw_spoken_n
+            for marker in (
+                "incapable de repondre",
+                "hors contexte",
+                "hors du cadre",
+                "pas assez d'informations",
+                "contacter le support",
+            )
+        ):
+            return self._build_out_of_scope_actions(transcript, screen_context)
+
         lang = transcript.lang or "fr"
         sb = _StreamBuilder(transcript, transcript.ts or 0)
         semantics = self._analyze_screen(screen_context)
@@ -1236,7 +1358,6 @@ class M2Service:
         kb_terms = self.kb.terms
         q_norm = self._norm(transcript.text)
 
-        raw_spoken = str(llm_payload.get("spoken") or "").strip()
         spoken = self._safe_text_for_harness(
             raw_spoken,
             screen_context,
@@ -1857,6 +1978,9 @@ class M2Service:
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
         """Délègue la décision complète au LLM open-weight en lui fournissant le ScreenContext réel."""
+        if self._is_out_of_scope_question(transcript.text, screen_context):
+            return self._build_out_of_scope_actions(transcript, screen_context)
+
         prompt = self._build_llm_prompt(transcript, screen_context)
         llm_payload = self.llm.generate(prompt)
 
