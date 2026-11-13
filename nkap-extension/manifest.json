@@ -1,18 +1,28 @@
 {
   "manifest_version": 3,
   "name": "nkapmobile — accessibilité linguistique",
-  "version": "0.1.0",
-  "description": "Traduit l'interface financière en ewondo (lexique verrouillé, montants intacts) et ajoute l'assistant vocal/dessin manuscrit. Prototype SAFINUM.",
+  "version": "0.2.0",
+  "description": "Le prof au tableau : traduit l'interface financière en douala (lexique verrouillé, montants intacts) et annote l'écran à la main.",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost/*", "https://safinum.cm/*"],
+  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*", "https://safinum.cm/*"],
   "web_accessible_resources": [
-    { "resources": ["fixtures/*.json", "fonts/*"], "matches": ["<all_urls>"] }
+    {
+      "resources": ["fixtures/*.json", "fonts/*.ttf", "voice-bank/*"],
+      "matches": ["<all_urls>"]
+    }
   ],
   "action": { "default_popup": "popup.html" },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/lexicon.js", "src/overlay.js", "src/assistant.js", "src/content.js"],
+      "js": [
+        "src/rules.js",
+        "src/hand-geometry.js",
+        "src/overlay.js",
+        "src/lexicon.js",
+        "src/assistant.js",
+        "src/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

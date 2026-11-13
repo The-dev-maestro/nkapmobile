@@ -14,10 +14,9 @@ Ce dépôt contient le code complet et opérationnel du **Module M2** et du **Ga
    - Émission conjointe des métadonnées audio (`audio_out` — I2).
    - Émission du signal critique de fin de tour (`turn_end`) pour débloquer l'UI mobile.
 
-2. **Cerveau LLM Hybride & Souverain (M2.1)** :
-   - **Hugging Face Serverless Inference API** via le nouveau routeur officiel (`router.huggingface.co`).
-   - **Fallback direct sur Ollama local** (`http://localhost:11434`) pour une exécution 100% gratuite et hors-ligne.
-   - **Repli heuristique déterministe** : garantit un taux de disponibilité de 100% sans jamais planter la session.
+2. **Cerveau LLM 100% Open-Weight Local (M2.1)** :
+   - **Inférence open-weight locale uniquement** via **Ollama** (`http://localhost:11434`, ex. `qwen2.5:3b`, `mistral:7b`, `llama3.2:3b`) ou serveur local compatible OpenAI (`LOCAL_LLM_URL` pour `llama.cpp` / `vLLM`). Aucune API cloud payante ni free-tier externe.
+   - **Repli heuristique déterministe** : garantit un taux de disponibilité de 100% hors-ligne sans jamais planter la session.
 
 3. **Harnais de Validation & Filtre de Sécurité (M2.2)** :
    - **Zéro altération financière** : Vérification stricte mot pour mot et chiffre pour chiffre que **chaque** montant manipulé provient textuellement du `ScreenContext` ou du lexique M5.
@@ -96,16 +95,15 @@ Copiez le fichier `.env.example` vers `.env` :
 cp .env.example .env
 ```
 
-Aperçu de la configuration :
+Aperçu de la configuration (open-weight local uniquement) :
 ```ini
-# Hugging Face (Serverless Inference API)
-HF_TOKEN=hf_...
-HF_MODEL=mistralai/Mistral-7B-Instruct-v0.2
-HF_API_URL=https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2
-
-# Ollama local (Fallback souverain 100% gratuit)
+# Ollama local (modèle open-weight)
 OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=mistral:7b
+OLLAMA_MODEL=qwen2.5:3b
+
+# Optionnel : serveur local open-weight compatible OpenAI (llama.cpp / vLLM / LM Studio)
+# LOCAL_LLM_URL=http://127.0.0.1:8080/v1/chat/completions
+# LOCAL_LLM_MODEL=qwen2.5-3b-instruct
 ```
 
 ### 3. Lancer le serveur Gateway

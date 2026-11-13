@@ -22,3 +22,12 @@ Thumbs.db
 !debug.keystore
 .env
 secrets/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/

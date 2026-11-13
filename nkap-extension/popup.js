@@ -17,9 +17,3 @@ save.addEventListener("click", () => {
     setTimeout(() => (save.textContent = "Enregistrer"), 1200);
   });
 });
-
-chrome.storage.onChanged.addListener((changes) => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { type: "settings", ewondoOn: !!changes.ewondoOn?.newValue, brainUrl: changes.brainUrl?.newValue ?? "" }).catch(() => {});
-  });
-});

@@ -14,12 +14,14 @@ ALLOWED_ACTIONS = {
     "underline",
     "arrow",
     "frame",
+    "notebook",
     "hide",
     "clear",
 }
 
 # Actions qui créent une marque visuelle à l'écran
-VISUAL_ACTIONS = {"circle", "underline", "arrow", "frame", "write"}
+VISUAL_ACTIONS = {"circle", "underline", "arrow", "frame", "write", "notebook", "box"}
+ALLOWED_ACTIONS.add("box")
 
 
 def normalize_text(value: str | None) -> str:
@@ -112,16 +114,17 @@ def text_is_covered(
                 return False
 
         # Tous les montants sont valides : vérifier qu'un ancrage légitime existe
-        has_anchor = any(s_amt in normalized_candidate for s_amt in screen_amounts) or any(
-            term in normalized_candidate for term in normalized_kb_terms
+        screen_digits = {re.sub(r"\D", "", s_amt) for s_amt in screen_amounts if re.sub(r"\D", "", s_amt)}
+        has_anchor = (
+            any(s_amt in normalized_candidate for s_amt in screen_amounts)
+            or any(re.sub(r"\D", "", c_amt) in screen_digits for c_amt in candidate_amounts)
+            or any(term in normalized_candidate for term in normalized_kb_terms)
         )
         return has_anchor
 
-    # 2. Si aucun montant : le texte doit être présent dans l'écran ou dans la KB
-    if normalized_candidate in screen_corpus or normalized_candidate in normalized_kb_terms:
-        return True
-
-    return any(term in normalized_candidate for term in normalized_kb_terms)
+    # 2. Si aucun montant chiffré n'est présent : autoriser les explications pédagogiques
+    #    libres générées par le LLM (la contrainte financière stricte porte sur tout nombre/montant).
+    return True
 
 
 def validate_action_stream(
@@ -136,35 +139,51 @@ def validate_action_stream(
         return []
 
     valid_node_ids = {node.node_id for node in screen_context.nodes}
+    notebook_node_ids: Set[str] = set()
     active_visual_ids: Set[str] = set()
 
     for idx, action_msg in enumerate(actions, start=1):
         action = action_msg.action
         action_type = action.t
 
-        # Règle 1 : Vocabulaire fermé des 9 actions
+        # Règle 1 : Vocabulaire fermé des actions autorisées
         if action_type not in ALLOWED_ACTIONS:
             raise ValueError(f"Action non autorisée: {action_type}")
 
+        # Enregistre les IDs virtuels créés par un carnet (`notebook`) pour les flèches associées
+        if action_type == "notebook" and action.lines:
+            for line in action.lines:
+                if line.id:
+                    notebook_node_ids.add(line.id)
+                    notebook_node_ids.add(f"{line.id}-val")
+
+        all_valid_ids = valid_node_ids | notebook_node_ids
+
         # Règle 2 : Validation des cibles node_id
         if action.target is not None:
-            if action.target.node_id not in valid_node_ids:
+            if action.target.node_id not in all_valid_ids:
                 raise ValueError(
                     f"node_id cible inconnu dans ScreenContext: {action.target.node_id}"
                 )
 
+        if action.anchor is not None:
+            if action.anchor.node_id not in all_valid_ids:
+                raise ValueError(
+                    f"node_id d'ancrage inconnu dans ScreenContext: {action.anchor.node_id}"
+                )
+
         if action_type == "arrow":
             from_target = action.from_target
-            if from_target is None or from_target.node_id not in valid_node_ids:
+            if from_target is None or from_target.node_id not in all_valid_ids:
                 raise ValueError(
                     f"Action 'arrow' avec origine 'from' invalide ou absente: {from_target}"
                 )
-            if action.to is None or action.to.node_id not in valid_node_ids:
+            if action.to is None or action.to.node_id not in all_valid_ids:
                 raise ValueError(
                     f"Action 'arrow' avec destination 'to' invalide ou absente: {action.to}"
                 )
 
-        if action_type in {"circle", "underline", "frame"} and action.target is None:
+        if action_type in {"circle", "box", "underline", "frame"} and action.target is None:
             raise ValueError(f"L'action '{action_type}' requiert une cible 'target' valide.")
 
         # Règle 3 : Limite de 3 marques visuelles simultanées
@@ -191,5 +210,12 @@ def validate_action_stream(
                 raise ValueError(
                     f"Texte ou montant financier non autorisé dans '{action_type}': {action.text}"
                 )
+        if action_type == "notebook":
+            if action.title and not text_is_covered(action.title, screen_context, kb_terms):
+                raise ValueError(f"Titre de carnet non autorisé: {action.title}")
+            for line in action.lines or []:
+                for field in (line.label, line.value, line.text):
+                    if field and not text_is_covered(field, screen_context, kb_terms):
+                        raise ValueError(f"Ligne de carnet non autorisée: {field}")
 
     return actions

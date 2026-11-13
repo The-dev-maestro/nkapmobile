@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
+from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.websocket import router as ws_router
+from app.api.websocket import router as ws_router, service
+from app.core.contracts import AnswerRequest, AnswerResponse, Transcript
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT_DIR / "static"
@@ -20,11 +23,11 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS pour autoriser l'accès depuis n'importe quel client (app web, dev tools)
+# CORS pour autoriser l'accès depuis l'extension Chrome et tout client web
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,11 +45,42 @@ async def health() -> dict:
         "status": "ok",
         "service": "m2",
         "version": "0.1.0",
+        "llm": {
+            "ollama_host": service.llm.ollama_host,
+            "ollama_model": service.llm.ollama_model,
+            "last_engine": service.llm.last_engine,
+        },
         "endpoints": {
+            "http_answer": "/answer",
             "websocket": "/ws/session/{session_id}",
             "static_audio": "/static/audio/",
         },
     }
+
+
+@app.post("/answer", response_model=AnswerResponse, response_model_exclude_none=True)
+async def answer(req: AnswerRequest):
+    """Endpoint HTTP v1.1 (I5-web -> ActionStream I3) utilisé par l'extension Chrome."""
+    now_ms = int(time.time() * 1000)
+    turn_id = req.turn_id or f"t_{uuid4().hex[:8]}"
+    transcript = Transcript(
+        type="transcript",
+        session_id=req.session_id or "web_session",
+        turn_id=turn_id,
+        ts=now_ms,
+        text=req.transcript,
+        lang=req.lang_hint or "fr",
+        confidence=1.0,
+        is_final=True,
+    )
+    try:
+        actions = service.handle_turn(transcript=transcript, screen_context=req.context)
+    except ValueError as exc:
+        return JSONResponse(
+            status_code=422,
+            content={"error": "harness_reject", "reason": str(exc)},
+        )
+    return AnswerResponse(turn_id=turn_id, actions=actions)
 
 
 @app.get("/", response_class=HTMLResponse)
