@@ -581,11 +581,53 @@ class M2Service:
         current_row: list[ScreenNode] = []
         row_yc: float | None = None
 
-        for node in nodes:
+        i = 0
+        while i < len(nodes):
+            node = nodes[i]
             if has_layout and cls._has_valid_bounds(node):
+                # Regroupe une ligne de liste empilée à gauche (Libellé + Date dessous) avec son montant aligné à droite
+                if (
+                    i + 2 < len(nodes)
+                    and cls._has_valid_bounds(nodes[i + 1])
+                    and cls._has_valid_bounds(nodes[i + 2])
+                ):
+                    n1, n2, n3 = node, nodes[i + 1], nodes[i + 2]
+                    t2_n = cls._norm(n2.text or "")
+                    dx_sub = abs(n2.bounds[0] - n1.bounds[0])
+                    dy_sub = n2.bounds[1] - n1.bounds[3]
+                    yc3 = (n3.bounds[1] + n3.bounds[3]) / 2.0
+                    is_date_sub = bool(
+                        re.search(
+                            r"\b\d{1,2}\s+(?:janv|fev|mar|avr|mai|juin|juil|aout|sept|oct|nov|dec)[a-z.]*\s+\d{4}\b",
+                            t2_n,
+                        )
+                    )
+                    if (
+                        is_date_sub
+                        and dx_sub <= 18
+                        and -2 <= dy_sub <= 8
+                        and not (n1.clickable or n1.tag in {"button", "a", "h1", "h2", "h3"})
+                        and not extract_amounts(n1.text or "")
+                        and not (n3.clickable or n3.tag in {"button", "a"})
+                        and bool(extract_amounts(n3.text or ""))
+                        and n3.bounds[0] > max(n1.bounds[2], n2.bounds[2]) + 40
+                        and (n1.bounds[1] - 6) <= yc3 <= (n2.bounds[3] + 6)
+                    ):
+                        if current_row:
+                            raw_rows.append((current_zone, current_row))
+                            current_row = []
+                        if row_yc is not None and n1.bounds[1] < row_yc - 35:
+                            current_zone = "sidebar"
+                        raw_rows.append((current_zone, [n1, n2, n3]))
+                        row_yc = (n2.bounds[1] + n2.bounds[3]) / 2.0
+                        i += 3
+                        continue
+
                 yc = (node.bounds[1] + node.bounds[3]) / 2.0
                 last_left = current_row[-1].bounds[0] if (current_row and cls._has_valid_bounds(current_row[-1])) else 0
                 if not current_row:
+                    if row_yc is not None and node.bounds[1] < row_yc - 35:
+                        current_zone = "sidebar"
                     current_row = [node]
                     row_yc = yc
                 elif row_yc is not None and node.bounds[1] < row_yc - 35:
@@ -604,6 +646,7 @@ class M2Service:
                     raw_rows.append((current_zone, current_row))
                 current_row = [node]
                 row_yc = None
+            i += 1
 
         if current_row:
             raw_rows.append((current_zone, current_row))
@@ -612,15 +655,28 @@ class M2Service:
         node_meta: dict[str, dict[str, str]] = {}
 
         for zone, row_nodes in raw_rows:
-            parts: list[str] = []
-            seen_parts: set[str] = set()
-            for rn in row_nodes:
-                fr_text = cls._to_french_text(rn.text or "")
-                fmt = f"Bouton « {fr_text} »" if (rn.clickable or rn.tag in {"button", "a"}) and fr_text else fr_text
-                if fmt and fmt not in seen_parts:
-                    seen_parts.add(fmt)
-                    parts.append(fmt)
-            row_text = " | ".join(parts)
+            if (
+                len(row_nodes) == 3
+                and re.search(
+                    r"\b\d{1,2}\s+(?:janv|fev|mar|avr|mai|juin|juil|aout|sept|oct|nov|dec)[a-z.]*\s+\d{4}\b",
+                    cls._norm(row_nodes[1].text or ""),
+                )
+                and extract_amounts(row_nodes[2].text or "")
+            ):
+                t1 = cls._to_french_text(row_nodes[0].text or "")
+                t2 = cls._to_french_text(row_nodes[1].text or "")
+                t3 = cls._to_french_text(row_nodes[2].text or "")
+                row_text = f"{t1} ({t2}) | {t3}"
+            else:
+                parts: list[str] = []
+                seen_parts: set[str] = set()
+                for rn in row_nodes:
+                    fr_text = cls._to_french_text(rn.text or "")
+                    fmt = f"Bouton « {fr_text} »" if (rn.clickable or rn.tag in {"button", "a"}) and fr_text else fr_text
+                    if fmt and fmt not in seen_parts:
+                        seen_parts.add(fmt)
+                        parts.append(fmt)
+                row_text = " | ".join(parts)
             rows.append((zone, row_nodes, row_text))
 
             for rn in row_nodes:
@@ -763,11 +819,30 @@ class M2Service:
                 first_txt = texts[0]
                 last_n = row_nodes[-1]
                 last_txt = texts[-1]
+                is_tx_triple = (
+                    len(row_nodes) == 3
+                    and _is_date_text(norms[1])
+                    and bool(extract_amounts(last_txt))
+                )
+                has_btn_in_row = any(rn.clickable or rn.tag in {"button", "a"} for rn in row_nodes)
+                is_genuine_value = (
+                    is_tx_triple
+                    or bool(extract_amounts(last_txt))
+                    or last_n.tag in {"input", "select"}
+                    or (len(row_nodes) >= 3 and texts[1].lower() in {"gratuit", "bonam"})
+                    or (
+                        len(row_nodes) == 2
+                        and not has_btn_in_row
+                        and not _is_date_text(norms[0])
+                        and len(first_txt) >= 3
+                        and not (first_txt.isupper() and len(first_txt) <= 3)
+                    )
+                )
                 if (
-                    not (first_n.clickable or first_n.tag in {"button", "a"})
+                    is_genuine_value
+                    and not (first_n.clickable or first_n.tag in {"button", "a"})
                     and not extract_amounts(first_txt)
                     and len(first_txt) <= 36
-                    and (extract_amounts(last_txt) or last_n.tag in {"input", "select"} or len(row_nodes) >= 2)
                     and first_n.node_id not in subtitles
                 ):
                     # Cas particulier : <input value="25000"> | FCFA
@@ -775,7 +850,12 @@ class M2Service:
                         pass
                     else:
                         badge = texts[1] if len(row_nodes) >= 3 else ""
-                        display_val = f"{last_txt} ({badge})" if badge and badge.lower() in {"gratuit", "bonam"} else last_txt
+                        if is_tx_triple:
+                            display_val = f"{last_txt} ({badge})"
+                        elif badge and badge.lower() in {"gratuit", "bonam"}:
+                            display_val = f"{last_txt} ({badge})"
+                        else:
+                            display_val = last_txt
                         label_to_value[first_n.node_id] = last_n.node_id
                         value_to_label[last_n.node_id] = first_txt
                         field_pairs.append({
@@ -785,13 +865,13 @@ class M2Service:
                             "label_id": first_n.node_id,
                             "value_id": last_n.node_id,
                             "zone": zone,
-                            "kind": "row",
+                            "kind": "transaction" if is_tx_triple else "row",
                         })
 
         # 2. Paires verticales (ex: <label>Nom du bénéficiaire</label> au-dessus de <input>Jean-Paul Mbarga</input>)
         for idx, lbl_n in enumerate(usable_nodes):
             lbl_meta = node_meta.get(lbl_n.node_id, {})
-            if lbl_n.tag in {"input", "select", "textarea"} or lbl_n.node_id in value_to_label:
+            if lbl_n.tag in {"input", "select", "textarea", "h1", "h2", "h3"} or lbl_n.node_id in value_to_label:
                 continue
             if lbl_n.node_id in label_to_value or lbl_n.node_id in subtitles or lbl_n.node_id in checkbox_nodes:
                 continue
@@ -810,7 +890,9 @@ class M2Service:
                 cand_meta = node_meta.get(cand_n.node_id, {})
                 if (cand_meta.get("zone") or "main") != lbl_zone:
                     continue
-                if cand_meta.get("role") in {"button", "alert"}:
+                if cand_meta.get("role") in {"button", "alert"} or cand_n.tag in {"h1", "h2", "h3"}:
+                    continue
+                if cand_n.node_id in label_to_value:
                     continue
                 if not cls._has_valid_bounds(cand_n):
                     continue
@@ -820,10 +902,12 @@ class M2Service:
                     cand_txt = cand_meta.get("gloss_only") or ""
                     if not cand_txt or cand_n.node_id in subtitles or _is_date_text(cls._norm(cand_txt)):
                         continue
+                    is_micro_lbl = (lbl_n.bounds[3] - lbl_n.bounds[1]) <= 18 or lbl_txt.isupper()
                     is_val_candidate = (
                         cand_n.tag in {"input", "select"}
                         or bool(extract_amounts(cand_txt))
-                        or (len(cand_txt) <= 44 and (lbl_n.tag == "label" or cand_n.bounds[3] - cand_n.bounds[1] >= 20))
+                        or (len(cand_txt) <= 44 and lbl_n.tag == "label")
+                        or (len(cand_txt) <= 36 and len(lbl_txt) <= 28 and is_micro_lbl and cand_n.bounds[3] - cand_n.bounds[1] >= 20)
                     )
                     if is_val_candidate and cand_n.node_id not in value_to_label:
                         display_val = cand_txt
@@ -1429,6 +1513,8 @@ class M2Service:
                             and len(raw_str.split(":", 1)[1].strip()) <= 28
                         ):
                             lbl_p, val_p = raw_str.split(":", 1)
+                            if self._norm(lbl_p) == self._norm(val_p):
+                                continue
                             compiled_lines.append(
                                 NotebookLine(
                                     id=lid,
@@ -1463,6 +1549,8 @@ class M2Service:
                         if len(val) > 36:
                             val = val[:36].rsplit(" ", 1)[0]
                         if lbl and val:
+                            if self._norm(lbl) == self._norm(val):
+                                continue
                             compiled_lines.append(
                                 NotebookLine(
                                     id=lid,
@@ -1562,6 +1650,10 @@ class M2Service:
                     compiled_lines.append(NotebookLine(divider=True))
                     fact0_val = grounded_facts[0][1].lower() if grounded_facts else ""
                     is_free_fee = bool(re.search(r"(?:^|\b)0\s*fcfa\b", fact0_val)) or "gratuit" in fact0_val
+                    has_amount_in_lines = any(
+                        extract_amounts(f"{ln.label or ''} {ln.value or ''} {ln.text or ''}")
+                        for ln in compiled_lines
+                    )
                     if valid_highlights and valid_highlights[0].get("style") == "frame":
                         footer_txt = "→ Appuie sur ce bouton"
                         footer_col = "green"
@@ -1577,8 +1669,14 @@ class M2Service:
                     elif any(k in q_norm for k in ("transaction", "historique", "operation")):
                         footer_txt = "→ Regarde tes opérations récentes"
                         footer_col = "yellow"
-                    elif len(valid_highlights) >= 2:
+                    elif len(valid_highlights) >= 2 and has_amount_in_lines:
                         footer_txt = "→ Vérifie ces deux montants"
+                        footer_col = "yellow"
+                    elif any(k in q_norm for k in ("c'est quoi", "cest quoi", "app", "safinum", "quoi", "sert")):
+                        footer_txt = "→ Voici les infos de l'écran"
+                        footer_col = "green"
+                    elif len(valid_highlights) >= 2:
+                        footer_txt = "→ Vérifie ces deux informations"
                         footer_col = "yellow"
                     else:
                         footer_txt = "→ Vérifie bien cette info"
@@ -1665,19 +1763,31 @@ class M2Service:
             f_role = first_meta.get("role", "text")
             f_style = valid_highlights[0].get("style")
             sa_n = self._norm(spoken_after)
+            asks_benef = any(k in q_norm for k in ("beneficiaire", "destinataire", "numero", "telephone", "nom", "qui", "arnaqu", "securite"))
+            has_amount_hl = any(
+                extract_amounts(usable_nodes[h["node_id"]].text or "")
+                for h in valid_highlights
+                if h["node_id"] in usable_nodes
+            ) or any(extract_amounts(val) for _, val in grounded_facts)
             is_mismatch = (
                 not sa_n
                 or sa_n in generic_after
                 or ("bouton" in sa_n and f_style != "frame" and f_role != "button")
                 or ("chiffre" in sa_n and (f_style == "frame" or f_role in {"button", "security"}))
                 or ("case a cocher" in sa_n and f_role != "checkbox")
+                or (("beneficiaire" in sa_n or "numero" in sa_n) and f_role != "security" and not asks_benef and screen_context.screen_hint not in {"beneficiary", "recap"})
             )
             if is_mismatch:
                 if len(valid_highlights) >= 2 and use_dual_highlight:
                     if any(k in q_norm for k in ("nom", "numero", "beneficiaire", "telephone")):
                         cand_after = "Contrôle d'abord le nom puis chaque chiffre du numéro encadré."
-                    else:
+                    elif has_amount_hl:
                         cand_after = "Compare ces deux montants encadrés avant de confirmer."
+                    elif grounded_facts:
+                        lbl0, val0 = grounded_facts[0]
+                        cand_after = f"Tu peux lire ici : {lbl0} : {val0}."
+                    else:
+                        cand_after = "Regarde ces deux informations encadrées sur ton écran."
                 elif f_style == "frame" or f_role == "button":
                     btn_name = first_meta.get("gloss_only") or usable_nodes[first_nid].text or "ce bouton"
                     cand_after = f"Appuie exactement ici sur « {btn_name[:28]} »."

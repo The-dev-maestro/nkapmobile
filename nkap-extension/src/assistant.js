@@ -921,8 +921,10 @@ window.NKAP_ASSISTANT = (() => {
       errChip.addEventListener("click", () => {
         errChip.style.transform = "scale(0.96)";
         errChip.style.background = "rgba(255,59,92,0.32)";
-        if (brainUrl) askQuestion(errChip.textContent, "s-erreur-active");
-        else playParcours("s-erreur-active");
+        closePanel();
+        if (!playKnownErrorOrFixture(getActiveErrorText())) {
+          playParcours("s-erreur-active");
+        }
       });
       chipsBox.appendChild(errChip);
     }
@@ -937,13 +939,18 @@ window.NKAP_ASSISTANT = (() => {
       unseenChip.addEventListener("click", () => {
         unseenChip.style.transform = "scale(0.96)";
         unseenChip.style.background = "rgba(245,183,0,0.34)";
-        if (brainUrl) askQuestion(unseenChip.textContent, "s-inedit-actif");
+        const unseenText = getActiveUnseenText();
+        if (unseenText && playKnownErrorOrFixture(unseenText)) {
+          closePanel();
+          return;
+        }
+        if (brainUrl) askQuestion(unseenText || unseenChip.textContent, "s-inedit-actif");
         else playParcours("s-inedit-actif");
       });
       chipsBox.appendChild(unseenChip);
     }
 
-    // 3. Chips des scénarios de l'écran actif (uniquement les chips, zéro icône)
+    // 3. Chips des scénarios de l'écran actif (fixtures locales instantanées ; LLM réservé à l'inédit & au chat)
     const screenScenarios = SCENARIOS_META[state.step] || SCENARIOS_META.home;
     screenScenarios.forEach((sc) => {
       const btn = document.createElement("button");
@@ -954,8 +961,7 @@ window.NKAP_ASSISTANT = (() => {
         // Feedback tactile immédiat sans aucun temps mort
         btn.style.transform = "scale(0.96)";
         btn.style.background = "rgba(245,183,0,0.28)";
-        if (brainUrl) askQuestion(sc.label, sc.id);
-        else playParcours(sc.id);
+        playParcours(sc.id);
       });
       chipsBox.appendChild(btn);
     });
@@ -1061,14 +1067,42 @@ window.NKAP_ASSISTANT = (() => {
     console.log("[nkap] Changement d'étape détecté →", newStep);
   }
 
+  function getActiveUnseenText() {
+    const el =
+      document.querySelector('[id^="injected-"]') ||
+      (() => {
+        const heading = Q("Message important");
+        return heading ? heading.closest("div, section, aside") || heading.parentElement || heading : null;
+      })();
+    return el ? String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim() : "";
+  }
+
+  function getActiveErrorText() {
+    const errEl =
+      Q("Solde insuffisant") ||
+      Q("Alerte de sécurité") ||
+      Q("Une erreur est survenue") ||
+      Q("Erreur réseau");
+    if (!errEl) return "";
+    const container =
+      errEl.closest('[role="alert"], [class*="border-red"], [class*="bg-red"], [class*="border-amber"], .rounded-xl, .rounded-lg') ||
+      errEl.parentElement ||
+      errEl;
+    return String(container.innerText || container.textContent || "").replace(/\s+/g, " ").trim();
+  }
+
   /** Contenu inédit injecté par le jury — lance immédiatement l'explication visuelle ou appelle /answer. */
   function onUnseenContent(text) {
+    const raw = String(text || "").trim();
+    if (raw && playKnownErrorOrFixture(raw)) {
+      return;
+    }
     if (!brainUrl) {
-      lastExplainedUnseenText = text;
+      lastExplainedUnseenText = raw;
       playParcours("s-inedit-actif");
       return;
     }
-    askQuestion(text);
+    askQuestion(raw, "s-inedit-actif");
   }
 
   const ERROR_ALERTS = [
@@ -1113,6 +1147,15 @@ window.NKAP_ASSISTANT = (() => {
     },
   ];
 
+  function playKnownErrorOrFixture(errText) {
+    const low = norm(errText);
+    if (!low) return false;
+    const matched = ERROR_ALERTS.find((cfg) => cfg.match(low));
+    if (!matched) return false;
+    showErrorAlert(matched, low);
+    return true;
+  }
+
   function showErrorAlert(cfg, low) {
     cancelPendingSteps();
     O().clear();
@@ -1134,18 +1177,15 @@ window.NKAP_ASSISTANT = (() => {
     });
   }
 
-  /** Erreur ou alerte critique déclenchée dynamiquement — alerte immédiate de l'utilisateur. */
+  /** Erreur ou alerte critique déclenchée dynamiquement : erreurs connues via fixtures locales, inconnues via LLM. */
   function onErrorDetected(errText) {
     closePanel();
     const raw = String(errText || "").trim();
-    if (brainUrl) {
-      askQuestion(raw || "Une erreur est survenue sur l'écran, explique-la simplement.", "s-erreur-active");
+    if (playKnownErrorOrFixture(raw)) {
       return;
     }
-    const low = norm(raw);
-    const matched = ERROR_ALERTS.find((cfg) => cfg.match(low));
-    if (matched) {
-      showErrorAlert(matched, low);
+    if (brainUrl && raw) {
+      askQuestion(raw, "s-erreur-active");
       return;
     }
     playParcours("s-erreur-active");

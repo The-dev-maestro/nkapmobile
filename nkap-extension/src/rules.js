@@ -61,23 +61,44 @@ window.NKAP_RULES = (() => {
 
   /**
    * Calcule le ton effectif ("light" | "dark") du fond derrière `el`
-   * en remontant la chaîne des ancêtres jusqu'au premier fond opaque.
+   * en remontant toute la chaîne des ancêtres jusqu'à <html>, avec repli sur la couleur du texte.
    */
   function detectTone(el) {
-    let cur = el;
-    for (let depth = 0; depth < 10 && cur && cur !== document.documentElement; depth++, cur = cur.parentElement) {
-      const bg = window.getComputedStyle(cur).backgroundColor;
-      if (!bg || bg === "transparent") continue;
-      const m = bg.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/);
-      if (!m) continue;
+    const parseLum = (cssColor) => {
+      const m = String(cssColor || "").match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/);
+      if (!m) return null;
       const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1;
-      if (alpha < 0.35) continue;
+      if (alpha < 0.35) return null;
       const r = parseFloat(m[1]);
       const g = parseFloat(m[2]);
       const b = parseFloat(m[3]);
-      // Luminance relative perçue (sRGB)
-      const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-      return lum < 0.45 ? "dark" : "light";
+      return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    };
+
+    let cur = el;
+    for (let depth = 0; depth < 32 && cur && cur.nodeType === 1; depth++, cur = cur.parentElement) {
+      const cs = window.getComputedStyle(cur);
+      const bgLum = parseLum(cs.backgroundColor);
+      if (bgLum !== null) {
+        return bgLum < 0.45 ? "dark" : "light";
+      }
+      if (cs.backgroundImage && cs.backgroundImage !== "none") {
+        const matches = cs.backgroundImage.match(/rgba?\([^)]+\)/g);
+        if (matches && matches.length) {
+          const lums = matches.map(parseLum).filter((v) => v !== null);
+          if (lums.length) {
+            const avg = lums.reduce((a, b) => a + b, 0) / lums.length;
+            return avg < 0.45 ? "dark" : "light";
+          }
+        }
+      }
+    }
+
+    if (el && el.nodeType === 1) {
+      const fgLum = parseLum(window.getComputedStyle(el).color);
+      if (fgLum !== null && fgLum > 0.55) {
+        return "dark";
+      }
     }
     return "light";
   }

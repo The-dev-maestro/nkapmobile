@@ -33,6 +33,7 @@ window.NKAP_OVERLAY = (() => {
     inkDark: "#F5B700",  // jaune feutre sur fond sombre
     yellow: "#F5B700",
     red: "#FF3B5C",
+    green: "#34D399",
     chalk: "#F8FAFC",
     coral: "#FF6B8B",
     mint: "#34D399",
@@ -237,6 +238,7 @@ window.NKAP_OVERLAY = (() => {
   function resolveInk(colorName, targetEl) {
     if (colorName === "red") return PALETTE.red;
     if (colorName === "yellow") return PALETTE.yellow;
+    if (colorName === "green") return PALETTE.green;
     const tone = window.NKAP_RULES ? window.NKAP_RULES.detectTone(targetEl) : "light";
     return tone === "dark" ? PALETTE.inkDark : PALETTE.inkLight;
   }

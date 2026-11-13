@@ -8,7 +8,7 @@
     "http://localhost/*",
     "http://127.0.0.1/*",
     "https://safinum.cm/*",
-    "http://13.60.36.139/*",
+    "http://13.60.229.114/*",
     "https://*.sslip.io/*"
   ],
   "web_accessible_resources": [

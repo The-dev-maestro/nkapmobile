@@ -384,3 +384,94 @@ def test_http_answer_spatial_row_grouping_and_target_text_resolution(monkeypatch
     assert acts_bal[-2]["action"]["target"]["node_id"] == "n_main_bal"
 
 
+def test_http_answer_groups_stacked_transactions_and_avoids_amount_footer_on_non_amount_queries(monkeypatch):
+    import json
+    client = TestClient(app)
+    captured_prompts = []
+
+    class _FakeResp:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    def fake_ollama_tx(url, json=None, timeout=None, **kwargs):
+        captured_prompts.append((json or {}).get("prompt", ""))
+        return _FakeResp(
+            {
+                "spoken": "Tes dernières opérations incluent un paiement marchand.",
+                "spoken_after": "Vérifie le numéro du bénéficiaire.",
+                "title": "Dernières opérations",
+                "rows": [
+                    {"label": "Paiement marchand", "value": "Paiement marchand"},
+                    {"label": "Salaire reçu", "value": "+180 000 FCFA"},
+                ],
+                "targets": ["Paiement marchand"],
+                "color": "green",
+            }
+        )
+
+    monkeypatch.setattr("app.llm.requests.post", fake_ollama_tx)
+    tx_ctx = {
+        "type": "screen_context",
+        "page": {"url": "https://safinum.cm/hackathon-test", "title": "Safinum Pay"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "n_title", "tag": "p", "text": "Safinum Pay", "clickable": False, "bounds": [157, 81, 275, 109], "tone": "dark"},
+            {"node_id": "n_sub", "tag": "p", "text": "Banque en ligne", "clickable": False, "bounds": [157, 109, 275, 125], "tone": "dark"},
+            {"node_id": "n_user", "tag": "span", "text": "Amina Ngo Bell", "clickable": False, "bounds": [1026, 93, 1134, 113], "tone": "dark"},
+            {"node_id": "n_h2", "tag": "h2", "text": "Transactions récentes", "clickable": False, "bounds": [113, 601, 764, 621], "tone": "dark"},
+            {"node_id": "n_tx1_lbl", "tag": "p", "text": "Paiement marchand", "clickable": False, "bounds": [161, 645, 307, 665], "tone": "dark"},
+            {"node_id": "n_tx1_dt", "tag": "p", "text": "05 nov. 2026", "clickable": False, "bounds": [161, 665, 307, 681], "tone": "dark"},
+            {"node_id": "n_tx1_amt", "tag": "p", "text": "-12 500 FCFA", "clickable": False, "bounds": [674, 653, 764, 673], "tone": "dark"},
+            {"node_id": "n_side", "tag": "h2", "text": "Votre compte", "clickable": False, "bounds": [842, 239, 1146, 259], "tone": "dark"},
+        ],
+    }
+
+    resp = client.post(
+        "/answer",
+        json={"transcript": "Quelles sont mes dernières transactions ?", "lang_hint": "fr", "context": tx_ctx},
+    )
+    assert resp.status_code == 200
+    assert "- Paiement marchand (05 nov. 2026) | -12 500 FCFA" in captured_prompts[0]
+    assert "Panneau latéral:" in captured_prompts[0]
+    acts = resp.json()["actions"]
+    nb = next(a["action"] for a in acts if a["action"]["t"] == "notebook")
+    assert all((ln.get("label") or "") != (ln.get("value") or "") or not ln.get("label") for ln in nb["lines"])
+    spoken_texts = " ".join(a["action"].get("text", "") for a in acts if a["action"]["t"] == "speak")
+    assert "bénéficiaire" not in spoken_texts.lower()
+
+    # Correctif 2 : pas de mention "montants" pour une question non-monétaire ("C'est quoi cette app ?")
+    def fake_ollama_app(url, json=None, timeout=None, **kwargs):
+        return _FakeResp(
+            {
+                "spoken": "Safinum Pay est une banque en ligne de démonstration.",
+                "spoken_after": "",
+                "title": "Safinum Pay",
+                "rows": [
+                    {"label": "Safinum Pay", "value": "Banque en ligne"},
+                    {"label": "Titulaire", "value": "Amina Ngo Bell"},
+                ],
+                "targets": ["Safinum Pay", "Amina Ngo Bell"],
+                "color": "yellow",
+            }
+        )
+
+    monkeypatch.setattr("app.llm.requests.post", fake_ollama_app)
+    resp_app = client.post(
+        "/answer",
+        json={"transcript": "C'est quoi cette app ?", "lang_hint": "fr", "context": tx_ctx},
+    )
+    assert resp_app.status_code == 200
+    acts_app = resp_app.json()["actions"]
+    nb_app = next(a["action"] for a in acts_app if a["action"]["t"] == "notebook")
+    assert not any("montant" in (ln.get("text") or "").lower() for ln in nb_app["lines"])
+    spoken_app = " ".join(a["action"].get("text", "") for a in acts_app if a["action"]["t"] == "speak")
+    assert "montant" not in spoken_app.lower()
+
+
+
