@@ -384,3 +384,48 @@ def test_http_answer_spatial_row_grouping_and_target_text_resolution(monkeypatch
     assert acts_bal[-2]["action"]["target"]["node_id"] == "n_main_bal"
 
 
+def test_http_answer_compiles_fast_two_key_llm_payload(monkeypatch):
+    import json
+
+    class _FakeResponse:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    def fake_ollama_two_keys(url, json=None, timeout=None, **kwargs):
+        return _FakeResponse(
+            {
+                "spoken": "Envoie de l'argent",
+                "targets": ["Envoyer de l'argent"],
+            }
+        )
+
+    monkeypatch.setattr("app.llm.requests.post", fake_ollama_two_keys)
+    btn_ctx = {
+        "type": "screen_context",
+        "page": {"url": "https://safinum.cm/hackathon-test", "title": "Safinum Pay"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "n_lbl", "tag": "p", "text": "Solde disponible", "clickable": False, "bounds": [40, 120, 180, 142], "tone": "dark"},
+            {"node_id": "n_bal", "tag": "p", "text": "250 000 FCFA", "clickable": False, "bounds": [40, 148, 210, 180], "tone": "dark"},
+            {"node_id": "n_send", "tag": "button", "text": "Envoyer de l'argent", "clickable": True, "bounds": [80, 360, 300, 410], "tone": "dark"},
+        ],
+    }
+    resp = client.post(
+        "/answer",
+        json={"transcript": "Comment envoyer de l'argent ?", "lang_hint": "fr", "context": btn_ctx},
+    )
+    assert resp.status_code == 200
+    acts = resp.json()["actions"]
+    types = [a["action"]["t"] for a in acts]
+    assert types == ["speak", "notebook", "arrow", "frame", "clear"]
+    assert "Envoyer de l'argent" in acts[0]["action"]["text"]
+    assert acts[1]["action"]["title"] == "Action à faire"
+    assert acts[3]["action"]["target"]["node_id"] == "n_send"
+
+

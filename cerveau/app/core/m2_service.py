@@ -877,12 +877,12 @@ class M2Service:
         return None, None
 
     def _build_llm_prompt(self, transcript: Transcript, screen_context: ScreenContext) -> str:
-        """Construit un prompt structuré en français pur (lignes visuelles + champs appariés) sans IDs techniques."""
+        """Construit un prompt court (préfixe statique en tête pour cache KV Ollama, écran structuré en français pur)."""
         semantics = self._analyze_screen(screen_context)
         rows = semantics["rows"]
         prompt_lines: list[str] = []
         last_zone: str | None = None
-        for zone, _, row_text in rows[:45]:
+        for zone, _, row_text in rows[:30]:
             if not row_text:
                 continue
             if zone != last_zone:
@@ -893,32 +893,26 @@ class M2Service:
         main_pairs = [p for p in semantics["field_pairs"] if p["zone"] == "main"]
         if main_pairs:
             prompt_lines.append("Champs & valeurs clés:")
-            for p in main_pairs[:8]:
+            for p in main_pairs[:6]:
                 prompt_lines.append(f"  * {p['label']} -> {p['value']}")
         if semantics["alerts"]:
             prompt_lines.append("Alertes / Avertissements:")
-            for a in semantics["alerts"][:3]:
+            for a in semantics["alerts"][:2]:
                 prompt_lines.append(f"  ! {a['text']}")
 
         page_title = screen_context.page.title if screen_context.page and screen_context.page.title else "Safinum"
         hint = screen_context.screen_hint or "home"
 
         return (
-            f"Tu es NKAP, copilote bancaire vocal et visuel style HeyClicky. Application: {page_title} (étape: {hint}).\n"
+            "Tu es NKAP, copilote bancaire vocal. Tu tutoies (« tu/ton/ta/tes », jamais « vous/mon/mes »).\n"
+            "Réponds en JSON compact (2 clés UNIQUEMENT) basé STRICTEMENT sur l'Écran ci-dessous :\n"
+            '- "spoken": 1 phrase directe en tutoiement avec les valeurs ou le bouton exact.\n'
+            '- "targets": [1 ou 2 textes EXACTS copiés de l\'écran].\n'
+            "Règle: lis chaque chiffre sur sa propre ligne ; n'invente ni montant ni alerte absent.\n\n"
+            f"Application: {page_title} (étape: {hint}).\n"
             "Contenu structuré de l'écran:\n"
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
-            + "\n\nRègles strictes:\n"
-            "- TUTOIEMENT OBLIGATOIRE partout (« tu », « ton », « ta », « tes », « vérifie », JAMAIS « vous/votre/vérifiez », et JAMAIS « mon/ma/mes » pour le solde ou les transactions).\n"
-            "- Base-toi UNIQUEMENT sur les valeurs exactes affichées ci-dessus ; n'invente ni alerte, ni frais, ni bouton absent.\n"
-            "- Lis chaque chiffre sur SA PROPRE LIGNE sans jamais le confondre avec la ligne du dessus ou du dessous.\n"
-            "- Réponds en JSON strict sur UNE seule ligne avec exactement ces clés :\n"
-            '  "spoken" (string, 1 à 2 phrases simples en « tu » avec les valeurs exactes de l\'écran),\n'
-            '  "spoken_after" (string, courte phrase en « tu » propre au geste : où regarder ou sur quel libellé exact appuyer),\n'
-            '  "title" (string, titre court du carnet de 2 à 5 mots),\n'
-            '  "rows" (liste de 2 à 3 éléments : objets {"label":"...","value":"..."} avec les valeurs exactes pour un montant/champ, OU 2 courtes puces "• ..." + "→ ..." pour une alerte/arnaque/conseil),\n'
-            '  "targets" (liste de 1 ou 2 textes EXACTS d\'éléments de l\'écran qui répondent à la question),\n'
-            '  "color" ("ink"|"yellow"|"red"|"green").\n'
-            f"Question: {transcript.text}"
+            + f"\nQuestion: {transcript.text}"
         )
 
     @classmethod
@@ -1140,6 +1134,100 @@ class M2Service:
             sb.write("w_1", amount, target_node_id, dy=-66, size=27, per_letter_ms=55, run_after_ms=900)
         return sb.actions
 
+    @staticmethod
+    def _build_role_notebook(role: str) -> tuple[str, list[NotebookLine], str]:
+        """Construit les puces pédagogiques HeyClicky pour une alerte ou la carte Sécurité."""
+        if role == "alert":
+            title = "Pourquoi cette alerte ?"
+            bullets = (
+                "• Nouveau contact : jamais utilisé avant",
+                "• Un chiffre erroné = argent perdu",
+                "→ Relis chaque chiffre du numéro",
+            )
+            col = "yellow"
+        else:
+            title = "Éviter une arnaque"
+            bullets = (
+                "• Vérifie toujours le nom du bénéficiaire",
+                "• Contrôle chaque chiffre du numéro",
+                "→ Envoie seulement si tu connais la personne",
+            )
+            col = "green"
+        lines = [
+            NotebookLine(id="nb-l1", text=bullets[0], color=col),
+            NotebookLine(id="nb-l2", text=bullets[1], color="red" if role == "alert" else None),
+            NotebookLine(divider=True),
+            NotebookLine(id="nb-l3", text=bullets[2], color=col, bold=True, underline=True),
+        ]
+        return title, lines, "nb-l3"
+
+    @classmethod
+    def _build_facts_notebook_lines(
+        cls,
+        grounded_facts: list[tuple[str, str]],
+        screen_context: ScreenContext,
+        kb_terms: list[str],
+        accent_color: str,
+        last_highlight_bold: bool = True,
+    ) -> tuple[list[NotebookLine], str | None]:
+        """Construit les lignes label/value ancrées dans les valeurs réelles de l'écran."""
+        lines: list[NotebookLine] = []
+        arrow_source_id: str | None = None
+        for idx, (lbl, val) in enumerate(grounded_facts[:2]):
+            lid = f"nb-l{idx + 1}"
+            s_lbl = cls._safe_text_for_harness(lbl, screen_context, kb_terms, fallback=lbl)[:32]
+            s_val = cls._safe_text_for_harness(val, screen_context, kb_terms, fallback=val)[:36]
+            is_free = bool(re.search(r"(?:^|\b)0\s*fcfa\b", s_val.lower())) or "gratuit" in s_val.lower()
+            lines.append(
+                NotebookLine(
+                    id=lid,
+                    label=s_lbl,
+                    value=s_val,
+                    color="green" if is_free else accent_color,
+                    bold=last_highlight_bold or idx == len(grounded_facts[:2]) - 1,
+                )
+            )
+            arrow_source_id = f"{lid}-val"
+        return lines, arrow_source_id
+
+    @staticmethod
+    def _append_notebook_cta_footer(
+        compiled_lines: list[NotebookLine],
+        grounded_facts: list[tuple[str, str]],
+        valid_highlights: list[dict[str, Any]],
+        q_norm: str,
+        accent_color: str,
+        arrow_source_id: str | None,
+    ) -> str | None:
+        """Ajoute le séparateur et la ligne d'action HeyClicky sous un tableau label/value."""
+        compiled_lines.append(NotebookLine(divider=True))
+        fact0_val = grounded_facts[0][1].lower() if grounded_facts else ""
+        is_free_fee = bool(re.search(r"(?:^|\b)0\s*fcfa\b", fact0_val)) or "gratuit" in fact0_val
+        if valid_highlights and valid_highlights[0].get("style") == "frame":
+            footer_txt, footer_col = "→ Appuie sur ce bouton", "green"
+        elif len(valid_highlights) >= 2 and any(k in q_norm for k in ("nom", "numero", "beneficiaire", "telephone")):
+            footer_txt, footer_col = "→ Compare nom et numéro", "yellow"
+        elif is_free_fee:
+            footer_txt, footer_col = "→ Aucun frais sur ce transfert", "green"
+        elif "solde" in q_norm:
+            footer_txt, footer_col = "→ Montant disponible sur ton compte", "green"
+        elif any(k in q_norm for k in ("transaction", "historique", "operation")):
+            footer_txt, footer_col = "→ Regarde tes opérations récentes", "yellow"
+        elif len(valid_highlights) >= 2:
+            footer_txt, footer_col = "→ Vérifie ces deux montants", "yellow"
+        else:
+            footer_txt, footer_col = "→ Vérifie bien cette info", accent_color
+        compiled_lines.append(
+            NotebookLine(
+                id="nb-l-act",
+                text=footer_txt,
+                color=footer_col,
+                bold=True,
+                underline=True,
+            )
+        )
+        return arrow_source_id or "nb-l-act"
+
     def _compile_llm_plan(
         self, llm_payload: dict[str, Any], transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
@@ -1348,17 +1436,24 @@ class M2Service:
             if p["value_id"] in highlight_ids or p["label_id"] in highlight_ids:
                 grounded_facts.append((p["label"], p["value"]))
 
-        # Si `spoken` est trop générique alors qu'on a des faits précis, enrichit ou ancre le texte vocal
+        # Si `spoken` est trop générique ou est un écho court d'un bouton, enrichit le texte vocal
         spoken_n = self._norm(spoken)
+        spoken_auto_button = False
         if grounded_facts and first_role not in {"alert", "security"} and not any(self._norm(val.split(" (")[0]) in spoken_n for _, val in grounded_facts):
             fact_summary = " et ".join(f"{lbl} : {val}" for lbl, val in grounded_facts[:2])
             if len(spoken) < 40 or "regard" in spoken_n or "verifi" in spoken_n or "cette information" in spoken_n:
                 candidate_spoken = f"{fact_summary}. {spoken}"
                 spoken = self._safe_text_for_harness(candidate_spoken, screen_context, kb_terms, fallback=spoken)
+        elif valid_highlights and first_role == "button" and len(spoken.split()) <= 5:
+            first_nid = valid_highlights[0]["node_id"]
+            btn_name = node_meta.get(first_nid, {}).get("gloss_only") or usable_nodes[first_nid].text or "ce bouton"
+            candidate_spoken = f"Pour continuer, appuie sur le bouton « {btn_name[:34]} »."
+            spoken = self._safe_text_for_harness(candidate_spoken, screen_context, kb_terms, fallback=spoken)
+            spoken_auto_button = True
 
         sb.speak("llm_answer", spoken, lang, 0)
 
-        # 2. Carnet HeyClicky structuré (`rows` / `notebook_lines` / `points`)
+        # 2. Carnet HeyClicky structuré (`rows` / `notebook_lines` / `points` ou synthèse rapide 2 clés)
         raw_nb_title = str(llm_payload.get("notebook_title") or llm_payload.get("title") or "").strip()
         nb_title = self._safe_text_for_harness(raw_nb_title, screen_context, kb_terms, fallback="")
         raw_lines = (
@@ -1387,32 +1482,12 @@ class M2Service:
                 )
             )
             if is_generic_prose:
-                for idx, (lbl, val) in enumerate(grounded_facts[:2]):
-                    lid = f"nb-l{idx + 1}"
-                    s_lbl = self._safe_text_for_harness(lbl, screen_context, kb_terms, fallback=lbl)[:28]
-                    s_val = self._safe_text_for_harness(val, screen_context, kb_terms, fallback=val)[:28]
-                    compiled_lines.append(
-                        NotebookLine(
-                            id=lid,
-                            label=s_lbl,
-                            value=s_val,
-                            color="green" if "0 fcfa" in s_val.lower() or "gratuit" in s_val.lower() else "yellow" if idx == len(grounded_facts[:2]) - 1 else None,
-                            bold=True if idx == len(grounded_facts[:2]) - 1 else None,
-                        )
-                    )
-                    arrow_source_id = f"{lid}-val"
-                compiled_lines.append(NotebookLine(divider=True))
-                cta_line = "→ Vérifie chaque chiffre ici" if any(k in q_norm for k in ("nom", "numero", "telephone", "alerte")) else "→ Regarde cet élément"
-                compiled_lines.append(
-                    NotebookLine(
-                        id=f"nb-l{len(grounded_facts[:2]) + 1}",
-                        text=cta_line,
-                        color=accent_color,
-                        bold=True,
-                        underline=True,
-                    )
+                compiled_lines, arrow_source_id = self._build_facts_notebook_lines(
+                    grounded_facts, screen_context, kb_terms, accent_color, last_highlight_bold=False
                 )
-                arrow_source_id = f"nb-l{len(grounded_facts[:2]) + 1}"
+                arrow_source_id = self._append_notebook_cta_footer(
+                    compiled_lines, grounded_facts, valid_highlights, q_norm, accent_color, None
+                )
             else:
                 for idx, item in enumerate(cleaned_items):
                     lid = f"nb-l{idx + 1}"
@@ -1500,29 +1575,7 @@ class M2Service:
                     and compiled_lines
                     and all(ln.label and ln.value for ln in compiled_lines)
                 ):
-                    if first_role == "alert":
-                        nb_title = "Pourquoi cette alerte ?"
-                        bullets = [
-                            "• Nouveau contact : jamais utilisé avant",
-                            "• Un chiffre erroné = argent perdu",
-                            "→ Relis chaque chiffre du numéro",
-                        ]
-                        b_col = "yellow"
-                    else:
-                        nb_title = "Éviter une arnaque"
-                        bullets = [
-                            "• Vérifie toujours le nom du bénéficiaire",
-                            "• Contrôle chaque chiffre du numéro",
-                            "→ Envoie seulement si tu connais la personne",
-                        ]
-                        b_col = "green"
-                    compiled_lines = [
-                        NotebookLine(id="nb-l1", text=bullets[0], color=b_col),
-                        NotebookLine(id="nb-l2", text=bullets[1], color="red" if first_role == "alert" else None),
-                        NotebookLine(divider=True),
-                        NotebookLine(id="nb-l3", text=bullets[2], color=b_col, bold=True, underline=True),
-                    ]
-                    arrow_source_id = "nb-l3"
+                    nb_title, compiled_lines, arrow_source_id = self._build_role_notebook(first_role)
 
                 # Si un petit LLM a rempli le carnet avec d'autres chiffres que ceux de la cible (ex: Total au lieu de Frais)
                 if (
@@ -1534,22 +1587,9 @@ class M2Service:
                     rendered_blob = self._norm(" ".join(f"{ln.label or ''} {ln.value or ''} {ln.text or ''}" for ln in compiled_lines))
                     has_grounded_val = any(_has_exact_screen_val(val, rendered_blob) for _, val in grounded_facts)
                     if not has_grounded_val:
-                        compiled_lines = []
-                        for idx, (lbl, val) in enumerate(grounded_facts[:2]):
-                            lid = f"nb-l{idx + 1}"
-                            s_lbl = self._safe_text_for_harness(lbl, screen_context, kb_terms, fallback=lbl)[:32]
-                            s_val = self._safe_text_for_harness(val, screen_context, kb_terms, fallback=val)[:36]
-                            is_free = bool(re.search(r"(?:^|\b)0\s*fcfa\b", s_val.lower())) or "gratuit" in s_val.lower()
-                            compiled_lines.append(
-                                NotebookLine(
-                                    id=lid,
-                                    label=s_lbl,
-                                    value=s_val,
-                                    color="green" if is_free else accent_color,
-                                    bold=True,
-                                )
-                            )
-                            arrow_source_id = f"{lid}-val"
+                        compiled_lines, arrow_source_id = self._build_facts_notebook_lines(
+                            grounded_facts, screen_context, kb_terms, accent_color
+                        )
 
                 # Ajoute le séparateur + ligne d'action HeyClicky si le tableau n'a que des paires label/value
                 if (
@@ -1559,41 +1599,55 @@ class M2Service:
                     and len(compiled_lines) <= 3
                     and all(ln.label and ln.value for ln in compiled_lines)
                 ):
-                    compiled_lines.append(NotebookLine(divider=True))
-                    fact0_val = grounded_facts[0][1].lower() if grounded_facts else ""
-                    is_free_fee = bool(re.search(r"(?:^|\b)0\s*fcfa\b", fact0_val)) or "gratuit" in fact0_val
-                    if valid_highlights and valid_highlights[0].get("style") == "frame":
-                        footer_txt = "→ Appuie sur ce bouton"
-                        footer_col = "green"
-                    elif len(valid_highlights) >= 2 and any(k in q_norm for k in ("nom", "numero", "beneficiaire", "telephone")):
-                        footer_txt = "→ Compare nom et numéro"
-                        footer_col = "yellow"
-                    elif is_free_fee:
-                        footer_txt = "→ Aucun frais sur ce transfert"
-                        footer_col = "green"
-                    elif "solde" in q_norm:
-                        footer_txt = "→ Montant disponible sur ton compte"
-                        footer_col = "green"
-                    elif any(k in q_norm for k in ("transaction", "historique", "operation")):
-                        footer_txt = "→ Regarde tes opérations récentes"
-                        footer_col = "yellow"
-                    elif len(valid_highlights) >= 2:
-                        footer_txt = "→ Vérifie ces deux montants"
-                        footer_col = "yellow"
-                    else:
-                        footer_txt = "→ Vérifie bien cette info"
-                        footer_col = accent_color
-                    compiled_lines.append(
-                        NotebookLine(
-                            id="nb-l-act",
-                            text=footer_txt,
-                            color=footer_col,
-                            bold=True,
-                            underline=True,
-                        )
+                    arrow_source_id = self._append_notebook_cta_footer(
+                        compiled_lines, grounded_facts, valid_highlights, q_norm, accent_color, arrow_source_id
                     )
-                    if not arrow_source_id:
-                        arrow_source_id = "nb-l-act"
+        elif raw_lines is None and valid_highlights and not used_explicit_node_ids:
+            # Synthèse déterministe (0 ms) quand le LLM répond au format rapide 2 clés {"spoken","targets"}
+            if first_role in {"alert", "security"}:
+                nb_title, compiled_lines, arrow_source_id = self._build_role_notebook(first_role)
+            elif grounded_facts:
+                nb_title = nb_title or (
+                    "Ton solde"
+                    if "solde" in q_norm
+                    else "Frais du transfert"
+                    if "frais" in q_norm
+                    else "Détails à vérifier"
+                )
+                compiled_lines, arrow_source_id = self._build_facts_notebook_lines(
+                    grounded_facts, screen_context, kb_terms, accent_color
+                )
+                arrow_source_id = self._append_notebook_cta_footer(
+                    compiled_lines, grounded_facts, valid_highlights, q_norm, accent_color, arrow_source_id
+                )
+            else:
+                first_nid = valid_highlights[0]["node_id"]
+                item_label = node_meta.get(first_nid, {}).get("gloss_only") or usable_nodes[first_nid].text or "cet élément"
+                item_label = self._safe_text_for_harness(item_label, screen_context, kb_terms, fallback="cet élément")[:38]
+                if valid_highlights[0].get("style") == "frame" or first_role == "button":
+                    nb_title = nb_title or "Action à faire"
+                    compiled_lines = [
+                        NotebookLine(id="nb-l1", text=f"• Bouton : « {item_label} »", color="green"),
+                        NotebookLine(divider=True),
+                        NotebookLine(id="nb-l2", text="→ Appuie ici pour continuer", color="green", bold=True, underline=True),
+                    ]
+                    arrow_source_id = "nb-l2"
+                elif first_role == "checkbox":
+                    nb_title = nb_title or "Case à cocher"
+                    compiled_lines = [
+                        NotebookLine(id="nb-l1", text=f"• Coche : {item_label}", color="yellow"),
+                        NotebookLine(divider=True),
+                        NotebookLine(id="nb-l2", text="→ Confirme ensuite en bas", color="yellow", bold=True, underline=True),
+                    ]
+                    arrow_source_id = "nb-l2"
+                else:
+                    nb_title = nb_title or "Élément repéré"
+                    compiled_lines = [
+                        NotebookLine(id="nb-l1", text=f"• {item_label}", color=accent_color),
+                        NotebookLine(divider=True),
+                        NotebookLine(id="nb-l2", text="→ Regarde cet élément", color=accent_color, bold=True, underline=True),
+                    ]
+                    arrow_source_id = "nb-l2"
 
         remaining_visual_budget = 3
         first_node_id = valid_highlights[0]["node_id"] if valid_highlights else None
@@ -1679,8 +1733,11 @@ class M2Service:
                     else:
                         cand_after = "Compare ces deux montants encadrés avant de confirmer."
                 elif f_style == "frame" or f_role == "button":
-                    btn_name = first_meta.get("gloss_only") or usable_nodes[first_nid].text or "ce bouton"
-                    cand_after = f"Appuie exactement ici sur « {btn_name[:28]} »."
+                    if spoken_auto_button:
+                        cand_after = ""
+                    else:
+                        btn_name = first_meta.get("gloss_only") or usable_nodes[first_nid].text or "ce bouton"
+                        cand_after = f"Appuie exactement ici sur « {btn_name[:28]} »."
                 elif f_role == "checkbox":
                     cand_after = "Coche d'abord cette case puis appuie sur le bouton pour continuer."
                 elif f_role == "alert":
@@ -1692,7 +1749,11 @@ class M2Service:
                     cand_after = f"Tu peux lire ici : {lbl0} : {val0}."
                 else:
                     cand_after = "Regarde exactement l'élément entouré ici."
-                spoken_after = self._safe_text_for_harness(cand_after, screen_context, kb_terms, fallback="Regarde exactement ici.")
+                spoken_after = (
+                    self._safe_text_for_harness(cand_after, screen_context, kb_terms, fallback="Regarde exactement ici.")
+                    if cand_after
+                    else ""
+                )
 
         for idx, h in enumerate(valid_highlights):
             if remaining_visual_budget <= 0:
