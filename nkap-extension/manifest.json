@@ -4,7 +4,13 @@
   "version": "0.2.0",
   "description": "Le prof au tableau : traduit l'interface financière en douala (lexique verrouillé, montants intacts) et annote l'écran à la main.",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*", "https://safinum.cm/*"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://safinum.cm/*",
+    "http://13.60.36.139/*",
+    "https://*.sslip.io/*"
+  ],
   "web_accessible_resources": [
     {
       "resources": ["fixtures/*.json", "fonts/*.ttf", "voice-bank/*"],
