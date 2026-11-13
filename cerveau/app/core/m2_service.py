@@ -1356,7 +1356,7 @@ class M2Service:
             if any(k in q_norm for k in ("arnaqu", "fraude", "scam", "mefier")) and semantics.get("security_nodes"):
                 # Aligne uniquement vers l'encadré Sécurité (conseil principal) sans parasite secondaire
                 best_sec = max(semantics["security_nodes"], key=lambda s: len(s["text"]))
-                valid_highlights = [{"node_id": best_sec["node_id"], "style": "box", "color": "green"}]
+                valid_highlights = [{"node_id": best_sec["node_id"], "style": "box", "color": "yellow"}]
             else:
                 extra_ids = self._infer_extra_semantic_targets(
                     transcript.text, semantics, [h["node_id"] for h in valid_highlights]
@@ -1814,8 +1814,8 @@ class M2Service:
             color = str(h.get("color") or default_color).lower()
             if color not in ALLOWED_COLORS:
                 color = "yellow"
-            elif color == "ink" and not used_explicit_node_ids:
-                color = "yellow"  # Visibilité élevée sur fonds sombres (Safinum) sans encre sombre quasi invisible
+            elif color in {"ink", "green"} and not used_explicit_node_ids:
+                color = "yellow"  # Jaune feutre contrasté sur fonds sombres (Safinum) sans vert ni encre sombre quasi invisible
             label = str(h.get("label") or "").strip()[:24] if style == "frame" and h.get("label") else None
             arrow_pref = h.get("arrow_from_notebook")
             wants_arrow = (False if use_dual_highlight else (idx == 0)) if arrow_pref is None else bool(arrow_pref)

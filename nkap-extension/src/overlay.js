@@ -33,7 +33,6 @@ window.NKAP_OVERLAY = (() => {
     inkDark: "#F5B700",  // jaune feutre sur fond sombre
     yellow: "#F5B700",
     red: "#FF3B5C",
-    green: "#34D399",
     chalk: "#F8FAFC",
     coral: "#FF6B8B",
     mint: "#34D399",
@@ -238,7 +237,6 @@ window.NKAP_OVERLAY = (() => {
   function resolveInk(colorName, targetEl) {
     if (colorName === "red") return PALETTE.red;
     if (colorName === "yellow") return PALETTE.yellow;
-    if (colorName === "green") return PALETTE.green;
     const tone = window.NKAP_RULES ? window.NKAP_RULES.detectTone(targetEl) : "light";
     return tone === "dark" ? PALETTE.inkDark : PALETTE.inkLight;
   }
@@ -364,12 +362,26 @@ window.NKAP_OVERLAY = (() => {
     }
   }
 
+  let clearGen = 0;
+  const pendingOverlayTimers = new Set();
+
+  function trackOverlayTimer(fn, delayMs) {
+    const gen = clearGen;
+    const tid = setTimeout(() => {
+      pendingOverlayTimers.delete(tid);
+      if (gen !== clearGen) return;
+      fn();
+    }, delayMs);
+    pendingOverlayTimers.add(tid);
+    return tid;
+  }
+
   function fadeOutMark(id, m) {
     const elToFade = m.group || (m.node && m.node[0]);
     if (elToFade && elToFade.style) {
       elToFade.style.transition = "opacity 0.22s ease-out";
       elToFade.style.opacity = "0";
-      setTimeout(() => removeMark(id, m, false), 220);
+      trackOverlayTimer(() => removeMark(id, m, false), 220);
     } else {
       removeMark(id, m, false);
     }
@@ -418,7 +430,7 @@ window.NKAP_OVERLAY = (() => {
       r.top < 12 || r.bottom > window.innerHeight - 12 || r.left < 8 || r.right > window.innerWidth - 8;
     if (outOfView) {
       el.scrollIntoView({ block: "center", behavior: "smooth" });
-      setTimeout(drawFn, 320);
+      trackOverlayTimer(drawFn, 320);
     } else {
       drawFn();
     }
@@ -1091,7 +1103,9 @@ window.NKAP_OVERLAY = (() => {
         }
 
         // Contour wireframe esquissé à la craie (style omg_05) sur le bord extérieur exact (offsetWidth/offsetHeight)
+        const nbGen = clearGen;
         requestAnimationFrame(() => {
+          if (nbGen !== clearGen || !card.isConnected) return;
           const cw = card.offsetWidth;
           const ch = card.offsetHeight;
           const wirePath = window.NKAP_GEOMETRY.handBox(
@@ -1209,6 +1223,9 @@ window.NKAP_OVERLAY = (() => {
     },
 
     clear() {
+      clearGen++;
+      pendingOverlayTimers.forEach((tid) => clearTimeout(tid));
+      pendingOverlayTimers.clear();
       ensureLayers();
       if (wordTimer) {
         clearInterval(wordTimer);

@@ -19,6 +19,7 @@ window.NKAP_ASSISTANT = (() => {
   let brainUrl = "";
   let stepTimers = [];
   let speechTimer = null;
+  let clearGuardTimer = null;
   let audioEnabled = true;
   let recognition = null;
   let isListening = false;
@@ -307,6 +308,10 @@ window.NKAP_ASSISTANT = (() => {
   function cancelPendingSteps() {
     stepTimers.forEach((t) => clearTimeout(t));
     stepTimers = [];
+    if (clearGuardTimer) {
+      clearTimeout(clearGuardTimer);
+      clearGuardTimer = null;
+    }
     stopVoice();
   }
 
@@ -533,19 +538,27 @@ window.NKAP_ASSISTANT = (() => {
       case "hide":
         O().hide(action.id);
         break;
-      case "clear":
-        // Si l'assistant parle encore, attend la fin de l'explication avant d'effacer le tableau
+      case "clear": {
+        const runClear = () => {
+          if (clearGuardTimer) {
+            clearTimeout(clearGuardTimer);
+            clearGuardTimer = null;
+          }
+          O().clear();
+        };
+        // Si l'assistant parle encore, attend la fin (plafonné à 3,5 s anti-blocage TTS) avant d'effacer
         if (isSpeaking || speechQueue.length > 0) {
+          if (clearGuardTimer) clearTimeout(clearGuardTimer);
+          clearGuardTimer = setTimeout(runClear, 3500);
           onSpeechDoneOnce(() => {
-            const t = setTimeout(() => {
-              O().clear();
-            }, 1200);
+            const t = setTimeout(runClear, 500);
             stepTimers.push(t);
           });
         } else {
-          O().clear();
+          runClear();
         }
         break;
+      }
     }
   }
 
@@ -720,6 +733,7 @@ window.NKAP_ASSISTANT = (() => {
           cancelPendingSteps();
           O().clear();
           let nextAvailableDrawAt = 0;
+          let hasClearAction = false;
           res.actions.forEach((item, idx) => {
             const act = item.action || item;
             const isDraw = /^(circle|box|underline|arrow|frame)$/.test(act.t);
@@ -731,6 +745,11 @@ window.NKAP_ASSISTANT = (() => {
               }
               const dur = act.duration_ms || 600;
               nextAvailableDrawAt = actDelay + dur + 110;
+            } else if (act.t === "clear") {
+              hasClearAction = true;
+              if (actDelay < nextAvailableDrawAt + 3500) {
+                actDelay = nextAvailableDrawAt + 3500;
+              }
             }
             if (actDelay === 0) {
               executeAction(act);
@@ -739,6 +758,11 @@ window.NKAP_ASSISTANT = (() => {
               stepTimers.push(timer);
             }
           });
+          if (!hasClearAction) {
+            stepTimers.push(
+              setTimeout(() => executeAction({ t: "clear" }), Math.max(nextAvailableDrawAt + 4000, 6500))
+            );
+          }
         })
         .catch((err) => {
           console.warn("[nkap] Repli local (serveur M2 indisponible) :", err);
@@ -939,13 +963,12 @@ window.NKAP_ASSISTANT = (() => {
       unseenChip.addEventListener("click", () => {
         unseenChip.style.transform = "scale(0.96)";
         unseenChip.style.background = "rgba(245,183,0,0.34)";
+        closePanel();
         const unseenText = getActiveUnseenText();
         if (unseenText && playKnownErrorOrFixture(unseenText)) {
-          closePanel();
           return;
         }
-        if (brainUrl) askQuestion(unseenText || unseenChip.textContent, "s-inedit-actif");
-        else playParcours("s-inedit-actif");
+        showUnseenAttention(unseenText);
       });
       chipsBox.appendChild(unseenChip);
     }
@@ -1067,14 +1090,36 @@ window.NKAP_ASSISTANT = (() => {
     console.log("[nkap] Changement d'étape détecté →", newStep);
   }
 
+  function getActiveUnseenElement() {
+    const injected = document.querySelector('[id^="injected-"]');
+    if (injected) return injected;
+    const heading = Q("Message important");
+    return heading ? heading.closest("div, section, aside") || heading.parentElement || heading : null;
+  }
+
   function getActiveUnseenText() {
-    const el =
-      document.querySelector('[id^="injected-"]') ||
-      (() => {
-        const heading = Q("Message important");
-        return heading ? heading.closest("div, section, aside") || heading.parentElement || heading : null;
-      })();
+    const el = getActiveUnseenElement();
     return el ? String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim() : "";
+  }
+
+  /** Attire l'attention sur un message inédit sans appeler le LLM ni analyser son contenu. */
+  function showUnseenAttention(rawText = "") {
+    const targetEl = getActiveUnseenElement();
+    if (!targetEl) {
+      playParcours("s-inedit-actif");
+      return;
+    }
+    lastExplainedUnseenText = rawText || String(targetEl.textContent || "").trim();
+    cancelPendingSteps();
+    O().clear();
+    executeAction({
+      t: "speak",
+      phrase_key: "unseen_attention",
+      text: "Attention ! Un nouveau message vient d'apparaître. Regarde-le bien avant de continuer.",
+      lang: "fr",
+    });
+    O().box(targetEl, "yellow", 680, "b-unseen-auto");
+    stepTimers.push(setTimeout(() => executeAction({ t: "clear" }), 6200));
   }
 
   function getActiveErrorText() {
@@ -1091,18 +1136,13 @@ window.NKAP_ASSISTANT = (() => {
     return String(container.innerText || container.textContent || "").replace(/\s+/g, " ").trim();
   }
 
-  /** Contenu inédit injecté par le jury — lance immédiatement l'explication visuelle ou appelle /answer. */
+  /** Contenu inédit injecté par le jury : attire l'attention localement sans appeler le LLM. */
   function onUnseenContent(text) {
     const raw = String(text || "").trim();
     if (raw && playKnownErrorOrFixture(raw)) {
       return;
     }
-    if (!brainUrl) {
-      lastExplainedUnseenText = raw;
-      playParcours("s-inedit-actif");
-      return;
-    }
-    askQuestion(raw, "s-inedit-actif");
+    showUnseenAttention(raw);
   }
 
   const ERROR_ALERTS = [
@@ -1175,6 +1215,7 @@ window.NKAP_ASSISTANT = (() => {
       anchor: { match_text: targetMatch },
       lines: cfg.lines,
     });
+    stepTimers.push(setTimeout(() => executeAction({ t: "clear" }), 6500));
   }
 
   /** Erreur ou alerte critique déclenchée dynamiquement : erreurs connues via fixtures locales, inconnues via LLM. */
