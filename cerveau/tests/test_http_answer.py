@@ -423,9 +423,78 @@ def test_http_answer_compiles_fast_two_key_llm_payload(monkeypatch):
     assert resp.status_code == 200
     acts = resp.json()["actions"]
     types = [a["action"]["t"] for a in acts]
-    assert types == ["speak", "notebook", "arrow", "frame", "clear"]
+    assert types == ["speak", "frame", "clear"]
     assert "Envoyer de l'argent" in acts[0]["action"]["text"]
-    assert acts[1]["action"]["title"] == "Action à faire"
-    assert acts[3]["action"]["target"]["node_id"] == "n_send"
+    assert acts[1]["action"]["target"]["node_id"] == "n_send"
+
+
+def test_http_answer_guards_greeting_transfer_arrow_and_fees_confusion(monkeypatch):
+    import json
+
+    class _FakeResponse:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    # 1. Salutation pure ("bonjour") -> speak uniquement sans LLM ni carnet
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Le LLM ne doit pas être appelé pour un simple bonjour")
+
+    monkeypatch.setattr("app.llm.requests.post", fail_if_called)
+    home_ctx = {
+        "type": "screen_context",
+        "page": {"url": "https://safinum.cm/hackathon-test", "title": "Safinum Pay"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "n_name", "tag": "span", "text": "Amina Ngo Bell", "clickable": False, "bounds": [700, 20, 880, 44], "tone": "dark"},
+            {"node_id": "n_vc", "tag": "span", "text": "VOTRE COMPTE", "clickable": False, "bounds": [80, 140, 200, 160], "tone": "dark"},
+            {"node_id": "n_bjr", "tag": "h2", "text": "Bonjour, Amina", "clickable": False, "bounds": [80, 168, 280, 204], "tone": "dark"},
+            {"node_id": "n_trf", "tag": "button", "text": "Effectuer un transfert", "clickable": True, "bounds": [80, 340, 280, 388], "tone": "dark"},
+        ],
+    }
+    resp_hi = client.post("/answer", json={"transcript": "bonjour", "lang_hint": "fr", "context": home_ctx})
+    assert resp_hi.status_code == 200
+    assert [a["action"]["t"] for a in resp_hi.json()["actions"]] == ["speak", "clear"]
+
+    # 2. "comment faire un transfert" avec cible parasite ("Amina Ngo Bell") -> pas de flèche depuis le nom, cadre sur le bouton
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResponse({"spoken": "Appuie sur Effectuer un transfert.", "targets": ["Amina Ngo Bell", "Effectuer un transfert"]}),
+    )
+    resp_trf = client.post("/answer", json={"transcript": "comment faire un transfert", "lang_hint": "fr", "context": home_ctx})
+    assert resp_trf.status_code == 200
+    trf_acts = resp_trf.json()["actions"]
+    assert [a["action"]["t"] for a in trf_acts] == ["speak", "frame", "clear"]
+    assert trf_acts[1]["action"]["target"]["node_id"] == "n_trf"
+
+    # 3. Question sur les frais mais le petit LLM répond "Total à débiter : 25 000 FCFA" -> recadré sur Frais (0 FCFA)
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResponse({"spoken": "Le total à débiter est de 25 000 FCFA.", "targets": ["25 000 FCFA"]}),
+    )
+    fees_ctx = {
+        "type": "screen_context",
+        "page": {"url": "https://safinum.cm/hackathon-test", "title": "Safinum Pay"},
+        "screen_hint": "fees",
+        "nodes": [
+            {"node_id": "n_flbl", "tag": "span", "text": "Frais", "clickable": False, "bounds": [80, 380, 140, 400], "tone": "dark"},
+            {"node_id": "n_fgrat", "tag": "span", "text": "Gratuit", "clickable": False, "bounds": [150, 380, 210, 400], "tone": "dark"},
+            {"node_id": "n_fval", "tag": "span", "text": "0 FCFA", "clickable": False, "bounds": [480, 380, 560, 400], "tone": "dark"},
+            {"node_id": "n_tlbl", "tag": "span", "text": "Total à débiter", "clickable": False, "bounds": [80, 420, 220, 444], "tone": "dark"},
+            {"node_id": "n_tval", "tag": "span", "text": "25 000 FCFA", "clickable": False, "bounds": [450, 420, 560, 444], "tone": "dark"},
+        ],
+    }
+    resp_fee = client.post("/answer", json={"transcript": "quels sont les frais ?", "lang_hint": "fr", "context": fees_ctx})
+    assert resp_fee.status_code == 200
+    fee_acts = resp_fee.json()["actions"]
+    assert "0 FCFA" in fee_acts[0]["action"]["text"]
+    assert "25 000 FCFA" not in fee_acts[0]["action"]["text"]
+    box_act = next(a["action"] for a in fee_acts if a["action"]["t"] == "box")
+    assert box_act["target"]["node_id"] == "n_fval"
 
 

@@ -113,7 +113,7 @@ class LLMAdapter:
             "options": {
                 "temperature": 0.1,
                 "num_ctx": 1280,
-                "num_predict": 110,
+                "num_predict": 75,
             },
         }
         is_local = any(h in self.ollama_host for h in ("localhost", "127.0.0.1"))
