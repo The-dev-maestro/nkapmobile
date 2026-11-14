@@ -149,7 +149,8 @@
     const entry = window.NKAP_LEXICON.exactMatch(trimmed);
     if (!entry) return false;
 
-    const translated = entry.dua || entry.ewo;
+    // Ewondo est la langue principale du projet (fallback Douala si absent)
+    const translated = entry.ewo || entry.dua;
     if (!translated) return false;
 
     if (!restoredTextNodes.has(textNode)) {

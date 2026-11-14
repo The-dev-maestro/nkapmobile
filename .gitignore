@@ -31,3 +31,10 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+
+# ── Service voix ──
+voix/models/
+voix/generated/
+voix/.venv/
+voix/**/__pycache__/
+voix/.pytest_cache/

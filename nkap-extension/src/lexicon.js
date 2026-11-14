@@ -14,32 +14,33 @@ window.NKAP_LEXICON = {
   version: 2,
   entries: [
     // ── En-tête & Navigation (Stepper) ──
-    { fr: "Banque en ligne", dua: "Ndabo a moni o муссо", ewo: "Ndá moni á nkul", status: "demo", key: "online_bank" },
+    { fr: "Banque en ligne", dua: "Ndabo a moni o муссо", ewo: "Nkwap", status: "validated", key: "online_bank" },
     { fr: "Solde", dua: "Moni ma dia", ewo: "Nděn", status: "demo", key: "step_balance" },
     { fr: "Frais", dua: "Mabála", ewo: "Mbug", status: "demo", key: "step_fees" },
     { fr: "Bénéficiaire", dua: "Mukusa", ewo: "Nyi á nɔŋ", status: "demo", key: "step_beneficiary" },
     { fr: "Récapitulatif", dua: "Botali", ewo: "Ntolán", status: "demo", key: "step_recap" },
-    { fr: "Confirmation", dua: "Bola la mbale", ewo: " Yemban", status: "demo", key: "step_confirm" },
+    { fr: "Confirmation", dua: "Bola la mbale", ewo: "Yemban", status: "demo", key: "step_confirm" },
 
-    // ── Écran 1 : Compte & Solde ──
-    { fr: "Votre compte", dua: "Konto ango", ewo: "Bɔ́l yi", status: "demo", key: "your_account" },
+    // ── Écran 1 : Compte & Solde (Bloc 1 validé NSIA / Maylis) ──
+    { fr: "Votre compte", dua: "Konto ango", ewo: "Nkwap woué", status: "validated", key: "your_account" },
     { fr: "Compte courant", dua: "Konto ya pondi", ewo: "Bɔ́l á mɛlú", status: "demo", key: "current_account" },
-    { fr: "Solde disponible", dua: "Moni ma peńe", ewo: "Nděn wɔ́g í bɔ́l", status: "demo", key: "balance_label" },
-    { fr: "Consultez votre solde et lancez un transfert en toute sécurité.", dua: "Ombwa moni mango pe loma moni na musango.", ewo: "Nyi bɔ́l ní nděn, tó wɔ́ lɛ́.", status: "demo", key: "balance_hint" },
-    { fr: "Numéro de compte", dua: "Nimero a konto", ewo: "Nem bɔ́l", status: "demo", key: "account_number" },
-    { fr: "Effectuer un transfert", dua: "Loma moni", ewo: "Tó nděn", status: "demo", key: "do_transfer" },
-    { fr: "Consulter les frais", dua: "Ombwa mabála", ewo: "Nɛ́ mbug", status: "demo", key: "see_fees" },
-    { fr: "Transactions récentes", dua: "Bebolo ba sukan", ewo: "Mimbɔ́an mí ndɔ́ŋ", status: "demo", key: "recent_tx" },
-    { fr: "Paiement marchand", dua: "Sawedi la mome-nyunga", ewo: " Yaŋan nkúkúm", status: "demo", key: "tx_merchant" },
-    { fr: "Salaire reçu", dua: "Musawedi mukusabe", ewo: "Mɔ́ni ésáé", status: "demo", key: "tx_salary" },
-    { fr: "Transfert reçu", dua: "Moni malomabe", ewo: "Nděn á nɔŋ", status: "demo", key: "tx_transfer_in" },
-    { fr: "Facture électricité", dua: "Kalati a weya", ewo: "Kalara ndɔ́k", status: "demo", key: "tx_electricity" },
-    { fr: "Facture d'électricité", dua: "Kalati a weya", ewo: "Kalara ndɔ́k", status: "demo", key: "tx_electricity_alt" },
+    { fr: "Solde disponible", dua: "Moni ma peńe", ewo: "Itan ineu", status: "validated", key: "balance_label" },
+    { fr: "Consultez votre solde et lancez un transfert en toute sécurité.", dua: "Ombwa moni mango pe loma moni na musango.", ewo: "Bebgeu itan o beleu ou lom moany voae.", status: "validated", key: "balance_hint" },
+    { fr: "Numéro de compte", dua: "Nimero a konto", ewo: "Nombo nkwap", status: "validated", key: "account_number" },
+    { fr: "Effectuer un transfert", dua: "Loma moni", ewo: "Lomo moni", status: "validated", key: "do_transfer" },
+    { fr: "Consulter les frais", dua: "Ombwa mabála", ewo: "Fombo itan ya yi wa tsig", status: "validated", key: "see_fees" },
+    { fr: "Transactions récentes", dua: "Bebolo ba sukan", ewo: "Itang o nga kène nong itang ou dzali", status: "validated", key: "recent_tx" },
+    { fr: "Dernières opérations", dua: "Bebolo ba sukan", ewo: "Itang o nga kène nong itang ou dzali", status: "validated", key: "recent_ops" },
+    { fr: "Paiement marchand", dua: "Sawedi la mome-nyunga", ewo: "Maane", status: "validated", key: "tx_merchant" },
+    { fr: "Salaire reçu", dua: "Musawedi mukusabe", ewo: "I maane o bi", status: "validated", key: "tx_salary" },
+    { fr: "Transfert reçu", dua: "Moni malomabe", ewo: "Itan ineu nloman", status: "validated", key: "tx_transfer_in" },
+    { fr: "Facture électricité", dua: "Kalati a weya", ewo: "Ayaane mfiè", status: "validated", key: "tx_electricity" },
+    { fr: "Facture d'électricité", dua: "Kalati a weya", ewo: "Ayaane mfiè", status: "validated", key: "tx_electricity_alt" },
 
-    // ── Carte latérale Sécurité ──
-    { fr: "Sécurité", dua: "Musango", ewo: "Mvo'é", status: "demo", key: "security_title" },
-    { fr: "Vérifiez toujours le nom et le numéro du bénéficiaire avant de confirmer un transfert.", dua: "Ombwa bwam dina na nimero ya mukusa oboso ba bola loma.", ewo: "Fombɔ́k éyóló ai nɔ́mbɔ obúsú.", status: "demo", key: "security_hint" },
-    { fr: "Connexion sécurisée", dua: "Diwuta la musango", ewo: "Ntilán mvo'é", status: "demo", key: "secure_conn" },
+    // ── Carte latérale Sécurité (Bloc 1 validé NSIA / Maylis) ──
+    { fr: "Sécurité", dua: "Musango", ewo: "Mebalan", status: "validated", key: "security_title" },
+    { fr: "Vérifiez toujours le nom et le numéro du bénéficiaire avant de confirmer un transfert.", dua: "Ombwa bwam dina na nimero ya mukusa oboso ba bola loma.", ewo: "Kèguè tône fombo dzoé ai number e mod wa lom moni ossussua eneu wa lom.", status: "validated", key: "security_hint" },
+    { fr: "Connexion sécurisée", dua: "Diwuta la musango", ewo: "Ewolo connexion", status: "validated", key: "secure_conn" },
 
     // ── Écran 2 : Frais de transfert ──
     { fr: "Frais de transfert", dua: "Mabála ma loma", ewo: "Mbug í nděn", status: "demo", key: "fees_header" },
