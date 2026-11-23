@@ -378,6 +378,7 @@ class M2Service:
         self.kb = KnowledgeBase(kb_root)
         self.llm = llm or LLMAdapter()
         self.last_screen_context: ScreenContext | None = None
+        self._turn_cache: dict[tuple[int, str, str], list[ActionMessage]] = {}
 
     @staticmethod
     def _norm(value: str | None) -> str:
@@ -961,28 +962,18 @@ class M2Service:
         return None, None
 
     def _build_llm_prompt(self, transcript: Transcript, screen_context: ScreenContext) -> str:
-        """Construit un prompt structuré en français pur (lignes visuelles + champs appariés) sans IDs techniques."""
+        """Construit un prompt compact avec préfixe d'écran stable (optimisé pour le cache KV d'Ollama et ~300ms de latence)."""
         semantics = self._analyze_screen(screen_context)
         rows = semantics["rows"]
         prompt_lines: list[str] = []
         last_zone: str | None = None
-        for zone, _, row_text in rows[:45]:
+        for zone, _, row_text in rows[:35]:
             if not row_text:
                 continue
             if zone != last_zone:
                 prompt_lines.append("Zone principale:" if zone == "main" else "Panneau latéral:")
                 last_zone = zone
             prompt_lines.append(f"- {row_text}")
-
-        main_pairs = [p for p in semantics["field_pairs"] if p["zone"] == "main"]
-        if main_pairs:
-            prompt_lines.append("Champs & valeurs clés:")
-            for p in main_pairs[:8]:
-                prompt_lines.append(f"  * {p['label']} -> {p['value']}")
-        if semantics["alerts"]:
-            prompt_lines.append("Alertes / Avertissements:")
-            for a in semantics["alerts"][:3]:
-                prompt_lines.append(f"  ! {a['text']}")
 
         page_title = screen_context.page.title if screen_context.page and screen_context.page.title else "Safinum"
         hint = screen_context.screen_hint or "home"
@@ -991,19 +982,10 @@ class M2Service:
             f"Tu es NKAP, copilote bancaire vocal et visuel style HeyClicky. Application: {page_title} (étape: {hint}).\n"
             "Contenu structuré de l'écran:\n"
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
-            + "\n\nRègles strictes:\n"
-            "- TUTOIEMENT OBLIGATOIRE partout (« tu », « ton », « ta », « tes », « vérifie », JAMAIS « vous/votre/vérifiez », et JAMAIS « mon/ma/mes » pour le solde ou les transactions).\n"
-            "- Base-toi UNIQUEMENT sur les valeurs exactes affichées ci-dessus ; n'invente ni alerte, ni frais, ni bouton absent.\n"
-            "- HORS CONTEXTE / INFO MANQUANTE : si la question sort de ce qui est affiché sur l'écran (ex: acheter des actions, doubler son argent, pirater, acheter un bien, crédit absent...) ou manque d'informations pour répondre avec certitude, N'INVENTE RIEN : mets \"out_of_scope\": true, \"spoken\": \"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\", \"targets\": [].\n"
-            "- Lis chaque chiffre sur SA PROPRE LIGNE sans jamais le confondre avec la ligne du dessus ou du dessous.\n"
-            "- Réponds en JSON strict sur UNE seule ligne avec exactement ces clés :\n"
-            '  "spoken" (string, 1 à 2 phrases simples en « tu » avec les valeurs exactes de l\'écran),\n'
-            '  "spoken_after" (string, courte phrase en « tu » propre au geste : où regarder ou sur quel libellé exact appuyer),\n'
-            '  "title" (string, titre court du carnet de 2 à 5 mots),\n'
-            '  "rows" (liste de 2 à 3 éléments : objets {"label":"...","value":"..."} avec les valeurs exactes pour un montant/champ, OU 2 courtes puces "• ..." + "→ ..." pour une alerte/arnaque/conseil),\n'
-            '  "targets" (liste de 1 ou 2 textes EXACTS d\'éléments de l\'écran qui répondent à la question),\n'
-            '  "color" ("ink"|"yellow"|"red"|"green").\n'
-            f"Question: {transcript.text}"
+            + "\n\nConsigne: indique l'élément exact de l'écran (valeur ou libellé de bouton) qui répond à la question, ou 0 si absent ou hors-sujet.\n"
+            "Réponds en 1 à 4 mots maximum (valeur exacte, pas d'explication).\n"
+            f"Question: {transcript.text}\n"
+            "Élément:"
         )
 
     @classmethod
@@ -1557,15 +1539,28 @@ class M2Service:
         spoken_n = self._norm(spoken)
         if grounded_facts and first_role not in {"alert", "security"} and not any(self._norm(val.split(" (")[0]) in spoken_n for _, val in grounded_facts):
             fact_summary = " et ".join(f"{lbl} : {val}" for lbl, val in grounded_facts[:2])
-            if len(spoken) < 40 or "regard" in spoken_n or "verifi" in spoken_n or "cette information" in spoken_n:
+            if not raw_spoken:
+                lbl0, val0 = grounded_facts[0]
+                if "solde" in q_norm or "solde" in lbl0.lower():
+                    candidate_spoken = f"Ton solde disponible est de {val0}."
+                elif "frais" in q_norm or "frais" in lbl0.lower():
+                    candidate_spoken = f"Tes frais de transfert sont de {val0}."
+                elif "total" in q_norm or "total" in lbl0.lower():
+                    candidate_spoken = f"Le montant total débité sera de {val0}."
+                elif any(k in q_norm for k in ("beneficiaire", "nom", "destinataire")):
+                    candidate_spoken = f"Le bénéficiaire est {val0}."
+                else:
+                    candidate_spoken = f"{fact_summary}."
+            elif len(spoken) < 40 or "regard" in spoken_n or "verifi" in spoken_n or "cette information" in spoken_n:
                 candidate_spoken = f"{fact_summary}. {spoken}"
-                spoken = self._safe_text_for_harness(candidate_spoken, screen_context, kb_terms, fallback=spoken)
+            else:
+                candidate_spoken = spoken
+            spoken = self._safe_text_for_harness(candidate_spoken, screen_context, kb_terms, fallback=spoken)
 
         sb.speak("llm_answer", spoken, lang, 0)
 
         # 2. Carnet HeyClicky structuré (`rows` / `notebook_lines` / `points`)
         raw_nb_title = str(llm_payload.get("notebook_title") or llm_payload.get("title") or "").strip()
-        nb_title = self._safe_text_for_harness(raw_nb_title, screen_context, kb_terms, fallback="")
         raw_lines = (
             llm_payload.get("rows")
             if llm_payload.get("rows") is not None
@@ -1573,6 +1568,12 @@ class M2Service:
             if llm_payload.get("notebook_lines") is not None
             else llm_payload.get("points")
         )
+        if not raw_nb_title and grounded_facts and first_role not in {"button"}:
+            raw_nb_title = grounded_facts[0][0]
+            if raw_lines is None:
+                raw_lines = [f"{lbl} : {val}" for lbl, val in grounded_facts[:2]]
+
+        nb_title = self._safe_text_for_harness(raw_nb_title, screen_context, kb_terms, fallback="")
         compiled_lines: list[NotebookLine] = []
         arrow_source_id: str | None = None
         accent_color = default_color if default_color in {"yellow", "red", "green"} else "yellow"
@@ -1974,6 +1975,13 @@ class M2Service:
         sb.clear(clear_at)
         return sb.actions
 
+    @staticmethod
+    def _get_turn_cache_key(transcript: Transcript, screen_context: ScreenContext) -> tuple[int, str, str] | None:
+        if not screen_context.nodes or not transcript.text:
+            return None
+        node_sig = hash(tuple((n.node_id, n.text, n.clickable) for n in screen_context.nodes if n.text))
+        return (node_sig, transcript.lang or "fr", transcript.text.strip().lower())
+
     def candidate_actions(
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
@@ -1981,8 +1989,17 @@ class M2Service:
         if self._is_out_of_scope_question(transcript.text, screen_context):
             return self._build_out_of_scope_actions(transcript, screen_context)
 
+        # 1. Cache mémoire ultra-rapide (<1ms si même écran et même question)
+        cache_key = self._get_turn_cache_key(transcript, screen_context)
+        if cache_key and cache_key in self._turn_cache:
+            return self._turn_cache[cache_key]
+
         prompt = self._build_llm_prompt(transcript, screen_context)
-        llm_payload = self.llm.generate(prompt)
+        llm_payload = self.llm.generate(
+            prompt,
+            options={"temperature": 0.0, "num_predict": 10, "num_thread": 2, "stop": ["\n", ";"]},
+            format_type=None,
+        )
 
         # Compatibilité avec l'ancien format mocké par les tests unitaires existants
         if (
@@ -1990,9 +2007,18 @@ class M2Service:
             and llm_payload.get("intent") == "check_balance"
             and not llm_payload.get("spoken")
         ):
-            return self._compile_legacy_check_balance(llm_payload, transcript, screen_context)
+            actions = self._compile_legacy_check_balance(llm_payload, transcript, screen_context)
+        else:
+            actions = self._compile_llm_plan(
+                llm_payload if isinstance(llm_payload, dict) else {}, transcript, screen_context
+            )
 
-        return self._compile_llm_plan(llm_payload if isinstance(llm_payload, dict) else {}, transcript, screen_context)
+        if cache_key:
+            self._turn_cache[cache_key] = actions
+            if len(self._turn_cache) > 256:
+                self._turn_cache.pop(next(iter(self._turn_cache)))
+
+        return actions
 
     def handle_turn(
         self, transcript: Transcript, screen_context: ScreenContext

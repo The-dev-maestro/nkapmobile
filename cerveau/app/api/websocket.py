@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.core.contracts import (
@@ -120,8 +121,10 @@ async def session_socket(websocket: WebSocket, session_id: str) -> None:
 
                 try:
                     transcript = Transcript.model_validate(payload)
-                    actions = service.handle_turn(
-                        transcript=transcript, screen_context=last_screen
+                    actions = await run_in_threadpool(
+                        service.handle_turn,
+                        transcript=transcript,
+                        screen_context=last_screen,
                     )
 
                     # Émission du flux ActionStream validé (I3)
