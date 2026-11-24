@@ -1147,7 +1147,7 @@ window.NKAP_ASSISTANT = (() => {
 
   const ERROR_ALERTS = [
     {
-      match: (low) => low.includes("solde insuffisant") || low.includes("amount_002"),
+      match: (low) => low.includes("solde insuffisant") || low.includes("insufficient balance") || low.includes("amount_002"),
       voiceId: "err_solde",
       text: "Attention : ton solde est insuffisant pour envoyer cette somme. Aucun franc n'a été retiré : baisse le montant à l'étape 1.",
       targetText: () => "Une erreur est survenue",
@@ -1160,10 +1160,18 @@ window.NKAP_ASSISTANT = (() => {
       ],
     },
     {
-      match: (low) => low.includes("alerte de securite") && !low.includes("une erreur est survenue"),
+      match: (low) =>
+        (low.includes("alerte de securite") || low.includes("security warning") || low.includes("security_00")) &&
+        !low.includes("une erreur est survenue") &&
+        !low.includes("an error occurred"),
       voiceId: "err_sec",
       text: "Attention : la banque affiche une alerte de sécurité. Vérifie bien chaque chiffre du numéro avant de continuer.",
-      targetText: (low) => (low.includes("verifiez") ? "vérifiez le numéro du bénéficiaire" : "Alerte de sécurité"),
+      targetText: (low) =>
+        low.includes("verify")
+          ? "verify the beneficiary phone number"
+          : low.includes("verifiez")
+          ? "vérifiez le numéro du bénéficiaire"
+          : "Alerte de sécurité",
       title: "Alerte de sécurité",
       lines: [
         { id: "nb-es1", text: "• Envoi sensible à vérifier", color: "red" },

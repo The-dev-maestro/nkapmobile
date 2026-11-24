@@ -59,7 +59,12 @@
   function isJuryDrawer(el) {
     if (!el) return false;
     const pane = el.closest("aside, .fixed, [class*='overflow-y']");
-    return !!(pane && /Outil interne Safinum|DÉCLENCHER UNE ERREUR|INJECTER DU CONTENU INÉDIT/i.test(pane.textContent || ""));
+    return !!(
+      pane &&
+      /Outil interne Safinum|DÉCLENCHER UNE ERREUR|INJECTER DU CONTENU INÉDIT|Safinum internal tool|Trigger an error|Inject unseen content/i.test(
+        pane.textContent || ""
+      )
+    );
   }
 
   /** True si l'élément fait partie du bandeau jaune d'environnement de test tout en haut de Safinum. */
@@ -153,7 +158,7 @@
     const translated = entry.ewo || entry.dua;
     if (!translated) return false;
 
-    if (!restoredTextNodes.has(textNode)) {
+    if (!restoredTextNodes.has(textNode) || trimmed.toLowerCase() !== translated.toLowerCase()) {
       restoredTextNodes.set(textNode, raw);
       parent.setAttribute("data-nkap-orig", trimmed);
     }
@@ -204,29 +209,29 @@
 
     let step = "home";
 
-    // Étape 5 : Reçu / Confirmation
+    // Étape 5 : Reçu / Confirmation (FR + EN)
     if (
-      /transfert confirme|transfert effectue|operation a ete enregistree|nouveau transfert|nouveau solde disponible|retour a l'accueil|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe/.test(fullText)
+      /transfert confirme|transfert effectue|operation a ete enregistree|nouveau transfert|nouveau solde disponible|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe/.test(fullText)
     ) {
       step = "receipt";
     }
-    // Étape 4 : Récapitulatif avant confirmation
+    // Étape 4 : Récapitulatif avant confirmation (FR + EN)
     else if (
-      /confirmer le transfert|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|ombwa myango mese|na bamse na myango|bamse loma/.test(fullText) ||
+      /confirmer le transfert|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Confirmer le transfert") || window.NKAP_QUERY("Bamse loma")) && !window.NKAP_QUERY("Nom du bénéficiaire"))
     ) {
       step = "recap";
     }
-    // Étape 3 : Saisie / Vérification du bénéficiaire
+    // Étape 3 : Saisie / Vérification du bénéficiaire (FR + EN)
     else if (
-      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero/.test(fullText) ||
+      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Nom du bénéficiaire") || window.NKAP_QUERY("Dina la mukusa") || window.NKAP_QUERY("Renseignez les informations du destinataire")))
     ) {
       step = "beneficiary";
     }
-    // Étape 2 : Frais de transfert & Montant
+    // Étape 2 : Frais de transfert & Montant (FR + EN)
     else if (
-      /frais de transfert|choisissez le type de transfert|type d'operation|montant a envoyer|mabala ma loma|moni ma loma|botali ba busa|moni ma dia ombusa/.test(fullText) ||
+      /frais de transfert|choisissez le type de transfert|type d'operation|montant a envoyer|transfer fees|choose the transfer type|operation type|amount to send|balance after transfer|mabala ma loma|moni ma loma|botali ba busa|moni ma dia ombusa/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Frais de transfert") || window.NKAP_QUERY("Mabála ma loma") || window.NKAP_QUERY("Montant à envoyer")))
     ) {
       step = "fees";
@@ -239,10 +244,11 @@
     // Détection d'une bannière d'erreur / alerte critique active (hors boutons et panneau jury)
     const hasError = !!findActiveErrorBanner();
 
-    // Détection d'un bloc de contenu inédit injecté (#injected-* ou "Message important")
+    // Détection d'un bloc de contenu inédit injecté (#injected-* ou "Message important" / "Important message")
     const hasUnseen =
       !!document.querySelector('[id^="injected-"]') ||
-      !!window.NKAP_QUERY("Message important");
+      !!window.NKAP_QUERY("Message important") ||
+      !!window.NKAP_QUERY("Important message");
 
     return { step, hasError, hasUnseen };
   }
@@ -270,18 +276,28 @@
   function findActiveErrorBanner() {
     const candidates = [
       "Une erreur est survenue",
+      "An error occurred",
       "Solde insuffisant pour effectuer ce transfert.",
+      "Insufficient balance for this transfer.",
+      "Le montant doit être supérieur à zéro.",
+      "The amount must be greater than zero.",
+      "Veuillez renseigner le nom et le numéro du bénéficiaire.",
+      "Please provide the beneficiary name and phone number.",
+      "Vous devez confirmer les informations avant de valider le transfert.",
+      "You must confirm the details before validating the transfer.",
       "Alerte de sécurité",
+      "Security warning",
       "Erreur réseau :",
+      "Network error:",
       "Le service est temporairement indisponible. Réessayez.",
+      "The service is temporarily unavailable. Please try again.",
     ];
     for (const phrase of candidates) {
       const target = phrase.toLowerCase();
       for (const el of document.querySelectorAll("body *")) {
         if (!isMainTarget(el) || !isTextAtom(el)) continue;
         if (el.closest("button")) continue;
-        const pane = el.closest("aside, .fixed, [class*='overflow-y']");
-        if (pane && /Outil interne Safinum|DÉCLENCHER UNE ERREUR/i.test(pane.textContent || "")) {
+        if (isJuryDrawer(el)) {
           continue;
         }
         const card = el.closest('[class*="border-"]');
@@ -335,7 +351,7 @@
         }
 
         // Détection immédiate de contenu inédit injecté par le jury
-        if ((node.id && node.id.startsWith("injected-")) || /message important/i.test(node.textContent || "")) {
+        if ((node.id && node.id.startsWith("injected-")) || /message important|important message/i.test(node.textContent || "")) {
           const txt = node.textContent.trim();
           if (txt && window.NKAP_ASSISTANT) {
             setTimeout(() => window.NKAP_ASSISTANT.onUnseenContent(txt), 120);
@@ -386,18 +402,38 @@
 
   // ---- 4. Cibles & Contexte I5-web (docs/02 v1.1 §2) -----------------------
 
+  /** Déplie les variantes FR/EN du lexique pour trouver la cible quelle que soit la langue du site. */
+  function expandTargets(rawLabel) {
+    const base = norm(rawLabel);
+    if (!base) return [];
+    const set = new Set([base]);
+    const lex = window.NKAP_LEXICON;
+    if (lex && Array.isArray(lex.entries) && typeof lex.sourceForms === "function") {
+      for (const e of lex.entries) {
+        const forms = lex.sourceForms(e).map(norm);
+        if (forms.includes(base)) {
+          forms.forEach((f) => f && set.add(f));
+        }
+      }
+    }
+    return Array.from(set);
+  }
+
   window.NKAP_QUERY = function (textFragment) {
-    const target = norm(textFragment);
-    if (!target) return null;
+    const targets = expandTargets(textFragment);
+    if (!targets.length) return null;
 
     const candidates = [];
     for (const el of document.querySelectorAll("body *")) {
       if (!isMainTarget(el) || !isTextAtom(el)) continue;
       const currentNorm = norm(el.textContent);
       const origNorm = norm(el.getAttribute("data-nkap-orig") || "");
-      if (currentNorm.includes(target) || origNorm.includes(target)) {
-        const isExact = currentNorm === target || origNorm === target;
-        candidates.push({ el, score: priorityScore(el, isExact) });
+      for (const target of targets) {
+        if (currentNorm.includes(target) || origNorm.includes(target)) {
+          const isExact = currentNorm === target || origNorm === target;
+          candidates.push({ el, score: priorityScore(el, isExact) });
+          break;
+        }
       }
     }
     if (!candidates.length) return null;
@@ -413,15 +449,15 @@
   window.NKAP_QUERY_VALUE_OF = function (labels) {
     const list = Array.isArray(labels) ? labels : [labels];
     for (const rawLabel of list) {
-      const target = norm(rawLabel);
-      if (!target) continue;
+      const targets = expandTargets(rawLabel);
+      if (!targets.length) continue;
 
       for (const el of document.querySelectorAll("body *")) {
         if (!isMainTarget(el)) continue;
         if (el.querySelector("label, dt, dd, p, div, input, select, textarea")) continue;
         const full = norm(origOrCurrentText(el));
         const direct = norm(directText(el));
-        if (full === target || direct === target) {
+        if (targets.some((t) => full === t || direct === t)) {
           // Cas 1 : voisin direct (<dt>Frais</dt><dd>0 FCFA</dd> ou <span>Frais</span><span>0 FCFA</span>)
           if (el.nextElementSibling && isMainTarget(el.nextElementSibling)) {
             const sib = el.nextElementSibling;
@@ -458,13 +494,13 @@
   window.NKAP_QUERY_FIELD_OF = function (labels) {
     const list = Array.isArray(labels) ? labels : [labels];
     for (const rawLabel of list) {
-      const target = norm(rawLabel);
-      if (!target) continue;
+      const targets = expandTargets(rawLabel);
+      if (!targets.length) continue;
 
       for (const el of document.querySelectorAll("label, span, p")) {
         if (!isMainTarget(el) || !isTextAtom(el)) continue;
         const full = norm(origOrCurrentText(el));
-        if (full === target || full.includes(target)) {
+        if (targets.some((t) => full === t || full.includes(t))) {
           const next = el.nextElementSibling;
           if (next && isMainTarget(next)) {
             const tag = next.tagName.toLowerCase();
@@ -589,9 +625,14 @@
           const hit = window.NKAP_LEXICON.entries.find(
             (e) =>
               (e.dua && (e.dua.toLowerCase() === low || norm(e.dua) === nrmTxt)) ||
-              (e.ewo && (e.ewo.toLowerCase() === low || norm(e.ewo) === nrmTxt))
+              (e.ewo && (e.ewo.toLowerCase() === low || norm(e.ewo) === nrmTxt)) ||
+              (typeof window.NKAP_LEXICON.sourceForms === "function" &&
+                window.NKAP_LEXICON.sourceForms(e).some((f) => f.toLowerCase() === low || norm(f) === nrmTxt))
           );
-          return hit && hit.fr ? hit.fr : null;
+          if (!hit) return null;
+          return typeof window.NKAP_LEXICON.canonicalFr === "function"
+            ? window.NKAP_LEXICON.canonicalFr(hit)
+            : hit.fr || null;
         };
         const directFr = findFr(contextText);
         if (directFr) {

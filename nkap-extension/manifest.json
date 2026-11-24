@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "nkapmobile — accessibilité linguistique",
   "version": "0.2.0",
-  "description": "Le prof au tableau : traduit l'interface financière en douala (lexique verrouillé, montants intacts) et annote l'écran à la main.",
+  "description": "Le prof au tableau : traduit l'interface financière en ewondo (lexique verrouillé, montants intacts) et annote l'écran à la main.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "http://localhost/*",
