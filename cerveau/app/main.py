@@ -3,11 +3,13 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
+from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
 from app.api.websocket import router as ws_router, service
 from app.core.contracts import AnswerRequest, AnswerResponse, Transcript
@@ -17,10 +19,22 @@ STATIC_DIR = ROOT_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 (STATIC_DIR / "audio").mkdir(exist_ok=True)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Préchauffe Ollama en mémoire au démarrage pour éviter 30s de chargement à froid."""
+    try:
+        await run_in_threadpool(service.llm.warmup)
+    except Exception:
+        pass
+    yield
+
+
 app = FastAPI(
     title="nkap-m2",
     description="Module M2 Cerveau & Harnais de Sécurité - NKAP Money",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # CORS pour autoriser l'accès depuis l'extension Chrome et tout client web
@@ -74,7 +88,9 @@ async def answer(req: AnswerRequest):
         is_final=True,
     )
     try:
-        actions = service.handle_turn(transcript=transcript, screen_context=req.context)
+        actions = await run_in_threadpool(
+            service.handle_turn, transcript=transcript, screen_context=req.context
+        )
     except ValueError as exc:
         return JSONResponse(
             status_code=422,

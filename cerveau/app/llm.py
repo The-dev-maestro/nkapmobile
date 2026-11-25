@@ -80,6 +80,14 @@ class LLMAdapter:
                     return json.loads(candidate)
                 except json.JSONDecodeError:
                     pass
+
+            # Extension tolérante pour micro-réponses (chiffre seul, target text)
+            clean = text.strip().strip('"\'')
+            if clean in {"0", "aucun", "absent", "rien", "non"}:
+                return {"out_of_scope": True, "targets": []}
+            if clean:
+                return {"targets": [clean], "raw_text": clean}
+
             raise ValueError(f"Impossible de parser la réponse JSON du LLM: {text[:200]}")
 
     def _query_local_openai(self, prompt: str) -> dict[str, Any]:
@@ -98,23 +106,37 @@ class LLMAdapter:
         raw_text = data["choices"][0]["message"]["content"]
         return self.parse_model_json(raw_text)
 
-    def _query_ollama(self, prompt: str) -> dict[str, Any]:
+    def _query_ollama(
+        self,
+        prompt: str,
+        options: dict[str, Any] | None = None,
+        format_type: str | dict | None = "json",
+        keep_alive: int | str = -1,
+    ) -> dict[str, Any]:
         """Interroge un modèle open-weight servi par Ollama (local ou VPS auto-hébergé)."""
         url = f"{self.ollama_host}/api/generate"
         headers = {}
         if self.ollama_bearer_token:
             headers["Authorization"] = f"Bearer {self.ollama_bearer_token}"
-        payload = {
+
+        opts: dict[str, Any] = {
+            "temperature": 0.0,
+            "num_predict": 12,
+            "num_thread": 2,
+        }
+        if options:
+            opts.update(options)
+
+        payload: dict[str, Any] = {
             "model": self.ollama_model,
             "prompt": prompt,
             "stream": False,
-            "format": "json",
-            "keep_alive": "30m",
-            "options": {
-                "temperature": 0.1,
-                "num_predict": 320,
-            },
+            "keep_alive": keep_alive if isinstance(keep_alive, int) else (int(keep_alive) if keep_alive.lstrip("-").isdigit() else keep_alive),
+            "options": opts,
         }
+        if format_type:
+            payload["format"] = format_type
+
         is_local = any(h in self.ollama_host for h in ("localhost", "127.0.0.1"))
         connect_timeout = 2.0 if is_local else 4.0
         response = requests.post(
@@ -136,7 +158,26 @@ class LLMAdapter:
         raw_text = data.get("response", "") if isinstance(data, dict) else ""
         return self.parse_model_json(raw_text)
 
-    def generate(self, prompt: str) -> dict[str, Any]:
+    def warmup(self) -> None:
+        """Préchauffe le modèle local en mémoire pour éliminer la latence à froid (cold start)."""
+        try:
+            self._query_ollama(
+                "warmup",
+                options={"num_predict": 1},
+                format_type=None,
+                keep_alive=-1,
+            )
+            logger.info("Modèle %s préchauffé avec succès dans Ollama.", self.ollama_model)
+        except Exception as exc:
+            logger.info("Préchauffage Ollama ignoré/échoué: %s", exc)
+
+    def generate(
+        self,
+        prompt: str,
+        options: dict[str, Any] | None = None,
+        format_type: str | dict | None = "json",
+        keep_alive: int | str = -1,
+    ) -> dict[str, Any]:
         self.last_error = None
         self.last_engine = None
         now = time.monotonic()
@@ -158,7 +199,9 @@ class LLMAdapter:
         # 2. Ollama local open-weight (aucun blocage après timeout ; court cooldown 5s seulement si connexion impossible)
         if now >= self._ollama_retry_after:
             try:
-                result = self._query_ollama(prompt)
+                result = self._query_ollama(
+                    prompt, options=options, format_type=format_type, keep_alive=keep_alive
+                )
                 self.last_engine = "ollama"
                 self._ollama_retry_after = 0.0
                 return result
@@ -181,6 +224,10 @@ class LLMAdapter:
         else:
             prev_err = f"{self.last_error} | " if self.last_error else ""
             self.last_error = f"{prev_err}Ollama local indisponible (cooldown)"
+
+        # 3. Repli heuristique local (100% hors-ligne, zéro API cloud, zéro plantage)
+        self.last_engine = "heuristic"
+        return self._fallback_response(prompt)
 
         # 3. Repli heuristique local (100% hors-ligne, zéro API cloud, zéro plantage)
         self.last_engine = "heuristic"
