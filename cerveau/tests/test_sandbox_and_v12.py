@@ -363,7 +363,7 @@ def test_http_answer_explains_financial_concepts_and_distinguishes_balances(monk
         assert nb["title"] != "Hors contexte"
     assert len(llm_calls) == 0
 
-    # 2. Concept financier non listé dans le glossaire ("c'est quoi l'inflation ?") -> passe au LLM conceptuel (jamais bloqué Hors contexte)
+    # 2. Concept financier non listé dans le glossaire ("c'est quoi une caution bancaire ?") -> passe au LLM conceptuel (jamais bloqué Hors contexte)
     class _FakeConceptResp:
         def raise_for_status(self) -> None:
             return None
@@ -372,9 +372,9 @@ def test_http_answer_explains_financial_concepts_and_distinguishes_balances(monk
             return {
                 "response": json.dumps(
                     {
-                        "spoken": "L'inflation est la hausse générale des prix qui réduit ce que tu peux acheter avec la même somme.",
-                        "title": "C'est quoi l'inflation ?",
-                        "rows": ["• Les prix augmentent avec le temps", "→ Protège ton budget et ton épargne"],
+                        "spoken": "Une caution bancaire est un engagement par lequel la banque garantit un paiement si tu ne peux pas payer.",
+                        "title": "La caution bancaire",
+                        "rows": ["• Garantie donnée par la banque", "→ Vérifie les frais avant de signer"],
                         "targets": [],
                     },
                     ensure_ascii=False,
@@ -390,14 +390,14 @@ def test_http_answer_explains_financial_concepts_and_distinguishes_balances(monk
     monkeypatch.setattr("app.llm.requests.post", fake_concept_llm)
     resp_inf = client.post(
         "/answer",
-        json={"transcript": "C'est quoi l'inflation ?", "lang_hint": "fr", "context": ussd_empty_ctx},
+        json={"transcript": "C'est quoi une caution bancaire ?", "lang_hint": "fr", "context": ussd_empty_ctx},
     )
     assert resp_inf.status_code == 200
     assert len(concept_llm_calls) == 1
     body_inf = resp_inf.json()
     assert body_inf["meta"]["intent"] == "TERM_EXPLANATION"
     spoken_inf = " ".join(a["action"].get("text", "") for a in body_inf["actions"] if a["action"]["t"] == "speak").lower()
-    assert "inflation" in spoken_inf and "incapable" not in spoken_inf
+    assert "caution" in spoken_inf and "incapable" not in spoken_inf
 
     # 3. Distinction stricte "Solde disponible" (120 000 FCFA) vs "Solde après opération" (94 850 FCFA)
     # Même si le petit LLM 1.5B confond et cite 94 850 FCFA, le garde sémantique corrige vers 120 000 FCFA !

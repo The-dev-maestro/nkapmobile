@@ -499,6 +499,54 @@ FINANCIAL_CONCEPTS: list[dict[str, Any]] = [
         "tip": "→ Ne clique pas sur un lien suspect et garde ton code secret",
         "screen_keywords": ("securite", "alerte"),
     },
+    {
+        "key": "inflation",
+        "triggers": ("inflation", "hausse des prix"),
+        "title": "C'est quoi l'inflation ?",
+        "spoken": (
+            "L'inflation est la hausse générale et durable des prix dans un pays. "
+            "Avec la même somme d'argent, tu achètes un peu moins de choses qu'avant."
+        ),
+        "bullets": [
+            "• Les prix des produits augmentent avec le temps",
+            "• Le pouvoir d'achat de ton argent diminue peu à peu",
+            "• Épargner et comparer les frais aide à protéger ton budget",
+        ],
+        "tip": "→ Suis ton budget et évite les frais inutiles",
+        "screen_keywords": (),
+    },
+    {
+        "key": "decouvert",
+        "triggers": ("decouvert", "agio", "agios"),
+        "title": "C'est quoi un découvert / agio ?",
+        "spoken": (
+            "Un découvert arrive quand ton compte passe sous zéro avec l'accord de la banque. "
+            "Les agios sont les frais et intérêts que la banque te facture tant que ton solde reste négatif."
+        ),
+        "bullets": [
+            "• Découvert : avance temporaire quand tu n'as plus assez sur ton compte",
+            "• Agios : frais calculés chaque jour où le compte reste en négatif",
+            "• Doit être remboursé rapidement pour limiter le coût",
+        ],
+        "tip": "→ Vérifie ton solde disponible avant chaque dépense",
+        "screen_keywords": ("solde",),
+    },
+    {
+        "key": "carte_bancaire",
+        "triggers": ("carte bancaire", "carte visa", "mastercard", "carte de debit", "carte prepayee"),
+        "title": "C'est quoi une carte bancaire ?",
+        "spoken": (
+            "Une carte bancaire est reliée à ton compte ou rechargée d'avance. "
+            "Elle te sert à payer dans les commerces, en ligne ou à retirer des billets au guichet automatique."
+        ),
+        "bullets": [
+            "• Carte de débit : prélève directement sur ton solde disponible",
+            "• Carte prépayée : tu dépenses seulement ce que tu as chargé dessus",
+            "• Protégée par ton code PIN et les chiffres au dos",
+        ],
+        "tip": "→ Ne partage jamais le code PIN ni les chiffres au dos de ta carte",
+        "screen_keywords": ("compte",),
+    },
 ]
 
 FINANCIAL_DOMAIN_VOCAB = {
@@ -1785,15 +1833,14 @@ class M2Service:
         return sb.actions
 
     def _build_concept_llm_prompt(self, transcript: Transcript) -> str:
-        """Prompt minimaliste pour expliquer tout autre concept financier non présent dans le glossaire rapide."""
+        """Prompt 1-shot concret pour expliquer tout autre concept financier sans recopie de gabarit sur 1.5B."""
         return (
-            "Tu es NKAP, éducateur en inclusion financière au Cameroun.\n"
-            "Explique simplement ce concept bancaire ou financier avec tutoiement (« tu/ton/ta »), "
-            "SANS inventer aucun chiffre, pourcentage ni montant.\n"
-            "Réponds en JSON compact sur 1 ligne: "
-            "{\"spoken\":\"2 phrases simples en tu sans chiffres\",\"title\":\"C'est quoi ... ?\","
-            "\"rows\":[\"• point clé 1\",\"• point clé 2\",\"→ conseil pratique\"],\"targets\":[]}.\n"
-            f"Question: {transcript.text}"
+            "Tu es NKAP, éducateur financier bienveillant (tutoiement, sans chiffres ni montants).\n"
+            "Exemple :\n"
+            "Question: C'est quoi un chèque ?\n"
+            "JSON: {\"spoken\":\"Un chèque est un papier signé qui autorise ta banque à verser une somme de ton compte à la personne indiquée.\",\"title\":\"Le chèque\",\"rows\":[\"• Moyen de paiement écrit et signé\",\"• Débité quand le bénéficiaire l'encaisse\",\"→ Vérifie ton solde avant d'écrire un chèque\"]}\n"
+            f"Question: {transcript.text}\n"
+            "JSON:"
         )
 
     @classmethod
@@ -2160,17 +2207,23 @@ class M2Service:
             if p["value_id"] in highlight_ids or p["label_id"] in highlight_ids:
                 grounded_facts.append((p["label"], p["value"]))
 
-        # Si `spoken` est trop générique alors qu'on a des faits précis, enrichit ou ancre le texte vocal
+        # Si `spoken` est vide, trop générique, ou juste un chiffre brut sans phrase (ex: "120 000 FCFA"), formule une phrase naturelle
         spoken_n = self._norm(spoken)
-        if grounded_facts and first_role not in {"alert", "security"} and not any(self._norm(val.split(" (")[0]) in spoken_n for _, val in grounded_facts):
+        is_bare_value = bool(grounded_facts) and len(spoken_n) <= len(self._norm(grounded_facts[0][1])) + 6
+        if grounded_facts and first_role not in {"alert", "security"} and (
+            is_bare_value or not any(self._norm(val.split(" (")[0]) in spoken_n for _, val in grounded_facts)
+        ):
             fact_summary = " et ".join(f"{lbl} : {val}" for lbl, val in grounded_facts[:2])
-            if not raw_spoken:
+            if not raw_spoken or is_bare_value:
                 lbl0, val0 = grounded_facts[0]
-                if "solde" in q_norm or "solde" in lbl0.lower():
+                lbl0_n = self._norm(lbl0)
+                if "solde" in lbl0_n and "apres" in lbl0_n:
+                    candidate_spoken = f"Ton solde après opération sera de {val0}."
+                elif "solde" in q_norm or "solde" in lbl0_n:
                     candidate_spoken = f"Ton solde disponible est de {val0}."
-                elif "frais" in q_norm or "frais" in lbl0.lower():
+                elif "frais" in q_norm or "frais" in lbl0_n:
                     candidate_spoken = f"Tes frais de transfert sont de {val0}."
-                elif "total" in q_norm or "total" in lbl0.lower():
+                elif "total" in q_norm or "total" in lbl0_n:
                     candidate_spoken = f"Le montant total débité sera de {val0}."
                 elif any(k in q_norm for k in ("beneficiaire", "nom", "destinataire")):
                     candidate_spoken = f"Le bénéficiaire est {val0}."
