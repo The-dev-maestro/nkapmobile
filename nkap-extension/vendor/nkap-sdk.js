@@ -771,7 +771,7 @@
       if (!root) return { type: "screen_context", channel, screen_hint: "unknown", nodes: [] };
       const rules = NS.rules;
       const nodes = [];
-      const all = root.querySelectorAll("h1,h2,h3,h4,p,button,a,label,dt,dd,th,td,li,span,div");
+      const all = root.querySelectorAll("h1,h2,h3,h4,p,button,a,label,dt,dd,th,td,li,span,strong,b,em,small,code,div");
       for (const el of all) {
         if (nodes.length >= 200) break;
         if (!isLeafText(el)) continue;
@@ -822,7 +822,14 @@
 
       if (target.node_id) {
         const byId = document.querySelector(`[data-nkap-id="${CSS.escape(target.node_id)}"]`);
-        if (byId && isVisible(byId)) return byId;
+        if (byId) {
+          if (isVisible(byId)) return byId;
+          // Autorise l'ancrage d'une flèche depuis une ligne de notre ardoise (#nkap-notebook)
+          if (byId.closest("#nkap-notebook")) {
+            const nr = byId.getBoundingClientRect();
+            if (nr.width > 2 && nr.height > 2) return byId;
+          }
+        }
       }
 
       const query = target.match_text || target.text;
@@ -837,7 +844,7 @@
       const qn = norm(query);
       const root = getRoot();
       if (!root) return null;
-      const candidates = root.querySelectorAll("button,a,h1,h2,h3,p,dt,dd,th,td,li,label,span,div");
+      const candidates = root.querySelectorAll("button,a,h1,h2,h3,p,dt,dd,th,td,li,label,span,strong,b,em,small,code,div");
       let best = null;
       let bestScore = Infinity;
 

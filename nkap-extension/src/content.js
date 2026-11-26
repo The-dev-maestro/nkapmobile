@@ -11,6 +11,12 @@
  */
 
 (function () {
+  if (
+    document.documentElement?.hasAttribute("data-nkap-standalone") ||
+    document.querySelector('meta[name="nkap-standalone"]')
+  ) {
+    return;
+  }
   if (window.__NKAP_CONTENT__) return;
   window.__NKAP_CONTENT__ = true;
 

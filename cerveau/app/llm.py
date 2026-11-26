@@ -120,8 +120,9 @@ class LLMAdapter:
             headers["Authorization"] = f"Bearer {self.ollama_bearer_token}"
 
         opts: dict[str, Any] = {
-            "temperature": 0.1,
-            "num_predict": 160,
+            "temperature": 0.05,
+            "num_predict": 85,
+            "num_ctx": 1024,
         }
         if options:
             opts.update(options)

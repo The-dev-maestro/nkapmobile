@@ -323,3 +323,140 @@ def test_v12_visual_actions_and_amount_guard():
     ]
     with pytest.raises(ValueError, match="Choix non autorisé"):
         validate_action_stream(bad_choice, scene)
+
+
+def test_http_answer_explains_financial_concepts_and_distinguishes_balances(monkeypatch):
+    # 1. "c'est quoi une micro finance" sur écran USSD quasi vide -> explication pédagogique immédiate (0 appel LLM, PAS Hors contexte)
+    llm_calls = []
+
+    def fail_if_called(*args, **kwargs):
+        llm_calls.append(kwargs)
+        raise AssertionError("Le glossaire pédagogique instantané ne doit pas appeler Ollama")
+
+    monkeypatch.setattr("app.llm.requests.post", fail_if_called)
+
+    ussd_empty_ctx = {
+        "type": "screen_context",
+        "channel": "ussd",
+        "page": {"url": "https://safinum.cm/sandbox/ussd", "title": "Simulateur USSD"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "n_01", "tag": "div", "text": "Composez *123#", "clickable": False, "bounds": [300, 200, 500, 230], "tone": "dark"},
+        ],
+    }
+    for concept_q, expected_word in (
+        ("c'est quoi une micro finance", "microfinance"),
+        ("Explique moi c'est quoi un plafond ?", "plafond"),
+        ("Que veut dire bénéficiaire ?", "bénéficiaire"),
+        ("C'est quoi le mobile money ?", "porte-monnaie"),
+        ("C'est quoi l'USSD ?", "internet"),
+        ("C'est quoi un taux d'intérêt ?", "pourcentage"),
+    ):
+        resp = client.post("/answer", json={"transcript": concept_q, "lang_hint": "fr", "context": ussd_empty_ctx})
+        assert resp.status_code == 200, f"Échec sur {concept_q}: {resp.text}"
+        body = resp.json()
+        assert body["meta"]["intent"] == "TERM_EXPLANATION"
+        spoken = " ".join(a["action"].get("text", "") for a in body["actions"] if a["action"]["t"] == "speak").lower()
+        assert "incapable" not in spoken and "hors contexte" not in spoken
+        assert expected_word in spoken
+        nb = next(a["action"] for a in body["actions"] if a["action"]["t"] == "notebook")
+        assert nb["title"] != "Hors contexte"
+    assert len(llm_calls) == 0
+
+    # 2. Concept financier non listé dans le glossaire ("c'est quoi l'inflation ?") -> passe au LLM conceptuel (jamais bloqué Hors contexte)
+    class _FakeConceptResp:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "response": json.dumps(
+                    {
+                        "spoken": "L'inflation est la hausse générale des prix qui réduit ce que tu peux acheter avec la même somme.",
+                        "title": "C'est quoi l'inflation ?",
+                        "rows": ["• Les prix augmentent avec le temps", "→ Protège ton budget et ton épargne"],
+                        "targets": [],
+                    },
+                    ensure_ascii=False,
+                )
+            }
+
+    concept_llm_calls = []
+
+    def fake_concept_llm(url, json=None, timeout=None, **kwargs):
+        concept_llm_calls.append(json)
+        return _FakeConceptResp()
+
+    monkeypatch.setattr("app.llm.requests.post", fake_concept_llm)
+    resp_inf = client.post(
+        "/answer",
+        json={"transcript": "C'est quoi l'inflation ?", "lang_hint": "fr", "context": ussd_empty_ctx},
+    )
+    assert resp_inf.status_code == 200
+    assert len(concept_llm_calls) == 1
+    body_inf = resp_inf.json()
+    assert body_inf["meta"]["intent"] == "TERM_EXPLANATION"
+    spoken_inf = " ".join(a["action"].get("text", "") for a in body_inf["actions"] if a["action"]["t"] == "speak").lower()
+    assert "inflation" in spoken_inf and "incapable" not in spoken_inf
+
+    # 3. Distinction stricte "Solde disponible" (120 000 FCFA) vs "Solde après opération" (94 850 FCFA)
+    # Même si le petit LLM 1.5B confond et cite 94 850 FCFA, le garde sémantique corrige vers 120 000 FCFA !
+    class _FakeConfusedBalanceResp:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "response": json.dumps(
+                    {
+                        "spoken": "Ton solde après l'opération est de 94 850 FCFA.",
+                        "title": "Solde",
+                        "targets": ["94 850 FCFA"],
+                    },
+                    ensure_ascii=False,
+                )
+            }
+
+    monkeypatch.setattr("app.llm.requests.post", lambda *a, **kw: _FakeConfusedBalanceResp())
+    dual_bal_ctx = {
+        "type": "screen_context",
+        "channel": "web",
+        "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Web Banking"},
+        "screen_hint": "review",
+        "nodes": [
+            {"node_id": "n_hdr", "tag": "div", "text": "SAFINUM WEB BANKING · COMPTE 690 00 00 01", "clickable": False, "bounds": [360, 110, 680, 126], "tone": "light"},
+            {"node_id": "n_bal_lbl", "tag": "div", "text": "Solde disponible", "clickable": False, "bounds": [360, 130, 490, 146], "tone": "light"},
+            {"node_id": "n_balance", "tag": "div", "text": "120 000 FCFA", "clickable": False, "bounds": [360, 150, 560, 186], "tone": "light"},
+            {"node_id": "n_amt_lbl", "tag": "span", "text": "Montant à envoyer", "clickable": False, "bounds": [360, 260, 500, 280], "tone": "light"},
+            {"node_id": "n_amount", "tag": "strong", "text": "25 000 FCFA", "clickable": False, "bounds": [780, 260, 920, 280], "tone": "light"},
+            {"node_id": "n_after_lbl", "tag": "span", "text": "Solde après opération", "clickable": False, "bounds": [360, 340, 520, 360], "tone": "light"},
+            {"node_id": "n_after", "tag": "strong", "text": "94 850 FCFA", "clickable": False, "bounds": [780, 340, 920, 360], "tone": "light"},
+        ],
+    }
+    resp_bal = client.post(
+        "/answer",
+        json={"transcript": "Quel est mon solde ?", "lang_hint": "fr", "context": dual_bal_ctx},
+    )
+    assert resp_bal.status_code == 200
+    acts_bal = resp_bal.json()["actions"]
+    spoken_bal = " ".join(a["action"].get("text", "") for a in acts_bal if a["action"]["t"] == "speak")
+    assert "120 000 FCFA" in spoken_bal
+    # Cible uniquement n_balance (PAS n_after!)
+    visual_targets = [
+        a["action"]["target"]["node_id"]
+        for a in acts_bal
+        if a["action"]["t"] in {"circle", "box", "frame", "underline", "callout"} and a["action"].get("target")
+    ]
+    assert visual_targets == ["n_balance"]
+
+    # 4. USSD /sandbox reconnait aussi "c'est quoi une microfinance"
+    SESSIONS.clear()
+    bank = _mock_bank()
+    r_mf = handle_channel_turn(
+        {"session_id": "s_mf", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "c'est quoi une microfinance ?"}},
+        trace_id="t_mf",
+        bank_client=bank,
+    )
+    assert r_mf["interpretation"]["intent"] == "TERM_EXPLANATION"
+    assert "Microfinance" in r_mf["response"]["text"]
+    assert is_gsm7(r_mf["response"]["text"]) and gsm7_length(r_mf["response"]["text"]) <= 182

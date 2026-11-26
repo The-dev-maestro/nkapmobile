@@ -209,6 +209,310 @@ ALLOWED_HIGHLIGHT_STYLES = {
 }
 ALLOWED_COLORS = {"ink", "yellow", "red", "green"}
 
+# Glossaire pédagogique d'inclusion financière (zéro chiffre inventé -> 100 % conforme AmountGuard sur tout écran)
+FINANCIAL_CONCEPTS: list[dict[str, Any]] = [
+    {
+        "key": "microfinance",
+        "triggers": ("microfinance", "micro finance", "micro-finance", "emf", "etablissement de microfinance"),
+        "title": "C'est quoi une microfinance ?",
+        "spoken": (
+            "Une microfinance est un établissement financier de proximité qui aide les particuliers, "
+            "les familles et les petits commerçants à épargner, envoyer de l'argent et obtenir de petits prêts."
+        ),
+        "bullets": [
+            "• Banque de proximité accessible avec peu de moyens",
+            "• Propose épargne, transferts et microcrédits",
+            "• Utile quand une banque classique est trop loin ou coûteuse",
+        ],
+        "tip": "→ Vérifie toujours que l'établissement est agréé",
+        "screen_keywords": ("microfinance", "banque", "compte"),
+    },
+    {
+        "key": "plafond",
+        "triggers": ("plafond", "limite de transfert", "limite journaliere", "limite quotidienne"),
+        "title": "C'est quoi un plafond ?",
+        "spoken": (
+            "Le plafond est le montant maximum que tu peux envoyer ou retirer sur une journée "
+            "ou sur une seule opération. Il protège ton compte en cas de vol ou d'erreur."
+        ),
+        "bullets": [
+            "• Montant maximum autorisé par jour ou par opération",
+            "• Bloque les gros retraits non voulus pour ta sécurité",
+            "• Si ton envoi dépasse le plafond, réduis le montant",
+        ],
+        "tip": "→ Au-delà du plafond, l'opération est refusée",
+        "screen_keywords": ("plafond", "limite"),
+    },
+    {
+        "key": "frais",
+        "triggers": ("frais", "commission", "mbug", "mabala", "tarif de transfert"),
+        "title": "C'est quoi les frais ?",
+        "spoken": (
+            "Les frais sont la petite somme prélevée par la banque ou l'opérateur pour exécuter ton transfert "
+            "ou ton retrait. Ils s'ajoutent au montant envoyé pour former le total débité."
+        ),
+        "bullets": [
+            "• Somme prise pour le service de transfert ou retrait",
+            "• Calculés selon le montant et le type d'opération",
+            "• Total débité = montant envoyé + frais",
+        ],
+        "tip": "→ Vérifie toujours les frais avant de confirmer",
+        "screen_keywords": ("frais", "mbug", "mabala"),
+    },
+    {
+        "key": "solde",
+        "triggers": ("un solde", "le solde", "mot solde", "veut dire solde", "signifie solde", "solde disponible", "solde apres"),
+        "title": "C'est quoi le solde ?",
+        "spoken": (
+            "Le solde disponible est l'argent réellement présent sur ton compte avant une opération. "
+            "Le solde après opération montre ce qui te restera une fois le transfert et les frais déduits."
+        ),
+        "bullets": [
+            "• Solde disponible : argent que tu as maintenant",
+            "• Solde après opération : reste après envoi et frais",
+            "• Ne confonds pas les deux avant de valider",
+        ],
+        "tip": "→ Regarde le solde disponible pour savoir ce que tu peux envoyer",
+        "screen_keywords": ("solde disponible", "solde"),
+    },
+    {
+        "key": "beneficiaire",
+        "triggers": ("beneficiaire", "destinataire", "mukusa", "nyi a non"),
+        "title": "C'est quoi un bénéficiaire ?",
+        "spoken": (
+            "Le bénéficiaire est la personne ou le commerce qui va recevoir l'argent que tu envoies. "
+            "Il faut toujours vérifier son nom exact et chaque chiffre de son numéro avant de confirmer."
+        ),
+        "bullets": [
+            "• La personne qui reçoit ton transfert d'argent",
+            "• Identifiée par son nom et son numéro de téléphone ou compte",
+            "• Un seul chiffre erroné envoie l'argent à quelqu'un d'autre",
+        ],
+        "tip": "→ Vérifie toujours le nom et le numéro avant de valider",
+        "screen_keywords": ("beneficiaire", "destinataire"),
+    },
+    {
+        "key": "mobile_money",
+        "triggers": ("mobile money", "orange money", "momo", "mtn money", "porte-monnaie mobile", "portefeuille mobile", "wallet"),
+        "title": "C'est quoi le Mobile Money ?",
+        "spoken": (
+            "Le Mobile Money est un porte-monnaie électronique lié à ton numéro de téléphone. "
+            "Il te permet d'envoyer de l'argent, payer des factures et retirer du liquide sans aller en agence."
+        ),
+        "bullets": [
+            "• Compte d'argent relié directement à ta carte SIM",
+            "• Sert à envoyer, recevoir, payer et retirer en agence",
+            "• Protégé par ton code secret personnel",
+        ],
+        "tip": "→ Ne partage jamais ton code secret Mobile Money",
+        "screen_keywords": ("mobile money", "telephone"),
+    },
+    {
+        "key": "ussd",
+        "triggers": ("ussd", "code court", "menu ussd"),
+        "title": "C'est quoi l'USSD ?",
+        "spoken": (
+            "L'USSD est un menu interactif que tu ouvres en composant un code court sur ton téléphone, "
+            "même sans connexion internet et même sur un téléphone simple à touches."
+        ),
+        "bullets": [
+            "• Fonctionne sur tout téléphone, même sans internet",
+            "• Affiche des menus numérotés où tu réponds par un choix",
+            "• Chaque session se ferme automatiquement après inactivité",
+        ],
+        "tip": "→ Réponds simplement avec le chiffre du choix voulu",
+        "screen_keywords": ("ussd", "composez"),
+    },
+    {
+        "key": "gab_atm",
+        "triggers": ("gab", "atm", "guichet automatique", "distributeur automatique", "distributeur de billets"),
+        "title": "C'est quoi un GAB / ATM ?",
+        "spoken": (
+            "Un GAB, ou guichet automatique bancaire, est une machine où tu peux retirer des billets, "
+            "consulter ton solde ou faire certaines opérations avec ta carte bancaire et ton code PIN."
+        ),
+        "bullets": [
+            "• Machine pour retirer des billets en libre-service",
+            "• Fonctionne avec ta carte bancaire et ton code secret",
+            "• Donne des billets par coupures disponibles dans la machine",
+        ],
+        "tip": "→ Cache toujours le clavier quand tu tapes ton code",
+        "screen_keywords": ("gab", "guichet", "retrait"),
+    },
+    {
+        "key": "virement_transfert",
+        "triggers": ("virement", "transfert d'argent", "transfert bancaire", "un transfert"),
+        "title": "C'est quoi un transfert / virement ?",
+        "spoken": (
+            "Un transfert ou virement consiste à envoyer de l'argent directement de ton compte vers le compte "
+            "ou le numéro d'un bénéficiaire, sans manipuler d'espèces."
+        ),
+        "bullets": [
+            "• Déplace de l'argent d'un compte vers un autre compte",
+            "• Indique toujours le bénéficiaire, le montant et les frais",
+            "• Une fois confirmé, l'opération est difficile à annuler",
+        ],
+        "tip": "→ Relis toujours le récapitulatif avant de confirmer",
+        "screen_keywords": ("transfert", "montant"),
+    },
+    {
+        "key": "epargne",
+        "triggers": ("epargne", "compte epargne", "epargner"),
+        "title": "C'est quoi l'épargne ?",
+        "spoken": (
+            "L'épargne est la partie de ton argent que tu mets de côté sur un compte pour tes projets futurs "
+            "ou en cas d'imprévu, au lieu de la dépenser tout de suite."
+        ),
+        "bullets": [
+            "• Argent mis de côté en sécurité pour plus tard",
+            "• Protège contre les urgences (santé, scolarité, imprévus)",
+            "• Un compte épargne peut rapporter de petits intérêts",
+        ],
+        "tip": "→ Mets un peu de côté régulièrement, même un petit montant",
+        "screen_keywords": ("epargne", "solde"),
+    },
+    {
+        "key": "credit_pret",
+        "triggers": ("microcredit", "micro-credit", "credit", "pret bancaire", "un pret", "emprunt"),
+        "title": "C'est quoi un crédit / prêt ?",
+        "spoken": (
+            "Un crédit ou prêt est une somme d'argent qu'une banque ou une microfinance te prête aujourd'hui "
+            "et que tu t'engages à rembourser progressivement, le plus souvent avec des intérêts."
+        ),
+        "bullets": [
+            "• Somme prêtée pour financer un projet ou un besoin",
+            "• Se rembourse par mensualités selon un calendrier fixé",
+            "• Inclut souvent des intérêts et parfois des frais de dossier",
+        ],
+        "tip": "→ Vérifie toujours combien tu devras rembourser au total",
+        "screen_keywords": ("credit", "pret"),
+    },
+    {
+        "key": "taux_interet",
+        "triggers": ("taux d'interet", "taux d interet", "taux interet", "des interets", "un interet"),
+        "title": "C'est quoi le taux d'intérêt ?",
+        "spoken": (
+            "Le taux d'intérêt est le pourcentage qui calcule soit le coût d'un prêt que tu rembourses, "
+            "soit le gain que te rapporte ton argent placé sur un compte d'épargne."
+        ),
+        "bullets": [
+            "• Sur un prêt : c'est le prix de l'argent emprunté",
+            "• Sur une épargne : c'est la récompense versée sur ton argent",
+            "• Plus le taux est élevé sur un crédit, plus le remboursement coûte cher",
+        ],
+        "tip": "→ Demande toujours le coût total avant de signer un prêt",
+        "screen_keywords": ("interet", "taux"),
+    },
+    {
+        "key": "code_pin",
+        "triggers": ("code pin", "code secret", "mot de passe bancaire", "pin bancaire"),
+        "title": "C'est quoi le code PIN ?",
+        "spoken": (
+            "Le code PIN est ton code secret personnel qui valide tes paiements, retraits et transferts. "
+            "Personne — ni un agent ni la banque — ne doit jamais te le demander."
+        ),
+        "bullets": [
+            "• Clé personnelle qui autorise tes opérations bancaires",
+            "• Ne le dicte jamais au téléphone ni par SMS",
+            "• Évite une date de naissance ou une suite trop simple",
+        ],
+        "tip": "→ Ton code PIN reste strictement secret, toujours",
+        "screen_keywords": ("code secret", "securite"),
+    },
+    {
+        "key": "tontine",
+        "triggers": ("tontine", "njangi"),
+        "title": "C'est quoi une tontine ?",
+        "spoken": (
+            "Une tontine est une épargne collective où plusieurs membres cotisent régulièrement ensemble, "
+            "puis chacun reçoit la cagnotte à tour de rôle pour financer un projet."
+        ),
+        "bullets": [
+            "• Cotisation régulière entre membres qui se font confiance",
+            "• Chaque participant reçoit le pot commun à son tour",
+            "• Peut être complétée par un compte bancaire ou microfinance",
+        ],
+        "tip": "→ Garde toujours une trace écrite de chaque cotisation",
+        "screen_keywords": ("tontine",),
+    },
+    {
+        "key": "banque",
+        "triggers": ("une banque", "compte bancaire", "compte courant", "banque en ligne"),
+        "title": "C'est quoi une banque / un compte ?",
+        "spoken": (
+            "Une banque garde ton argent en sécurité sur un compte à ton nom et te permet de payer, "
+            "recevoir ton salaire, faire des transferts ou épargner."
+        ),
+        "bullets": [
+            "• Compte courant : pour tes dépenses et transferts de tous les jours",
+            "• Banque en ligne : accès à ton compte depuis ton téléphone ou ordinateur",
+            "• Chaque opération laisse un reçu et un historique clair",
+        ],
+        "tip": "→ Consulte souvent ton historique pour suivre ton argent",
+        "screen_keywords": ("banque", "compte"),
+    },
+    {
+        "key": "rib_iban",
+        "triggers": ("rib", "iban", "releve d'identite bancaire", "numero de compte"),
+        "title": "C'est quoi un RIB / IBAN ?",
+        "spoken": (
+            "Le RIB ou l'IBAN est l'identifiant officiel de ton compte bancaire. "
+            "Tu peux le partager à quelqu'un qui veut t'envoyer de l'argent ou te verser un salaire."
+        ),
+        "bullets": [
+            "• Coordonnées exactes qui identifient ton compte",
+            "• Utile pour recevoir un salaire ou un virement",
+            "• Peut être communiqué sans danger pour recevoir de l'argent",
+        ],
+        "tip": "→ Partage ton RIB pour recevoir, jamais ton code secret",
+        "screen_keywords": ("compte", "numero"),
+    },
+    {
+        "key": "depot_retrait",
+        "triggers": ("un depot", "un retrait", "cash in", "cash out", "cash-in", "cash-out"),
+        "title": "Dépôt et retrait : la différence",
+        "spoken": (
+            "Un dépôt consiste à verser de l'argent sur ton compte pour augmenter ton solde. "
+            "Un retrait consiste à sortir de l'argent en espèces depuis ton compte."
+        ),
+        "bullets": [
+            "• Dépôt : tu mets de l'argent sur ton compte (+)",
+            "• Retrait : tu récupères des billets depuis ton compte (−)",
+            "• Vérifie toujours le reçu ou le SMS après chaque opération",
+        ],
+        "tip": "→ Compte tes billets avant de quitter le guichet ou l'agent",
+        "screen_keywords": ("retrait", "depot"),
+    },
+    {
+        "key": "phishing",
+        "triggers": ("phishing", "hameconnage", "faux sms", "ingenierie sociale"),
+        "title": "C'est quoi le phishing (arnaque) ?",
+        "spoken": (
+            "Le phishing est une arnaque où un escroc se fait passer pour ta banque ou un proche "
+            "par SMS, appel ou lien piégé pour voler ton code secret ou te faire envoyer de l'argent."
+        ),
+        "bullets": [
+            "• Faux message urgent qui réclame ton code ou un transfert",
+            "• Ta banque ne demande jamais ton code secret par téléphone",
+            "• En cas de doute, raccroche et vérifie sur ton application",
+        ],
+        "tip": "→ Ne clique pas sur un lien suspect et garde ton code secret",
+        "screen_keywords": ("securite", "alerte"),
+    },
+]
+
+FINANCIAL_DOMAIN_VOCAB = {
+    "microfinance", "microcredit", "finance", "financier", "financiere", "banque", "bancaire",
+    "compte", "solde", "epargne", "epargner", "credit", "pret", "emprunt", "interet", "interets",
+    "taux", "frais", "commission", "plafond", "limite", "beneficiaire", "destinataire", "virement",
+    "transfert", "retrait", "depot", "tontine", "njangi", "ussd", "mobile", "money", "wallet",
+    "gab", "atm", "guichet", "distributeur", "rib", "iban", "cheque", "carte", "visa", "mastercard",
+    "decouvert", "agio", "agios", "inflation", "devise", "fcfa", "xaf", "beac", "cobac", "cemac",
+    "assurance", "caution", "garantie", "mensualite", "echeance", "remboursement", "facture",
+    "marchand", "recu", "historique", "releve", "pin", "phishing", "hameconnage", "arnaque",
+    "fraude", "securite", "budget", "salaire", "cotisation", "hypotheque", "change", "taux",
+}
+
 
 class KnowledgeBase:
     """Gestionnaire de la base de connaissances M5 locale."""
@@ -461,6 +765,39 @@ class M2Service:
         if not out:
             return ""
         replacements = (
+            (r"\bVeuillez\s+confirmer\b", "Confirme"),
+            (r"\bveuillez\s+confirmer\b", "confirme"),
+            (r"\bVeuillez\s+vérifier\b", "Vérifie"),
+            (r"\bveuillez\s+vérifier\b", "vérifie"),
+            (r"\bVeuillez\s+patienter\b", "Patiente"),
+            (r"\bveuillez\s+patienter\b", "patiente"),
+            (r"\bVeuillez\s+réessayer\b", "Réessaie"),
+            (r"\bveuillez\s+réessayer\b", "réessaie"),
+            (r"\bVous voulez\b", "Tu veux"),
+            (r"\bvous voulez\b", "tu veux"),
+            (r"\bVous souhaitez\b", "Tu souhaites"),
+            (r"\bvous souhaitez\b", "tu souhaites"),
+            (r"\bVous voyez\b", "Tu vois"),
+            (r"\bvous voyez\b", "tu vois"),
+            (r"\bVous utilisez\b", "Tu utilises"),
+            (r"\bvous utilisez\b", "tu utilises"),
+            (r"\bVous envoyez\b", "Tu envoies"),
+            (r"\bvous envoyez\b", "tu envoies"),
+            (r"\bVous payez\b", "Tu paies"),
+            (r"\bvous payez\b", "tu paies"),
+            (r"\bVous recevez\b", "Tu reçois"),
+            (r"\bvous recevez\b", "tu reçois"),
+            (r"\bVous confirmez\b", "Tu confirmes"),
+            (r"\bvous confirmez\b", "tu confirmes"),
+            (r"\bVous choisissez\b", "Tu choisis"),
+            (r"\bvous choisissez\b", "tu choisis"),
+            (r"\bVous aurez\b", "Tu auras"),
+            (r"\bvous aurez\b", "tu auras"),
+            (r"\bvous restera\b", "te restera"),
+            (r"\bvous coûte\b", "te coûte"),
+            (r"\bvous coûtent\b", "te coûtent"),
+            (r"\bvous manque\b", "te manque"),
+            (r"\bque vous\b", "que tu"),
             (r"\bVous pouvez\b", "Tu peux"),
             (r"\bvous pouvez\b", "tu peux"),
             (r"\bVous devez\b", "Tu dois"),
@@ -980,6 +1317,37 @@ class M2Service:
                         })
                         break
 
+        # 3. Solde principal sans libellé explicite (ex: gros montant FCFA juste sous un en-tête COMPTE / BANKING)
+        has_avail_bal = any(
+            "solde" in cls._norm(p["label"]) and "apres" not in cls._norm(p["label"])
+            for p in field_pairs
+        )
+        if not has_avail_bal:
+            for idx, n in enumerate(usable_nodes):
+                if n.node_id in value_to_label or not cls._has_valid_bounds(n):
+                    continue
+                meta = node_meta.get(n.node_id, {})
+                if (meta.get("zone") or "main") != "main" or meta.get("role") in {"button", "alert"}:
+                    continue
+                txt = meta.get("gloss_only") or (n.text or "").strip()
+                if not extract_amounts(txt) or len(txt) > 22:
+                    continue
+                h_px = n.bounds[3] - n.bounds[1]
+                prev_txt = cls._norm(usable_nodes[idx - 1].text or "") if idx > 0 else ""
+                under_acct_header = any(k in prev_txt for k in ("compte", "banking", "safinum", "guichet", "solde", "ewondo", "duala"))
+                if h_px >= 24 or (under_acct_header and n.bounds[1] <= 320):
+                    value_to_label[n.node_id] = "Solde disponible"
+                    field_pairs.insert(0, {
+                        "label": "Solde disponible",
+                        "value": txt,
+                        "raw_value": txt,
+                        "label_id": n.node_id,
+                        "value_id": n.node_id,
+                        "zone": "main",
+                        "kind": "metric",
+                    })
+                    break
+
         return {
             "rows": rows,
             "node_meta": node_meta,
@@ -1014,12 +1382,12 @@ class M2Service:
         return None, None
 
     def _build_llm_prompt(self, transcript: Transcript, screen_context: ScreenContext) -> str:
-        """Construit un prompt JSON compact (calibré qwen2.5:1.5b, ~150 tokens, préfixe écran stable pour KV cache)."""
+        """Construit un prompt JSON ultra-compact (calibré qwen2.5:1.5b CPU, préfixe écran stable)."""
         semantics = self._analyze_screen(screen_context)
         rows = semantics["rows"]
         prompt_lines: list[str] = []
         last_zone: str | None = None
-        for zone, _, row_text in rows[:35]:
+        for zone, _, row_text in rows[:22]:
             if not row_text:
                 continue
             if zone != last_zone:
@@ -1030,34 +1398,24 @@ class M2Service:
         main_pairs = [p for p in semantics["field_pairs"] if p["zone"] == "main"]
         if main_pairs:
             prompt_lines.append("Champs clés:")
-            for p in main_pairs[:8]:
+            for p in main_pairs[:7]:
                 prompt_lines.append(f"  * {p['label']} -> {p['value']}")
         if semantics["alerts"]:
             prompt_lines.append("Alertes:")
-            for a in semantics["alerts"][:3]:
+            for a in semantics["alerts"][:2]:
                 prompt_lines.append(f"  ! {a['text']}")
 
         page_title = screen_context.page.title if screen_context.page and screen_context.page.title else "Safinum"
         hint = screen_context.screen_hint or "home"
-        channel = screen_context.channel or "web"
 
         return (
-            f"Tu es NKAP, copilote bancaire vocal et visuel (App: {page_title}, canal: {channel}, étape: {hint}).\n"
-            "Contenu de l'écran:\n"
+            f"Tu es NKAP, assistant bancaire (App: {page_title}, étape: {hint}).\n"
+            "Écran:\n"
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
-            + "\n\nRègles:\n"
-            "- TUTOIEMENT obligatoire (« tu/ton/ta/tes », jamais « vous » ni « mon »).\n"
-            "- Utilise UNIQUEMENT les valeurs exactes affichées ; n'invente aucun montant ni bouton.\n"
-            "- Hors-sujet / info absente -> {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}.\n"
-            "- Réponds en JSON compact sur une ligne avec les clés : "
-            "\"intent\" (BALANCE_INQUIRY|TRANSFER|FEE_INQUIRY|TRANSACTION_HISTORY|CORRECTION|CLARIFICATION_NEEDED|TERM_EXPLANATION|UNKNOWN), "
-            "\"visual_mode\" (default|flow|bars|table|steps|correction|clarify), "
-            "\"spoken\" (1-2 phrases simples en tu avec valeurs exactes), "
-            "\"spoken_after\" (courte phrase de guidage), "
-            "\"title\" (2-5 mots), "
-            "\"rows\" (2-3 objets {\"label\":\"...\",\"value\":\"...\"} ou puces \"• ...\"), "
-            "\"targets\" (1-2 textes EXACTS de l'écran), "
-            "\"color\" (ink|yellow|red|green).\n"
+            + "\nRègles: tutoiement (« tu/ton/ta »), valeurs EXACTES de l'écran uniquement (jamais d'invention). "
+            "« Mon solde » = Solde disponible (avant opération), PAS « Solde après opération ». "
+            "Si info absente/hors-sujet: {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}. "
+            "Sinon JSON compact 1 ligne: {\"spoken\":\"1 phrase simple en tu avec valeur exacte\",\"title\":\"2-4 mots\",\"rows\":[{\"label\":\"...\",\"value\":\"...\"}],\"targets\":[\"texte exact écran\"]}.\n"
             f"Question: {transcript.text}"
         )
 
@@ -1094,6 +1452,15 @@ class M2Service:
 
         best_id: str | None = None
         best_score = 0
+
+        asks_after_balance = any(
+            k in q_ctx for k in ("apres", "restera", "apres operation", "apres l'operation", "nouveau solde")
+        )
+        asks_current_balance = (
+            any(k in q_ctx for k in ("solde", "combien j'ai", "combien jai", "disponible"))
+            and not asks_after_balance
+        )
+        v2l = semantics.get("value_to_label", {}) if semantics else {}
 
         for nid, node in usable_nodes.items():
             if exclude_ids and nid in exclude_ids:
@@ -1133,12 +1500,27 @@ class M2Service:
             elif ctx_tokens:
                 evidence_score += sum(4 for tok in ctx_tokens if tok in n_ann)
 
+            lbl_for_node = cls._norm(v2l.get(nid, ""))
+            bal_blob = f"{lbl_for_node} {row_norm} {n_gloss}"
+            is_after_bal = "solde" in bal_blob and ("apres" in bal_blob or "nouveau solde" in bal_blob)
+            is_curr_bal = "solde" in bal_blob and not is_after_bal
+
             if target_score == 0 and evidence_score == 0 and not (
                 meta.get("role") == "security" and any(k in (q_t + " " + q_ctx) for k in ("arnaqu", "securite", "fraude", "proteg", "prudence"))
-            ):
+            ) and not (asks_current_balance and is_curr_bal and bool(node_amounts)) and not (asks_after_balance and is_after_bal and bool(node_amounts)):
                 continue
 
             score = target_score + evidence_score
+            if asks_current_balance:
+                if is_curr_bal and node_amounts:
+                    score += 30
+                elif is_after_bal:
+                    score -= 32
+            elif asks_after_balance:
+                if is_after_bal and node_amounts:
+                    score += 30
+                elif is_curr_bal:
+                    score -= 18
             if meta.get("role") == "security" and any(k in (q_t + " " + q_ctx) for k in ("arnaqu", "securite", "fraude", "proteg", "prudence")):
                 score += 22
             if ctx_tokens and row_norm:
@@ -1221,11 +1603,24 @@ class M2Service:
         stop = {"pour", "dans", "avec", "quel", "quelle", "quoi", "comment", "faire", "avant", "apres", "mon", "ton", "est", "sont"}
         q_tokens = {t for t in re.findall(r"[a-z0-9]{3,}", q_n) if t not in stop}
 
+        asks_after_balance = any(
+            k in q_n for k in ("apres", "restera", "apres operation", "apres l'operation", "nouveau solde")
+        )
+        asks_current_balance = (
+            any(k in q_n for k in ("solde", "combien j'ai", "combien jai"))
+            and not asks_after_balance
+        )
+
         # Cherche dans les paires champ/valeur détectées
         for p in semantics["field_pairs"]:
             if p["zone"] != "main":
                 continue
             lbl_n = self._norm(p["label"])
+            # Ne mélange jamais « Solde disponible » et « Solde après opération »
+            if asks_current_balance and "solde" in lbl_n and ("apres" in lbl_n or "nouveau" in lbl_n):
+                continue
+            if asks_after_balance and "solde" in lbl_n and "apres" not in lbl_n and "nouveau" not in lbl_n:
+                continue
             val_n = self._norm(p["raw_value"])
             lbl_tokens = {t for t in re.findall(r"[a-z0-9]{3,}", lbl_n) if t not in stop}
             matched = bool(q_tokens & lbl_tokens) or (p["kind"] == "checkbox" and ("coch" in q_n or "case" in q_n))
@@ -1281,10 +1676,137 @@ class M2Service:
         return sb.actions
 
     @classmethod
+    def _is_concept_question(cls, q_n: str) -> bool:
+        """True si la question demande une explication ou définition d'un concept général (et non un élément propre à l'écran)."""
+        if not q_n:
+            return False
+        # Questions explicitement liées à l'écran / compte personnel -> parcours écran classique
+        screen_specific = (
+            "cette app", "cet ecran", "cette page", "ce bouton", "cette alerte",
+            "cette erreur", "ce message", "ce transfert", "cette operation",
+            "mon solde", "mes frais", "mon compte", "mes transactions", "mes operations",
+            "mon beneficiaire", "mon numero", "m'arnaquer", "marnaquer",
+        )
+        if any(s in q_n for s in screen_specific):
+            return False
+        concept_cues = (
+            "c'est quoi", "cest quoi", "qu'est-ce qu", "quest-ce qu", "qu est ce qu",
+            "que veut dire", "ca veut dire quoi", "veut dire", "que signifie", "signifie quoi",
+            "definition", "definir", "explique", "expliquer", "explication",
+            "difference entre", "comment fonctionne", "a quoi sert", "en quoi consiste",
+            "parle-moi de", "parle moi de", "c'est quelle", "cest quelle",
+        )
+        return any(cue in q_n for cue in concept_cues)
+
+    @classmethod
+    def _is_financial_concept_topic(cls, q_n: str) -> bool:
+        """True si la question porte sur un terme ou concept du domaine bancaire / inclusion financière."""
+        tokens = set(re.findall(r"[a-z0-9]{3,}", q_n))
+        if tokens & FINANCIAL_DOMAIN_VOCAB:
+            return True
+        for term in FINANCIAL_DOMAIN_VOCAB:
+            if len(term) >= 5 and term in q_n:
+                return True
+        return False
+
+    @classmethod
+    def _match_financial_concept(cls, question_text: str) -> dict[str, Any] | None:
+        """Associe une question conceptuelle au glossaire pédagogique d'inclusion financière."""
+        q_n = cls._norm(question_text)
+        if not cls._is_concept_question(q_n):
+            return None
+        for entry in FINANCIAL_CONCEPTS:
+            if any(trig in q_n for trig in entry["triggers"]):
+                return entry
+        return None
+
+    def _build_concept_explanation_actions(
+        self,
+        concept: dict[str, Any],
+        transcript: Transcript,
+        screen_context: ScreenContext,
+    ) -> list[ActionMessage]:
+        """Génère instantanément une explication pédagogique claire + ancrage optionnel sur l'écran."""
+        lang = transcript.lang or "fr"
+        sb = _StreamBuilder(transcript, transcript.ts or 0)
+        kb_terms = self.kb.terms
+        semantics = self._analyze_screen(screen_context)
+
+        # Cherche si l'écran actif illustre concrètement ce concept (ex: Frais -> 150 FCFA)
+        anchor_nid: str | None = None
+        screen_example: str | None = None
+        for kw in concept.get("screen_keywords", ()):
+            for p in semantics["field_pairs"]:
+                if p["zone"] != "main":
+                    continue
+                lbl_n = self._norm(p["label"])
+                if kw in lbl_n and not (concept["key"] == "solde" and "apres" in lbl_n):
+                    anchor_nid = p["value_id"]
+                    screen_example = f"Sur cet écran, {p['label']} : {p['value']}."
+                    break
+            if anchor_nid:
+                break
+
+        spoken_text = concept["spoken"]
+        if screen_example:
+            spoken_text = f"{spoken_text} {screen_example}"
+        spoken_text = self._safe_text_for_harness(spoken_text, screen_context, kb_terms, fallback=concept["spoken"])
+        sb.speak("concept_explanation", spoken_text, lang, 0)
+
+        nb_lines: list[NotebookLine] = []
+        for idx, bullet in enumerate(concept["bullets"][:3]):
+            nb_lines.append(
+                NotebookLine(
+                    id=f"nb-c{idx + 1}",
+                    text=bullet,
+                    color="yellow" if idx == 0 else None,
+                )
+            )
+        nb_lines.append(NotebookLine(divider=True))
+        nb_lines.append(
+            NotebookLine(
+                id="nb-c-tip",
+                text=concept["tip"],
+                color="green",
+                bold=True,
+                underline=True,
+            )
+        )
+        sb.notebook(
+            "nb-concept",
+            concept["title"],
+            nb_lines,
+            anchor_id=anchor_nid,
+            run_after_ms=0,
+        )
+        if anchor_nid and anchor_nid in semantics["usable_nodes"]:
+            sb.draw("box", "v-concept-1", anchor_nid, color="yellow", duration_ms=600, run_after_ms=900)
+        sb.clear(9500)
+        return sb.actions
+
+    def _build_concept_llm_prompt(self, transcript: Transcript) -> str:
+        """Prompt minimaliste pour expliquer tout autre concept financier non présent dans le glossaire rapide."""
+        return (
+            "Tu es NKAP, éducateur en inclusion financière au Cameroun.\n"
+            "Explique simplement ce concept bancaire ou financier avec tutoiement (« tu/ton/ta »), "
+            "SANS inventer aucun chiffre, pourcentage ni montant.\n"
+            "Réponds en JSON compact sur 1 ligne: "
+            "{\"spoken\":\"2 phrases simples en tu sans chiffres\",\"title\":\"C'est quoi ... ?\","
+            "\"rows\":[\"• point clé 1\",\"• point clé 2\",\"→ conseil pratique\"],\"targets\":[]}.\n"
+            f"Question: {transcript.text}"
+        )
+
+    @classmethod
     def _is_out_of_scope_question(cls, question_text: str, screen_context: ScreenContext) -> bool:
         """Détecte les questions hors-sujet, malveillantes ou impossibles à résoudre avec l'écran actuel."""
         q_n = cls._norm(question_text)
         if not q_n:
+            return False
+
+        # 0. Les questions d'éducation / explication de concepts financiers sont TOUJOURS dans le périmètre NKAP !
+        if cls._match_financial_concept(question_text) is not None:
+            return False
+        if cls._is_concept_question(q_n) and cls._is_financial_concept_topic(q_n):
             return False
 
         screen_parts: list[str] = []
@@ -1308,9 +1830,8 @@ class M2Service:
             "hack", "cracker", "craquer", "contourner", "voler", "frauder", "usurper",
             "voiture", "maison", "appartement", "terrain", "meteo", "recette", "cuisine",
             "football", "billet d'avion", "hotel", "restaurant", "medicament", "hopital",
-            "ecole", "universite", "acheter", "credit", "pret", "emprunt", "hypotheque",
-            "carte bancaire", "carte visa", "mastercard", "cheque", "taux d'interet",
-            "cloturer", "fermer mon compte", "ouvrir un compte", "mot de passe", "code pin",
+            "ecole", "universite", "acheter", "hypotheque",
+            "cloturer", "fermer mon compte", "ouvrir un compte", "mot de passe",
             "changer mon code", "support client", "service client", "contacter le support",
         )
         for kw in off_topic_keywords:
@@ -1344,7 +1865,8 @@ class M2Service:
             "securite", "arnaque", "arnaquer", "fraude", "mefier", "cocher", "case",
             "continuer", "etape", "etapes", "bouton", "montant", "montants", "reste",
             "restera", "debite", "debiter", "payer", "marchand", "facture", "electricite",
-            "disponible", "fcfa", "message", "nouveau", "courant", "nom",
+            "disponible", "fcfa", "message", "nouveau", "courant", "nom", "modifier",
+            "corriger", "annuler", "plafond", "retrait", "depot", "ussd",
         }
         screen_words = set(re.findall(r"[a-z0-9]{3,}", screen_corpus_n))
         for tok in q_tokens:
@@ -1599,6 +2121,36 @@ class M2Service:
                     usable_nodes[h["node_id"]].bounds[0] if h["node_id"] in usable_nodes else 9999,
                 )
             )
+
+        # Garde de cohérence Solde disponible vs Solde après opération (protège contre confusion du 1.5B)
+        asks_after_bal = any(k in q_norm for k in ("apres", "restera", "nouveau solde"))
+        asks_curr_bal = any(k in q_norm for k in ("solde", "combien j'ai", "combien jai")) and not asks_after_bal
+        if asks_curr_bal and not used_explicit_node_ids and llm_payload.get("notebook_lines") is None:
+            avail_pair = next(
+                (p for p in semantics["field_pairs"] if p["zone"] == "main" and "solde" in self._norm(p["label"]) and "apres" not in self._norm(p["label"])),
+                None,
+            )
+            after_pair = next(
+                (p for p in semantics["field_pairs"] if p["zone"] == "main" and "solde" in self._norm(p["label"]) and "apres" in self._norm(p["label"])),
+                None,
+            )
+            if avail_pair and after_pair and self._norm(avail_pair["raw_value"]) != self._norm(after_pair["raw_value"]):
+                avail_val = avail_pair["raw_value"]
+                after_val = after_pair["raw_value"]
+                if self._norm(avail_val) not in self._norm(spoken):
+                    spoken = self._safe_text_for_harness(
+                        f"Ton solde disponible avant opération est de {avail_val} (il te restera {after_val} après le transfert).",
+                        screen_context,
+                        kb_terms,
+                        fallback=f"Ton solde disponible est de {avail_val}.",
+                    )
+                valid_highlights = [{"node_id": avail_pair["value_id"], "style": "circle", "color": "yellow"}]
+                if not llm_payload.get("rows"):
+                    llm_payload = dict(llm_payload)
+                    llm_payload["rows"] = [
+                        {"label": "Solde disponible", "value": avail_val},
+                        {"label": "Solde après opération", "value": after_val},
+                    ]
 
         # Ancrage sur les données concrètes des cibles résolues
         first_role = node_meta.get(valid_highlights[0]["node_id"], {}).get("role", "text") if valid_highlights else "text"
@@ -2040,6 +2592,13 @@ class M2Service:
                     cand_after = "Regarde exactement l'élément entouré ici."
                 spoken_after = self._safe_text_for_harness(cand_after, screen_context, kb_terms, fallback="Regarde exactement ici.")
 
+        # Évite de répéter mot pour mot la même phrase vocale en `spoken` et `spoken_after`
+        if spoken_after and (
+            self._norm(spoken_after) == self._norm(spoken)
+            or self._norm(spoken_after) in self._norm(spoken)
+        ):
+            spoken_after = ""
+
         for idx, h in enumerate(valid_highlights):
             if remaining_visual_budget <= 0:
                 break
@@ -2089,17 +2648,23 @@ class M2Service:
         sb.clear(clear_at)
         return sb.actions
 
-    @staticmethod
-    def _get_turn_cache_key(transcript: Transcript, screen_context: ScreenContext) -> tuple[int, str, str] | None:
+    @classmethod
+    def _get_turn_cache_key(cls, transcript: Transcript, screen_context: ScreenContext) -> tuple[int, str, str] | None:
         if not screen_context.nodes or not transcript.text:
             return None
         node_sig = hash(tuple((n.node_id, n.text, n.clickable) for n in screen_context.nodes if n.text))
-        return (node_sig, transcript.lang or "fr", transcript.text.strip().lower())
+        q_key = cls._norm(transcript.text).strip(" ?!.,;:")
+        return (node_sig, transcript.lang or "fr", q_key)
 
     def candidate_actions(
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
-        """Délègue la décision complète au LLM open-weight en lui fournissant le ScreenContext réel."""
+        """Orchestre glossaire conceptuel instantané + LLM open-weight sur ScreenContext réel."""
+        # 0. Glossaire pédagogique d'inclusion financière instantané (< 5 ms, zéro hallucination)
+        matched_concept = self._match_financial_concept(transcript.text)
+        if matched_concept is not None:
+            return self._build_concept_explanation_actions(matched_concept, transcript, screen_context)
+
         if self._is_out_of_scope_question(transcript.text, screen_context):
             return self._build_out_of_scope_actions(transcript, screen_context)
 
@@ -2108,24 +2673,41 @@ class M2Service:
         if cache_key and cache_key in self._turn_cache:
             return self._turn_cache[cache_key]
 
-        prompt = self._build_llm_prompt(transcript, screen_context)
-        llm_payload = self.llm.generate(
-            prompt,
-            options={"temperature": 0.1, "num_predict": 160},
-            format_type="json",
-        )
-
-        # Compatibilité avec l'ancien format mocké par les tests unitaires existants
-        if (
-            isinstance(llm_payload, dict)
-            and llm_payload.get("intent") == "check_balance"
-            and not llm_payload.get("spoken")
-        ):
-            actions = self._compile_legacy_check_balance(llm_payload, transcript, screen_context)
-        else:
+        # 2. Concept financier ouvert non listé dans le glossaire -> prompt pédagogique court sans bruit d'écran
+        q_n = self._norm(transcript.text)
+        if self._is_concept_question(q_n) and self._is_financial_concept_topic(q_n):
+            prompt = self._build_concept_llm_prompt(transcript)
+            llm_payload = self.llm.generate(
+                prompt,
+                options={"temperature": 0.1, "num_predict": 85, "num_ctx": 512},
+                format_type="json",
+            )
+            if isinstance(llm_payload, dict):
+                llm_payload = dict(llm_payload)
+                llm_payload["targets"] = []
+                llm_payload["arrow"] = False
             actions = self._compile_llm_plan(
                 llm_payload if isinstance(llm_payload, dict) else {}, transcript, screen_context
             )
+        else:
+            prompt = self._build_llm_prompt(transcript, screen_context)
+            llm_payload = self.llm.generate(
+                prompt,
+                options={"temperature": 0.05, "num_predict": 80, "num_ctx": 1024},
+                format_type="json",
+            )
+
+            # Compatibilité avec l'ancien format mocké par les tests unitaires existants
+            if (
+                isinstance(llm_payload, dict)
+                and llm_payload.get("intent") == "check_balance"
+                and not llm_payload.get("spoken")
+            ):
+                actions = self._compile_legacy_check_balance(llm_payload, transcript, screen_context)
+            else:
+                actions = self._compile_llm_plan(
+                    llm_payload if isinstance(llm_payload, dict) else {}, transcript, screen_context
+                )
 
         if cache_key:
             self._turn_cache[cache_key] = actions
@@ -2143,7 +2725,10 @@ class M2Service:
     ) -> tuple[TurnMeta, str, list[ChoiceItem] | None]:
         """Construit les métadonnées multicanales v1.2 + text_fallback GSM-7 + choices éventuels."""
         q_n = self._norm(transcript.text)
-        if any(k in q_n for k in ("solde", "reste", "disponible", "itan", "nden")):
+        is_concept = any(m.action.phrase_key == "concept_explanation" for m in actions) or self._is_concept_question(q_n)
+        if is_concept:
+            intent = "TERM_EXPLANATION"
+        elif any(k in q_n for k in ("solde", "reste", "disponible", "itan", "nden")):
             intent = "BALANCE_INQUIRY"
         elif any(k in q_n for k in ("frais", "combien coute", "mbug", "mabala")):
             intent = "FEE_INQUIRY"

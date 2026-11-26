@@ -125,12 +125,26 @@ def detect_term_question(text: str) -> str | None:
             "definition", "what is", "za ne", "nje ne", "terme", "mot", "sens",
         )
     )
+    if "microfinance" in n or "micro finance" in n or "micro-finance" in n:
+        return "microfinance"
     if "plafond" in n or "limite" in n or "limit" in n or "nkuk" in n or "ndongo" in n:
         return "limit" if (asks_def or len(n.split()) <= 3) else None
     if "beneficiaire" in n or "destinataire" in n or "beneficiary" in n or "mukusa" in n:
         return "beneficiary" if (asks_def or len(n.split()) <= 3) else None
     if asks_def and any(k in n for k in ("frais", "fee", "mbug", "mabala", "commission", "tarif")):
         return "fee"
+    if asks_def and any(k in n for k in ("epargne", "epargner", "saving")):
+        return "epargne"
+    if asks_def and any(k in n for k in ("credit", "pret", "emprunt", "loan", "microcredit")):
+        return "credit"
+    if asks_def and any(k in n for k in ("tontine", "njangi")):
+        return "tontine"
+    if asks_def and any(k in n for k in ("mobile money", "momo", "orange money", "wallet")):
+        return "mobile_money"
+    if asks_def and any(k in n for k in ("ussd", "code court")):
+        return "ussd"
+    if asks_def and any(k in n for k in ("code pin", "code secret", "pin")):
+        return "pin"
     return None
 
 
@@ -317,6 +331,48 @@ PHRASES: dict[str, dict[str, str]] = {
         "dua": "Mukusa: moto nu ma-kusa moni mongo. Ombwa dina na nimero oboso.",
         "fr": "Beneficiaire: la personne qui recoit votre argent. Verifiez toujours son numero.",
         "en": "Beneficiary: the person receiving your money. Always check their number.",
+    },
+    "term_microfinance": {
+        "ewo": "Microfinance: nda moni etun e ne bebebe, e bo na o baale moni, o lom itan, o nong kredi etun.",
+        "dua": "Microfinance: ndabo a moni e siti o boso, e ma-bobea o bamba moni, loma na nongo kredi.",
+        "fr": "Microfinance: etablissement financier de proximite pour epargner, transferer et obtenir de petits prets.",
+        "en": "Microfinance: local financial institution offering savings, transfers and small loans.",
+    },
+    "term_epargne": {
+        "ewo": "Epargne: itan wa baale a nkwap asu melu ma zu nge eban.",
+        "dua": "Epargne: moni o ma-bamba o konto asu ponda e ma-ya.",
+        "fr": "Epargne: argent mis de cote en securite pour vos projets ou imprevus.",
+        "en": "Savings: money set aside safely for future needs or emergencies.",
+    },
+    "term_credit": {
+        "ewo": "Credit: itan banki a ve wa tatan, wa bulan dzom a melu ma zu ai mbug.",
+        "dua": "Credit: moni banki e ma-bola wa tatan, o timbise mo na mabala.",
+        "fr": "Credit: somme pretee par une banque ou microfinance a rembourser progressivement.",
+        "en": "Loan: money borrowed from a bank or microfinance and repaid over time.",
+    },
+    "term_tontine": {
+        "ewo": "Tontine: bbot be kote itan a ngum, mod ese a non a ebe dzie.",
+        "dua": "Tontine: bato ba ma-kote moni mwambo, moto te a kusa o ponda ao.",
+        "fr": "Tontine: epargne collective ou chaque membre cotise et recoit la cagnotte a tour de role.",
+        "en": "Tontine: group savings circle where members contribute and take turns receiving the pot.",
+    },
+    "term_mobile_money": {
+        "ewo": "Mobile Money: nkwap moni a nombo telefon wog asu lomo, yan kalara ai nong moni.",
+        "dua": "Mobile Money: konto a moni o nimero a telefone ango o loma na sawa.",
+        "fr": "Mobile Money: porte-monnaie lie a votre numero pour envoyer, payer et retirer.",
+        "en": "Mobile Money: phone-linked wallet to send, pay bills and withdraw cash.",
+    },
+    "term_ussd": {
+        "ewo": "USSD: menu a telefon ai *123#, e bo isae te ke internet.",
+        "dua": "USSD: menu o telefone na *123#, e ma-bolane to internet te.",
+        "fr": "USSD: menu bancaire par code court (*123#) qui marche sans internet.",
+        "en": "USSD: short-code banking menu (*123#) that works without internet.",
+    },
+    "term_pin": {
+        "ewo": "Code PIN: nombo nsolan wog. Te ve mod ese, to agent banki.",
+        "dua": "Code PIN: kode ango ya dimbambe. O si langwea to moto.",
+        "fr": "Code PIN: votre code secret personnel. Ne le partagez jamais, meme a un agent.",
+        "en": "PIN code: your personal secret code. Never share it with anyone.",
     },
     "lang_switched": {
         "ewo": "Nkobo o tyendeban: Ewondo. {resume}",
