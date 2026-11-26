@@ -549,3 +549,109 @@ def test_open_financial_advice_bypasses_canned_glossary_and_recovers_truncated_j
     # Aucun encadrement parasite sur n_00 (SAFINUM WEB BANKING) !
     assert not any(a["action"]["t"] in {"box", "circle", "frame"} for a in acts_momo)
     assert len(advisor_calls) == 2
+
+
+def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
+    from app.sandbox.language import detect_language_switch, detect_term_question
+
+    # 1. Blindages SAFINUM #8, #10 et Duálá
+    assert detect_language_switch("en duala") == "dua"
+    assert detect_language_switch("en ewondo") == "ewo"
+    assert detect_term_question("mbug e ne dze ?") == "fee"
+    assert detect_term_question("nkuk e ne dze ?") == "limit"
+    dua = json.loads((TRANSLATIONS_DIR / "dua.json").read_text(encoding="utf-8"))
+    assert dua["shell.greeting"] == "Mbole {name}"
+
+    # 2. Correction via /update en place (garde la même référence TRX sans annulation parasite)
+    SESSIONS.clear()
+    bank = _mock_bank()
+    bank.update.return_value = (
+        True,
+        200,
+        {"id": "TRX-001", "amount": 10000, "fee": 150, "total": 10150, "status": "pending"},
+    )
+    r1 = handle_channel_turn(
+        {"session_id": "s_upd", "channel": "ussd", "phone": "237690000001", "language": "ewo", "input": {"text": "lomo 5000 a Paul"}},
+        trace_id="t_u1",
+        bank_client=bank,
+    )
+    assert r1["transaction"]["id"] == "TRX-001"
+    r2 = handle_channel_turn(
+        {"session_id": "s_upd", "channel": "ussd", "phone": "237690000001", "language": "ewo", "input": {"text": "modifier 10000"}},
+        trace_id="t_u2",
+        bank_client=bank,
+    )
+    assert r2["interpretation"]["intent"] == "CORRECTION"
+    assert r2["transaction"]["id"] == "TRX-001"
+    assert "150 FCFA" in r2["response"]["text"]
+    bank.update.assert_called_with("TRX-001", {"amount": 10000})
+
+    # 3. Choix judicieux v1.2 côté cerveau : table (dépôt/retrait), highlight (frais), flow + callout (solde après), bars (comparaison)
+    review_ctx = {
+        "type": "screen_context",
+        "channel": "web",
+        "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Web"},
+        "screen_hint": "review",
+        "nodes": [
+            {"node_id": "n_bal_lbl", "tag": "div", "text": "Solde disponible", "clickable": False, "bounds": [360, 120, 490, 138], "tone": "light"},
+            {"node_id": "n_balance", "tag": "div", "text": "120 000 FCFA", "clickable": False, "bounds": [360, 144, 560, 180], "tone": "light"},
+            {"node_id": "n_amt_lbl", "tag": "span", "text": "Montant à envoyer", "clickable": False, "bounds": [360, 220, 500, 240], "tone": "light"},
+            {"node_id": "n_amount", "tag": "strong", "text": "25 000 FCFA", "clickable": False, "bounds": [780, 220, 900, 240], "tone": "light"},
+            {"node_id": "n_fee_lbl", "tag": "span", "text": "Frais de transfert", "clickable": False, "bounds": [360, 260, 500, 280], "tone": "light"},
+            {"node_id": "n_fee", "tag": "strong", "text": "150 FCFA", "clickable": False, "bounds": [800, 260, 900, 280], "tone": "light"},
+            {"node_id": "n_after_lbl", "tag": "span", "text": "Solde après opération", "clickable": False, "bounds": [360, 300, 520, 320], "tone": "light"},
+            {"node_id": "n_after", "tag": "strong", "text": "94 850 FCFA", "clickable": False, "bounds": [780, 300, 900, 320], "tone": "light"},
+        ],
+    }
+
+    # Table sur concept comparatif dépôt/retrait
+    r_tbl = client.post("/answer", json={"transcript": "C'est quoi un dépôt ?", "lang_hint": "fr", "context": review_ctx})
+    assert r_tbl.status_code == 200
+    nb_tbl = next(a["action"] for a in r_tbl.json()["actions"] if a["action"]["t"] == "notebook")
+    assert nb_tbl["mode"] == "table" and len(nb_tbl["columns"]) == 2
+
+    # Highlight sur concept frais ancré à l'écran
+    r_hl = client.post("/answer", json={"transcript": "C'est quoi les frais ?", "lang_hint": "fr", "context": review_ctx})
+    assert r_hl.status_code == 200
+    assert any(a["action"]["t"] == "highlight" and a["action"]["target"]["node_id"] == "n_fee" for a in r_hl.json()["actions"])
+
+    # Flow + callout sur "Combien il me restera après l'opération ?"
+    class _FakeFlowResp:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeFlowResp(
+            {
+                "spoken": "Ton solde après opération sera de 94 850 FCFA.",
+                "title": "Trajet du transfert",
+                "rows": [{"label": "Solde après opération", "value": "94 850 FCFA"}],
+                "targets": ["94 850 FCFA"],
+            }
+        ),
+    )
+    r_flow = client.post(
+        "/answer",
+        json={"transcript": "Combien il me restera après l'opération ?", "lang_hint": "fr", "context": review_ctx},
+    )
+    assert r_flow.status_code == 200
+    acts_flow = r_flow.json()["actions"]
+    nb_flow = next(a["action"] for a in acts_flow if a["action"]["t"] == "notebook")
+    assert nb_flow["mode"] == "flow" and len(nb_flow["flow_steps"]) >= 2
+    assert any(a["action"]["t"] == "callout" and a["action"]["target"]["node_id"] == "n_after" for a in acts_flow)
+
+    # Bars sur "Compare mon solde et le montant"
+    r_bars = client.post(
+        "/answer",
+        json={"transcript": "Compare mon solde et les frais", "lang_hint": "fr", "context": review_ctx},
+    )
+    assert r_bars.status_code == 200
+    nb_bars = next(a["action"] for a in r_bars.json()["actions"] if a["action"]["t"] == "notebook")
+    assert nb_bars["mode"] == "bars" and len(nb_bars["bars"]) >= 2

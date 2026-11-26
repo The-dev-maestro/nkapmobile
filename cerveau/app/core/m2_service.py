@@ -1648,14 +1648,16 @@ class M2Service:
         if node.tag in {"input", "select"} or node.node_id in semantics["value_to_label"]:
             return "box", None
 
-        # Solde principal ou statut de succès isolé -> cercle manuscrit si explicitement seul
+        # Solde principal ou statut de succès isolé
         if extract_amounts(txt_n) and len(txt_n) <= 22 and any(k in question_norm for k in ("solde", "disponible", "combien il me reste")):
             return "circle", None
-        if any(k in txt_n for k in ("confirme", "effectue", "succes")) and len(txt_n) <= 28:
-            return "circle", None
+        if any(k in txt_n for k in ("confirme", "effectue", "succes", "reussie", "e maneya", "e bodi")) and len(txt_n) <= 28:
+            return "check", None
+        if any(k in txt_n for k in ("echoue", "refuse", "e nji bo", "e bobi")) and len(txt_n) <= 24:
+            return "cross", None
 
         # Évite de remplacer systématiquement tout champ/valeur par un simple underline
-        if requested_style in {"box", "circle", "frame"}:
+        if requested_style in {"box", "circle", "frame", "callout", "highlight", "check", "cross", "num"}:
             return requested_style, "Appuie ici" if requested_style == "frame" else None
         return "box", None
 
@@ -1878,34 +1880,64 @@ class M2Service:
         spoken_text = self._safe_text_for_harness(spoken_text, screen_context, kb_terms, fallback=concept["spoken"])
         sb.speak("concept_explanation", spoken_text, lang, 0)
 
-        nb_lines: list[NotebookLine] = []
-        for idx, bullet in enumerate(concept["bullets"][:3]):
+        # Concepts comparatifs structurés -> ardoise v1.2 `table` quand c'est plus lisible qu'une liste
+        table_concepts: dict[str, tuple[list[str], list[list[str]]]] = {
+            "depot_retrait": (
+                ["Opération", "Ce qui se passe"],
+                [
+                    ["Dépôt (+)", "Tu verses de l'argent sur ton compte"],
+                    ["Retrait (−)", "Tu retires des billets en espèces"],
+                ],
+            ),
+            "solde": (
+                ["Type de solde", "Signification"],
+                [
+                    ["Solde disponible", "Argent que tu peux utiliser maintenant"],
+                    ["Solde après", "Reste après le transfert et les frais"],
+                ],
+            ),
+        }
+        if concept["key"] in table_concepts:
+            cols, tbl_rows = table_concepts[concept["key"]]
+            sb.notebook(
+                "nb-concept",
+                concept["title"],
+                None,
+                anchor_id=anchor_nid,
+                run_after_ms=0,
+                mode="table",
+                columns=cols,
+                rows=tbl_rows,
+            )
+        else:
+            nb_lines: list[NotebookLine] = []
+            for idx, bullet in enumerate(concept["bullets"][:3]):
+                nb_lines.append(
+                    NotebookLine(
+                        id=f"nb-c{idx + 1}",
+                        text=bullet,
+                        color="yellow" if idx == 0 else None,
+                    )
+                )
+            nb_lines.append(NotebookLine(divider=True))
             nb_lines.append(
                 NotebookLine(
-                    id=f"nb-c{idx + 1}",
-                    text=bullet,
-                    color="yellow" if idx == 0 else None,
+                    id="nb-c-tip",
+                    text=concept["tip"],
+                    color="green",
+                    bold=True,
+                    underline=True,
                 )
             )
-        nb_lines.append(NotebookLine(divider=True))
-        nb_lines.append(
-            NotebookLine(
-                id="nb-c-tip",
-                text=concept["tip"],
-                color="green",
-                bold=True,
-                underline=True,
+            sb.notebook(
+                "nb-concept",
+                concept["title"],
+                nb_lines,
+                anchor_id=anchor_nid,
+                run_after_ms=0,
             )
-        )
-        sb.notebook(
-            "nb-concept",
-            concept["title"],
-            nb_lines,
-            anchor_id=anchor_nid,
-            run_after_ms=0,
-        )
         if anchor_nid and anchor_nid in semantics["usable_nodes"]:
-            sb.draw("box", "v-concept-1", anchor_nid, color="yellow", duration_ms=600, run_after_ms=900)
+            sb.draw("highlight", "v-concept-1", anchor_nid, color="yellow", duration_ms=520, run_after_ms=900)
         sb.clear(9500)
         return sb.actions
 
@@ -2604,10 +2636,10 @@ class M2Service:
         )
 
         if is_action_flow:
-            # Chorégraphie fidèle à s1-lancer-transfert / s3-cocher-et-continuer : box(1) -> arrow(1->2) -> frame(2)
+            # Chorégraphie guidée v1.2 : badge num ① sur l'étape 1 -> arrow(1->2) -> frame(2)
             t1 = valid_highlights[0]
             t2 = valid_highlights[1]
-            sb.draw(t1["style"], "v-mark-1", t1["node_id"], color=t1.get("color", default_color), duration_ms=640, run_after_ms=0, label=t1.get("label"))
+            sb.draw("num", "v-mark-1", t1["node_id"], color="yellow", duration_ms=520, run_after_ms=0, step=1, label="Vérifie")
             sb.arrow("a-flow", t1["node_id"], t2["node_id"], color="ink", duration_ms=680, run_after_ms=1100)
             sb.draw("frame", "v-mark-2", t2["node_id"], color="red", duration_ms=520, run_after_ms=1950, label=t2.get("label") or "Appuie ici")
             follow_txt = spoken_after or f"Ensuite, appuie sur {usable_nodes[t2['node_id']].text} pour continuer."
@@ -2618,30 +2650,42 @@ class M2Service:
             return sb.actions
 
         visual_mode = str(llm_payload.get("visual_mode") or "default").lower().strip()
-        if visual_mode == "default" and not used_explicit_node_ids and llm_payload.get("notebook_lines") is None:
+        is_live_llm = getattr(self.llm, "last_engine", None) != "heuristic"
+        # Collecte les paires monétaires clés de la zone principale pour décider judicieusement de flow / bars
+        money_pairs = [
+            p for p in semantics["field_pairs"]
+            if p["zone"] == "main" and p.get("kind") != "transaction" and extract_amounts(p.get("raw_value", ""))
+        ]
+        if visual_mode == "default" and is_live_llm and not used_explicit_node_ids and llm_payload.get("notebook_lines") is None:
             if any(k in q_norm for k in ("corriger", "changer le montant", "finalement", "modifier le montant")):
                 visual_mode = "correction"
-            elif any(k in q_norm for k in ("trajet", "combien il me restera", "solde apres", "total a debiter")) and len(grounded_facts) >= 2:
+            elif any(k in q_norm for k in ("compare", "comparaison", "proportion", "part", "beaucoup", "cher")) and len(money_pairs) >= 2:
+                visual_mode = "bars"
+            elif any(k in q_norm for k in ("trajet", "combien il me restera", "solde apres", "total a debiter", "detail du transfert", "recapitulatif")) and len(money_pairs) >= 2:
                 visual_mode = "flow"
 
+        used_non_line_notebook = False
         if nb_title and compiled_lines:
-            # Mode v1.2 enrichi : compile un carnet `flow` ou `bars` déterministe quand les paires chiffrées existent
+            # Mode v1.2 enrichi : compile un carnet `flow` ou `bars` déterministe quand c'est judicieux
             nb_mode = "lines"
             flow_steps: list[FlowStep] | None = None
             bar_items: list[BarItem] | None = None
-            if visual_mode == "flow" and len(grounded_facts) >= 2:
+            rich_pairs = [(p["label"], p["raw_value"]) for p in money_pairs[:3]] if len(money_pairs) >= 2 else grounded_facts
+            if visual_mode == "flow" and len(rich_pairs) >= 2:
                 flow_steps = [
                     FlowStep(
                         label=self._safe_text_for_harness(lbl, screen_context, kb_terms, fallback=lbl)[:28],
                         value=self._safe_text_for_harness(val, screen_context, kb_terms, fallback=val)[:32],
                         tone="green" if ("0 fcfa" in val.lower() or "gratuit" in val.lower()) else ("yellow" if i == 0 else "ink"),
                     )
-                    for i, (lbl, val) in enumerate(grounded_facts[:3])
+                    for i, (lbl, val) in enumerate(rich_pairs[:3])
                 ]
                 nb_mode = "flow"
-            elif visual_mode == "bars" and len(grounded_facts) >= 2:
+                used_non_line_notebook = True
+                arrow_source_id = None  # flow n'a pas de ligne nb-l1-val
+            elif visual_mode == "bars" and len(rich_pairs) >= 2:
                 parsed_bars: list[BarItem] = []
-                for i, (lbl, val) in enumerate(grounded_facts[:3]):
+                for i, (lbl, val) in enumerate(rich_pairs[:3]):
                     digits = re.sub(r"\D+", "", val)
                     if digits:
                         parsed_bars.append(
@@ -2655,6 +2699,8 @@ class M2Service:
                 if len(parsed_bars) >= 2:
                     bar_items = parsed_bars
                     nb_mode = "bars"
+                    used_non_line_notebook = True
+                    arrow_source_id = None
 
             sb.notebook(
                 "nb-guide",
@@ -2667,6 +2713,18 @@ class M2Service:
                 bars=bar_items,
             )
             remaining_visual_budget -= 1  # Reste 2 marques visuelles
+
+        # Lorsque l'ardoise est en mode `flow`/`bars` (sans flèche depuis ligne), privilégie un `callout` ou `highlight` élégant sur la cible !
+        if used_non_line_notebook and valid_highlights and not used_explicit_node_ids:
+            h0 = valid_highlights[0]
+            n0 = usable_nodes.get(h0["node_id"])
+            if n0 and h0.get("style") == "box":
+                n0_txt = (n0.text or "").strip()
+                if extract_amounts(n0_txt) and len(n0_txt) <= 22:
+                    h0["style"] = "callout"
+                    h0["label"] = n0_txt
+                else:
+                    h0["style"] = "highlight"
 
         # 3. Tracés visuels (<= 3 marques au total)
         cursor_ms = 1400 if (nb_title and compiled_lines) else 250
@@ -2758,9 +2816,14 @@ class M2Service:
             color = str(h.get("color") or default_color).lower()
             if color not in ALLOWED_COLORS:
                 color = "yellow"
-            elif color in {"ink", "green"} and not used_explicit_node_ids:
+            elif color in {"ink", "green"} and not used_explicit_node_ids and style != "check":
                 color = "yellow"  # Jaune feutre contrasté sur fonds sombres (Safinum) sans vert ni encre sombre quasi invisible
-            label = str(h.get("label") or "").strip()[:24] if style == "frame" and h.get("label") else None
+            if style == "check" and not used_explicit_node_ids:
+                color = "green"
+            elif style == "cross" and not used_explicit_node_ids:
+                color = "red"
+            label = str(h.get("label") or "").strip()[:24] if style in {"frame", "callout", "num"} and h.get("label") else None
+            step_val = int(h["step"]) if style == "num" and h.get("step") else None
             arrow_pref = h.get("arrow_from_notebook")
             wants_arrow = (False if use_dual_highlight else (idx == 0)) if arrow_pref is None else bool(arrow_pref)
 
@@ -2783,6 +2846,7 @@ class M2Service:
                 duration_ms=600,
                 run_after_ms=cursor_ms,
                 label=label,
+                step=step_val,
             )
             remaining_visual_budget -= 1
             if spoken_after and not spoken_after_emitted and (not use_dual_highlight or idx == len(valid_highlights[:2]) - 1):

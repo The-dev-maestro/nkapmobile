@@ -459,14 +459,54 @@ def _route_turn(
             )
 
         if text == "3" or kw_intent == "CORRECTION":
-            # Annule l'ancienne transaction pending pour éviter toute double exécution
+            new_amt = parse_amount(text)
+            # 1. Correction directe de montant via POST /transactions/{ref}/update si disponible (sinon cancel + recreate)
+            if new_amt:
+                if state.get("reference") and callable(getattr(bank, "update", None)):
+                    res_u = bank.update(state["reference"], {"amount": new_amt})
+                    if isinstance(res_u, tuple) and len(res_u) == 3:
+                        ok_u, _st_u, tx_u = res_u
+                    else:
+                        ok_u, tx_u = False, {}
+                    if ok_u and isinstance(tx_u, dict) and tx_u.get("id"):
+                        state["amount"] = int(tx_u.get("amount", new_amt))
+                        state["fee"] = tx_u.get("fee", 0)
+                        state["total"] = tx_u.get("total", state["amount"] + state["fee"])
+                        txt, declared = _format_recap(state, lang, max_septets)
+                        return _reply(
+                            txt,
+                            "CORRECTION",
+                            declared,
+                            parameters={"amount": state["amount"], "fee": state["fee"], "total": state["total"], "currency": "XAF"},
+                            options=["Confirmer", "Annuler", "Modifier"],
+                            transaction={"id": state["reference"], "status": "pending"},
+                            max_septets=max_septets,
+                        )
+                if state.get("reference"):
+                    bank.cancel(state["reference"])
+                    state["reference"] = None
+                state["amount"] = new_amt
+                return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
+
+            # 2. Correction de bénéficiaire avant confirmation (ex: "modifier beneficiaire Franck" / "plutot a Carine")
+            benef_clean = re.sub(
+                r"\b(?:corriger|corrige|modifier|modifie|changer|change|finalement|plutot|tyende|tukwa|beneficiaire|destinataire|a|pour|vers|le|la|de)\b",
+                " ",
+                text,
+                flags=re.IGNORECASE,
+            ).strip(" ,.-:;")
+            if text != "3" and state.get("op_type", "transfer") == "transfer" and len(benef_clean) >= 2:
+                if state.get("reference"):
+                    bank.cancel(state["reference"])
+                    state["reference"] = None
+                err_or_clarify = _resolve_beneficiary_or_clarify(state, benef_clean, phone, bank, lang, max_septets)
+                if err_or_clarify:
+                    return err_or_clarify
+                return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
+
             if state.get("reference"):
                 bank.cancel(state["reference"])
                 state["reference"] = None
-            new_amt = parse_amount(text)
-            if new_amt:
-                state["amount"] = new_amt
-                return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
             state["step"] = "correction_amount"
             txt, declared = render_phrase("ask_new_amount", lang, max_septets=max_septets)
             return _reply(txt, "CORRECTION", declared, max_septets=max_septets)

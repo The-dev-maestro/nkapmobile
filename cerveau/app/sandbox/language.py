@@ -99,8 +99,8 @@ def translate_ui(payload: dict[str, Any]) -> dict[str, Any]:
 def detect_language_switch(text: str) -> str | None:
     n = _norm(text)
     switch_triggers = (
-        "langue", "language", "parle", "parler", "passe en", "passer en",
-        "switch", "change to", "kobo", "bato", "nkobo", "bwele",
+        "langue", "language", "parle", "parler", "passe en", "passer en", "en ",
+        "switch", "change to", "kobo", "bato", "nkobo", "bwele", "tyende nkobo", "tukwa bwambo",
     )
     lang_map = {
         "ewo": ("ewondo", "ewo"),
@@ -122,7 +122,7 @@ def detect_term_question(text: str) -> str | None:
         k in n
         for k in (
             "c'est quoi", "cest quoi", "veut dire", "signifie", "explique",
-            "definition", "what is", "za ne", "nje ne", "terme", "mot", "sens",
+            "definition", "what is", "za ne", "nje ne", "e ne dze", "e ne za", "terme", "mot", "sens",
         )
     )
     if "microfinance" in n or "micro finance" in n or "micro-finance" in n:
