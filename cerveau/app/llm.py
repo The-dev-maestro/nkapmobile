@@ -81,6 +81,42 @@ class LLMAdapter:
                 except json.JSONDecodeError:
                     pass
 
+            # Récupération tolérante si Ollama a coupé le JSON avant l'accolade fermante `}`
+            if '"spoken"' in text or '"title"' in text or '"out_of_scope"' in text:
+                recovered: dict[str, Any] = {}
+                if re.search(r'"out_of_scope"\s*:\s*true', text, re.IGNORECASE):
+                    recovered["out_of_scope"] = True
+
+                def _extract_json_str(key: str) -> str | None:
+                    m_full = re.search(rf'"{key}"\s*:\s*"((?:\\.|[^"\\])*)"', text)
+                    if m_full:
+                        try:
+                            return json.loads(f'"{m_full.group(1)}"')
+                        except Exception:
+                            return m_full.group(1)
+                    # Chaîne tronquée en fin de génération sans guillemet fermant
+                    m_cut = re.search(rf'"{key}"\s*:\s*"((?:\\.|[^"\\])+)$', text)
+                    if m_cut:
+                        val = m_cut.group(1).rstrip("\\").strip()
+                        if val and val[-1] not in ".!?":
+                            val += "."
+                        return val
+                    return None
+
+                sp = _extract_json_str("spoken")
+                if sp:
+                    recovered["spoken"] = sp
+                tl = _extract_json_str("title")
+                if tl:
+                    recovered["title"] = tl
+                m_rows = re.search(r'"rows"\s*:\s*\[([^\]]*)', text)
+                if m_rows:
+                    row_strs = re.findall(r'"((?:\\.|[^"\\])*)"', m_rows.group(1))
+                    if row_strs:
+                        recovered["rows"] = [r for r in row_strs if len(r.strip()) >= 3][:3]
+                if recovered:
+                    return recovered
+
             # Extension tolérante pour micro-réponses (chiffre seul, target text)
             clean = text.strip().strip('"\'')
             if clean in {"0", "aucun", "absent", "rien", "non"}:

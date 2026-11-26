@@ -856,6 +856,24 @@ class M2Service:
             (r"\bvous avez\b", "tu as"),
             (r"\bVous êtes\b", "Tu es"),
             (r"\bvous êtes\b", "tu es"),
+            (r"\bVous n'avez\b", "Tu n'as"),
+            (r"\bvous n'avez\b", "tu n'as"),
+            (r"\bVous n'êtes\b", "Tu n'es"),
+            (r"\bvous n'êtes\b", "tu n'es"),
+            (r"\bVous ne pouvez\b", "Tu ne peux"),
+            (r"\bvous ne pouvez\b", "tu ne peux"),
+            (r"\bVous ne voulez\b", "Tu ne veux"),
+            (r"\bvous ne voulez\b", "tu ne veux"),
+            (r"\bVous ne faites\b", "Tu ne fais"),
+            (r"\bvous ne faites\b", "tu ne fais"),
+            (r"\bVous ne savez\b", "Tu ne sais"),
+            (r"\bvous ne savez\b", "tu ne sais"),
+            (r"\bVous ne devez\b", "Tu ne dois"),
+            (r"\bvous ne devez\b", "tu ne dois"),
+            (r"\bVous ne ([a-zàâéèêîôûç]{3,})ez\b", r"Tu ne \1es"),
+            (r"\bvous ne ([a-zàâéèêîôûç]{3,})ez\b", r"tu ne \1es"),
+            (r"\bVous ([a-zàâéèêîôûç]{3,})ez\b", r"Tu \1es"),
+            (r"\bvous ([a-zàâéèêîôûç]{3,})ez\b", r"tu \1es"),
             (r"\bVotre\b", "Ton"),
             (r"\bvotre\b", "ton"),
             (r"\bVos\b", "Tes"),
@@ -1758,10 +1776,67 @@ class M2Service:
         return False
 
     @classmethod
+    def _is_general_financial_advice_question(cls, question_text: str, screen_context: ScreenContext) -> bool:
+        """True pour toute question ouverte d'éducation ou conseil financier (hors lecture directe de l'écran actif)."""
+        q_n = cls._norm(question_text)
+        if not q_n or not cls._is_financial_concept_topic(q_n):
+            return False
+        # Jamais intercepter les questions qui portent sur l'écran ou le compte affiché
+        screen_refs = (
+            "cette app", "cet ecran", "cette page", "ce bouton", "cette alerte",
+            "cette erreur", "ce message", "ce transfert", "cette operation",
+            "mon solde", "mes frais", "mon compte", "mes transactions", "mes operations",
+            "mon beneficiaire", "mon numero", "m'arnaquer", "marnaquer",
+            "combien cout", "quels sont les frais", "quel est mon", "quelles sont mes",
+            "combien il me rest", "combien j'ai", "combien jai", "ici", "affiche",
+            "cocher", "continuer", "valider", "confirmer", "etape suivante",
+        )
+        if any(s in q_n for s in screen_refs):
+            return False
+        # Bloque toujours les sujets hors-périmètre / fraude même s'ils contiennent un mot financier
+        banned = (
+            "actionnaire", "actions", "bourse", "investir", "investissement", "dividende",
+            "trading", "forex", "crypto", "bitcoin", "ethereum", "doubler", "tripler",
+            "multiplier", "argent facile", "gagner vite", "entreprise safinum",
+            "pirater", "piratage", "hacker", "hack", "cracker", "craquer", "contourner",
+            "voler", "frauder", "usurper", "voiture", "maison", "appartement", "terrain",
+            "acheter", "cloturer", "fermer mon compte", "changer mon code",
+        )
+        if any(b in q_n for b in banned):
+            return False
+        if cls._is_concept_question(q_n):
+            return True
+        # Questions pratiques / conseils / démarches (ex: "je veux créer un compte mobile money", "comment épargner ?")
+        advice_cues = (
+            "je veux creer", "creer un compte", "ouvrir un compte", "comment ouvrir",
+            "comment creer", "comment obtenir", "comment faire pour", "comment epargner",
+            "comment economiser", "comment eviter", "comment marche", "comment utiliser",
+            "comment choisir", "comment fonctionne", "quel est le meilleur", "quel est le moyen",
+            "le moyen le plus", "des conseils", "un conseil", "conseille-moi", "conseille moi",
+            "m'aider a", "je voudrais creer", "je voudrais ouvrir", "je souhaite creer",
+            "je souhaite ouvrir", "comment demander un", "comment avoir un",
+        )
+        return any(cue in q_n for cue in advice_cues)
+
+    @classmethod
     def _match_financial_concept(cls, question_text: str) -> dict[str, Any] | None:
-        """Associe une question conceptuelle au glossaire pédagogique d'inclusion financière."""
+        """Associe UNIQUEMENT les demandes courtes et exactes de définition au glossaire rapide (< 5 ms).
+        Toute question pratique, comparative ou ouverte (ex: 'le moyen le plus simple pour épargner') passe au vrai LLM.
+        """
         q_n = cls._norm(question_text)
         if not cls._is_concept_question(q_n):
+            return None
+        # Exclut les questions pratiques / ouvertes / comparatives -> doivent aller au vrai LLM !
+        open_ended_cues = (
+            "moyen", "meilleur", "meilleure", "simple", "facile", "rapide", "efficace",
+            "comment", "pourquoi", "creer", "ouvrir", "obtenir", "demander", "choisir",
+            "comparer", "difference", "combien", "etape", "etapes", "conseil", "astuce",
+            "faire pour", "je veux", "je voudrais", "puis-je", "peut-on", "avantage", "inconvenient",
+        )
+        if any(cue in q_n for cue in open_ended_cues):
+            return None
+        words = re.findall(r"[a-z0-9]+", q_n)
+        if len(words) > 8:
             return None
         for entry in FINANCIAL_CONCEPTS:
             if any(trig in q_n for trig in entry["triggers"]):
@@ -1833,12 +1908,14 @@ class M2Service:
         return sb.actions
 
     def _build_concept_llm_prompt(self, transcript: Transcript) -> str:
-        """Prompt 1-shot concret pour expliquer tout autre concept financier sans recopie de gabarit sur 1.5B."""
+        """Prompt 1-shot concret pour conseiller / expliquer tout concept ou démarche financière au Cameroun."""
         return (
-            "Tu es NKAP, éducateur financier bienveillant (tutoiement, sans chiffres ni montants).\n"
+            "Tu es NKAP, conseiller en inclusion financière au Cameroun (Mobile Money, microfinance, banque, épargne).\n"
+            "Réponds directement et concrètement à la question de l'utilisateur avec tutoiement (« tu/ton/ta »), "
+            "SANS chiffres ni montants inventés, et en JSON compact sur une seule ligne.\n"
             "Exemple :\n"
-            "Question: C'est quoi un chèque ?\n"
-            "JSON: {\"spoken\":\"Un chèque est un papier signé qui autorise ta banque à verser une somme de ton compte à la personne indiquée.\",\"title\":\"Le chèque\",\"rows\":[\"• Moyen de paiement écrit et signé\",\"• Débité quand le bénéficiaire l'encaisse\",\"→ Vérifie ton solde avant d'écrire un chèque\"]}\n"
+            "Question: Comment payer une facture d'eau facilement ?\n"
+            "JSON: {\"spoken\":\"Tu peux payer ta facture d'eau depuis ton compte Mobile Money ou ton application bancaire en entrant ta référence client, sans te déplacer en agence.\",\"title\":\"Payer une facture d'eau\",\"rows\":[\"• Ouvre ton appli bancaire ou Mobile Money\",\"• Choisis le facturier et saisis ta référence\",\"→ Garde toujours le reçu de paiement\"]}\n"
             f"Question: {transcript.text}\n"
             "JSON:"
         )
@@ -1850,10 +1927,10 @@ class M2Service:
         if not q_n:
             return False
 
-        # 0. Les questions d'éducation / explication de concepts financiers sont TOUJOURS dans le périmètre NKAP !
+        # 0. Les questions d'éducation / conseil financier sont dans le périmètre NKAP !
         if cls._match_financial_concept(question_text) is not None:
             return False
-        if cls._is_concept_question(q_n) and cls._is_financial_concept_topic(q_n):
+        if cls._is_general_financial_advice_question(question_text, screen_context):
             return False
 
         screen_parts: list[str] = []
@@ -1972,6 +2049,10 @@ class M2Service:
                 "contacter le support",
             )
         ):
+            return self._build_out_of_scope_actions(transcript, screen_context)
+
+        # Anti-écho : si un petit LLM 1.5B recopie mot pour mot la question de l'utilisateur sans répondre
+        if raw_spoken_n and raw_spoken_n == self._norm(transcript.text):
             return self._build_out_of_scope_actions(transcript, screen_context)
 
         lang = transcript.lang or "fr"
@@ -2726,13 +2807,12 @@ class M2Service:
         if cache_key and cache_key in self._turn_cache:
             return self._turn_cache[cache_key]
 
-        # 2. Concept financier ouvert non listé dans le glossaire -> prompt pédagogique court sans bruit d'écran
-        q_n = self._norm(transcript.text)
-        if self._is_concept_question(q_n) and self._is_financial_concept_topic(q_n):
+        # 2. Question financière ouverte / conseil pratique / définition hors glossaire -> vrai LLM conseiller (sans encadrement forcé)
+        if self._is_general_financial_advice_question(transcript.text, screen_context):
             prompt = self._build_concept_llm_prompt(transcript)
             llm_payload = self.llm.generate(
                 prompt,
-                options={"temperature": 0.1, "num_predict": 85, "num_ctx": 512},
+                options={"temperature": 0.15, "num_predict": 160, "num_ctx": 768},
                 format_type="json",
             )
             if isinstance(llm_payload, dict):
@@ -2746,7 +2826,7 @@ class M2Service:
             prompt = self._build_llm_prompt(transcript, screen_context)
             llm_payload = self.llm.generate(
                 prompt,
-                options={"temperature": 0.05, "num_predict": 80, "num_ctx": 1024},
+                options={"temperature": 0.05, "num_predict": 110, "num_ctx": 1024},
                 format_type="json",
             )
 

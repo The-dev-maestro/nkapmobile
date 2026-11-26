@@ -460,3 +460,92 @@ def test_http_answer_explains_financial_concepts_and_distinguishes_balances(monk
     assert r_mf["interpretation"]["intent"] == "TERM_EXPLANATION"
     assert "Microfinance" in r_mf["response"]["text"]
     assert is_gsm7(r_mf["response"]["text"]) and gsm7_length(r_mf["response"]["text"]) <= 182
+
+
+def test_open_financial_advice_bypasses_canned_glossary_and_recovers_truncated_json(monkeypatch):
+    from app.core.m2_service import M2Service
+    from app.llm import LLMAdapter
+
+    # 1. Récupération propre d'un JSON tronqué avant l'accolade fermante `}`
+    truncated = (
+        '{"spoken":"Une caution bancaire est une garantie donnée par ta banque pour sécuriser un engagement.",'
+        '"title":"La caution bancaire","rows":["• Garantie officielle de la banque","• Rassure le propriétaire ou le prête'
+    )
+    parsed = LLMAdapter.parse_model_json(truncated)
+    assert "caution bancaire" in parsed["spoken"].lower()
+    assert parsed["title"] == "La caution bancaire"
+    assert parsed["rows"] == ["• Garantie officielle de la banque"]
+
+    # 2. Conjugaison tutoiement sans "toi ne remboursez"
+    fixed_tu = M2Service._enforce_tutoiement("Tu dois payer si vous ne remboursez pas et vous utilisez votre compte.")
+    assert "toi ne" not in fixed_tu.lower()
+    assert "si tu ne rembourses pas" in fixed_tu.lower()
+    assert "tu utilises ton compte" in fixed_tu.lower()
+
+    # 3. "C'est quoi le moyen le plus simple pour épargner ?" NE DOIT PAS déclencher la fiche préfaite "C'est quoi l'épargne ?"
+    #    ET "je veux créer un compte mobile money" doit passer au vrai LLM conseiller sans encadrer un titre au hasard !
+    advisor_calls = []
+
+    class _FakeAdvisorResp:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    def fake_advisor(url, json=None, timeout=None, **kwargs):
+        prompt = (json or {}).get("prompt", "")
+        advisor_calls.append(prompt)
+        if "epargner" in prompt.lower() or "épargner" in prompt.lower():
+            return _FakeAdvisorResp(
+                {
+                    "spoken": "Le moyen le plus simple pour épargner est de mettre de côté une petite part dès que tu reçois un revenu, sur un compte séparé.",
+                    "title": "Épargner simplement",
+                    "rows": ["• Mets de côté dès que tu es payé", "• Sépare ton épargne de tes dépenses du jour", "→ Commence petit mais régulièrement"],
+                }
+            )
+        return _FakeAdvisorResp(
+            {
+                "spoken": "Pour créer un compte Mobile Money, rends-toi chez un agent agréé ou en agence avec ta carte d'identité et ta carte SIM enregistrée à ton nom.",
+                "title": "Créer un compte Mobile Money",
+                "rows": ["• Apporte ta pièce d'identité valide", "• Utilise une carte SIM à ton nom", "→ Choisis un code PIN secret sur place"],
+            }
+        )
+
+    monkeypatch.setattr("app.llm.requests.post", fake_advisor)
+    demo_ctx = {
+        "type": "screen_context",
+        "channel": "web",
+        "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Web Banking"},
+        "screen_hint": "review",
+        "nodes": [
+            {"node_id": "n_00", "tag": "div", "text": "SAFINUM WEB BANKING · COMPTE 690 00 00 01", "clickable": False, "bounds": [360, 110, 680, 126], "tone": "light"},
+            {"node_id": "n_bal_lbl", "tag": "div", "text": "Solde disponible", "clickable": False, "bounds": [360, 130, 490, 146], "tone": "light"},
+            {"node_id": "n_balance", "tag": "div", "text": "120 000 FCFA", "clickable": False, "bounds": [360, 150, 560, 186], "tone": "light"},
+        ],
+    }
+
+    r_save = client.post(
+        "/answer",
+        json={"transcript": "C'est quoi le moyen le plus simple pour épargner?", "lang_hint": "fr", "context": demo_ctx},
+    )
+    assert r_save.status_code == 200
+    acts_save = r_save.json()["actions"]
+    nb_save = next(a["action"] for a in acts_save if a["action"]["t"] == "notebook")
+    assert nb_save["title"] == "Épargner simplement"
+    assert not any(a["action"]["t"] in {"box", "circle", "frame"} for a in acts_save)
+
+    r_momo = client.post(
+        "/answer",
+        json={"transcript": "je veux créer un compte mobile money", "lang_hint": "fr", "context": demo_ctx},
+    )
+    assert r_momo.status_code == 200
+    acts_momo = r_momo.json()["actions"]
+    spoken_momo = " ".join(a["action"].get("text", "") for a in acts_momo if a["action"]["t"] == "speak").lower()
+    assert "agent" in spoken_momo or "identité" in spoken_momo
+    # Aucun encadrement parasite sur n_00 (SAFINUM WEB BANKING) !
+    assert not any(a["action"]["t"] in {"box", "circle", "frame"} for a in acts_momo)
+    assert len(advisor_calls) == 2
