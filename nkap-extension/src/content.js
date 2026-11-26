@@ -26,7 +26,182 @@
   const restoredTextNodes = new Map(); // TextNode → string original
 
   const OVERLAY_SEL =
-    "#nkap-overlay-host, #nkap-caption, #nkap-bubble, #nkap-cursor, #nkap-status-pill, #nkap-question-panel";
+    "#nkap-overlay-host, #nkap-caption, #nkap-bubble, #nkap-cursor, #nkap-cursor-buddy, #nkap-status-pill, #nkap-question-panel, #nkap-notebook";
+
+  const DEFAULT_SANDBOX_BRAIN_URL = "https://13.51.168.107.sslip.io";
+
+  /** True sur le bac à sable officiel SAFINUM (/sandbox/ussd, /sandbox/channel/web, /sandbox/channel/mobile). */
+  function isSafinumSandbox() {
+    return /^\/sandbox(\/|$)/i.test(location.pathname || "");
+  }
+
+  function detectSandboxChannel() {
+    const p = (location.pathname || "").toLowerCase();
+    if (p.includes("/sandbox/channel/mobile")) return "mobile";
+    if (p.includes("/sandbox/ussd")) return "ussd";
+    return "web";
+  }
+
+  /**
+   * Isole le conteneur DOM de la seule appli bancaire simulée dans safinum.cm/sandbox/*
+   * (exclut les panneaux Équipe, Compte de test, Lecture vocale et Diagnostics).
+   */
+  function getSandboxAppRoot() {
+    if (!isSafinumSandbox()) return null;
+    const p = (location.pathname || "").toLowerCase();
+    if (p.includes("/sandbox/channel/mobile")) {
+      return (
+        document.querySelector('[class*="rounded-[1.8rem]"]') ||
+        document.querySelector('[class*="rounded-[2.5rem]"]')
+      );
+    }
+    if (p.includes("/sandbox/ussd")) {
+      const scr = document.querySelector('[class*="bg-emerald-950"]');
+      return (scr && scr.closest('[class*="rounded-[2rem]"]')) || scr || null;
+    }
+    if (p.includes("/sandbox/channel/web")) {
+      const addrEl = Array.from(document.querySelectorAll("div, span, p")).find(
+        (el) => el.children.length === 0 && /banque-demo\.sandbox/i.test(el.textContent || "")
+      );
+      if (addrEl) {
+        let cur = addrEl.parentElement;
+        for (let i = 0; i < 6 && cur && cur !== document.body; i++, cur = cur.parentElement) {
+          const r = cur.getBoundingClientRect();
+          if (r.width >= 480 && r.height >= 300 && !/Compte de test|Lecture vocale/i.test(cur.textContent || "")) {
+            return cur;
+          }
+        }
+      }
+      const grid = document.querySelector("main .grid");
+      if (grid) {
+        for (const child of grid.children) {
+          const txt = child.textContent || "";
+          if (!/Compte de test|Lecture vocale|Diagnostics de traduction/i.test(txt) && txt.trim().length > 10) {
+            return child;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function getScanRoot() {
+    return getSandboxAppRoot() || document.body;
+  }
+
+  function isSandboxChromeDecor(el) {
+    if (!el || !isSafinumSandbox()) return false;
+    const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+    if (/^banque-demo\.sandbox/i.test(t)) return true;
+    if (/^(09:41|4G|5G|Wi-?Fi)$/i.test(t)) return true;
+    return false;
+  }
+
+  /** Convertit les 89 textes officiels Ewondo/Duálá du bac à sable en français pour le cerveau (sans jamais modifier le DOM). */
+  const SANDBOX_LOCAL_TO_FR = {
+    "nda": "Accueil",
+    "mboa": "Accueil",
+    "lomo": "Transfert",
+    "loma": "Transfert",
+    "yaan": "Payer",
+    "sawedi": "Payer",
+    "itang": "Historique",
+    "bebolo": "Historique",
+    "itan ineu": "Solde disponible",
+    "moni ma pene": "Solde disponible",
+    "za dzam wa yi bo?": "Que voulez-vous faire ?",
+    "nje o tondi bola?": "Que voulez-vous faire ?",
+    "lomo moni": "Envoyer de l'argent",
+    "loma moni": "Envoyer de l'argent",
+    "yaan mfie ai kalara": "Payer une facture",
+    "sawedi kalati": "Payer une facture",
+    "kus kredi telefon": "Acheter du crédit",
+    "ande kredi telefone": "Acheter du crédit",
+    "itang mvet yam": "Mes opérations",
+    "bebolo bam": "Mes opérations",
+    "itang o nga kene nong": "Dernières opérations",
+    "bebolo ba sukan": "Dernières opérations",
+    "fombo mese": "Tout voir",
+    "ombwa mese": "Tout voir",
+    "ewolo connexion": "Connexion sécurisée",
+    "diwuta la musango": "Connexion sécurisée",
+    "kui": "Déconnexion",
+    "busa": "Déconnexion",
+    "wog": "Écouter",
+    "senga": "Écouter",
+    "tele wog": "Arrêter la lecture",
+    "tele senga": "Arrêter la lecture",
+    "e maneya": "Confirmé",
+    "e bodi": "Confirmé",
+    "e vaban": "Annulé",
+    "e bukabe": "Annulé",
+    "e ne a yange": "En attente",
+    "e ma-enge": "En attente",
+    "e nji bo": "Échoué",
+    "e bobi": "Échoué",
+    "mod a non": "Bénéficiaire",
+    "mod a non moni": "Bénéficiaire",
+    "mukusa": "Bénéficiaire",
+    "itan": "Montant",
+    "moni": "Montant",
+    "mbug": "Frais",
+    "mabala": "Frais",
+    "ntolan wog": "Total à débiter",
+    "botali ba busa": "Total à débiter",
+    "itan e li'i": "Solde après opération",
+    "moni ombusa": "Solde après opération",
+    "itan mfefe": "Nouveau solde",
+    "moni ma pene ma dia": "Nouveau solde",
+    "fombo ossussua eneu wa yemban": "Vérifiez avant de confirmer",
+    "ombwa oboso ba bamse": "Vérifiez avant de confirmer",
+    "yemban": "Confirmer",
+    "bamse": "Confirmer",
+    "tyende": "Modifier",
+    "tukwa": "Modifier",
+    "vaa": "Annuler",
+    "buka": "Annuler",
+    "bulan": "Retour",
+    "timba": "Retour",
+    "kele obusu": "Continuer",
+    "ala oboso": "Continuer",
+    "itang mvet": "Historique des opérations",
+    "mvet o boban mben": "Opération réussie",
+    "ebolo e tilabe na bwam": "Opération réussie",
+    "nombo ndem": "Référence",
+    "edun": "Référence",
+    "bot bam ba non moni": "Bénéficiaires enregistrés",
+    "bakusa bam": "Bénéficiaires enregistrés",
+    "te ke mvet a tatan.": "Aucune opération pour le moment.",
+    "to ebolo tatan.": "Aucune opération pour le moment.",
+    "ayaane mfie": "Électricité (ENEO)",
+    "kalati a weya": "Électricité (ENEO)",
+    "mendim": "Eau (CAMWATER)",
+    "madiba": "Eau (CAMWATER)",
+    "kredi": "Crédit téléphone",
+    "kalara": "Facture",
+    "kalati": "Facture",
+    "mese": "Tout",
+    "bi bi": "Reçus",
+    "ma-poy": "Reçus",
+    "bi lom": "Envoyés",
+    "ma-ala": "Envoyés",
+  };
+
+  function sandboxPhraseToFr(rawText) {
+    const clean = String(rawText || "").replace(/\s+/g, " ").trim();
+    if (!clean) return "";
+    const n = norm(clean);
+    if (SANDBOX_LOCAL_TO_FR[n]) return SANDBOX_LOCAL_TO_FR[n];
+    let m;
+    if ((m = clean.match(/^Mbembe kiri\s+(.+)$/i))) return `Bonjour ${m[1]}`;
+    if ((m = clean.match(/^(?:Nkwap|Konto)\s+(\d[\d\s]+)$/i))) return `Compte ${m[1]}`;
+    if ((m = clean.match(/^(?:Bi lom a|Loma na)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
+    if ((m = clean.match(/^(?:Bi bi a|Kusa na)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
+    if ((m = clean.match(/^(?:Kredi)\s+(.+)$/i))) return `Crédit ${m[1]}`;
+    if ((m = clean.match(/^(?:Kalara|Kalati)\s+(.+)$/i))) return `Facture ${m[1]}`;
+    if ((m = clean.match(/^(?:Mbug|Mabala)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
+    return clean;
+  }
 
   /** Normalise : minuscules, sans accents/diacritiques, voyelles africaines et homoglyphes unifiés. */
   const norm = (s) =>
@@ -92,6 +267,12 @@
   /** Un élément fait partie du contenu lisible (exclut le stepper <ol>, <nav>, <footer>, le tiroir jury et le bandeau test). */
   function isMainTarget(el) {
     if (!isVisibleTarget(el)) return false;
+    const sbxRoot = getSandboxAppRoot();
+    if (sbxRoot) {
+      if (!sbxRoot.contains(el)) return false;
+      if (isSandboxChromeDecor(el)) return false;
+      return true;
+    }
     if (el.closest("ol, nav, footer")) return false;
     if (isJuryDrawer(el) || isTestBanner(el)) return false;
     return true;
@@ -144,6 +325,8 @@
   // ---- 1. Couche de traduction locale (TreeWalker respectueux des SVG) -----
 
   function translateTextNode(textNode) {
+    // Sur le bac à sable officiel SAFINUM (/sandbox/*), la traduction écrite est déjà assurée par POST /sandbox (zéro conflit).
+    if (isSafinumSandbox()) return false;
     if (!langOn || !window.NKAP_LEXICON) return false;
     const parent = textNode.parentElement;
     if (!parent || !isVisibleTarget(parent)) return false;
@@ -176,6 +359,7 @@
   }
 
   function translateVisible(root = document.body) {
+    if (isSafinumSandbox()) return 0;
     if (!root || !langOn) return 0;
     let count = 0;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -206,31 +390,31 @@
 
   function detectScreenState() {
     // 1. Détection via les marqueurs textuels et formulaires uniques de chaque étape
-    // On extrait le texte visible de toute la page (et les originaux en data-nkap-orig si traduits)
-    const bodyText = norm(document.body ? document.body.innerText : "");
-    const origTexts = Array.from(document.querySelectorAll("[data-nkap-orig]"))
+    const scopeRoot = getScanRoot();
+    const bodyText = norm(scopeRoot ? scopeRoot.innerText : "");
+    const origTexts = Array.from((scopeRoot || document).querySelectorAll("[data-nkap-orig]"))
       .map((el) => norm(el.getAttribute("data-nkap-orig")))
       .join(" ");
     const fullText = (bodyText + " " + origTexts).replace(/\s+/g, " ");
 
     let step = "home";
 
-    // Étape 5 : Reçu / Confirmation (FR + EN)
+    // Étape 5 : Reçu / Confirmation (FR + EN + EWO/DUA sandbox)
     if (
-      /transfert confirme|transfert effectue|operation a ete enregistree|nouveau transfert|nouveau solde disponible|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe/.test(fullText)
+      /transfert confirme|transfert effectue|operation reussie|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|itan mfefe/.test(fullText)
     ) {
       step = "receipt";
     }
-    // Étape 4 : Récapitulatif avant confirmation (FR + EN)
+    // Étape 4 : Récapitulatif avant confirmation (FR + EN + EWO/DUA sandbox)
     else if (
-      /confirmer le transfert|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma/.test(fullText) ||
+      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Confirmer le transfert") || window.NKAP_QUERY("Bamse loma")) && !window.NKAP_QUERY("Nom du bénéficiaire"))
     ) {
       step = "recap";
     }
-    // Étape 3 : Saisie / Vérification du bénéficiaire (FR + EN)
+    // Étape 3 : Saisie / Vérification du bénéficiaire (FR + EN + EWO/DUA sandbox)
     else if (
-      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero/.test(fullText) ||
+      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero|bot bam ba non moni|bakusa bam/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Nom du bénéficiaire") || window.NKAP_QUERY("Dina la mukusa") || window.NKAP_QUERY("Renseignez les informations du destinataire")))
     ) {
       step = "beneficiary";
@@ -592,8 +776,10 @@
     const nodes = [];
     let counter = window.__nkapIdCounter || 1;
     const state = detectScreenState();
+    const scanRoot = getScanRoot();
+    const inSandbox = isSafinumSandbox();
 
-    for (const el of document.querySelectorAll("body *")) {
+    for (const el of (scanRoot || document.body).querySelectorAll("*")) {
       if (nodes.length >= 200) break;
       if (!isMainTarget(el)) continue;
       const tag = el.tagName.toLowerCase();
@@ -605,6 +791,13 @@
         tag === "button" || tag === "a" || el.getAttribute("role") === "button";
       const atom = isTextAtom(el);
       if (!isInputOrSelect && !atom && !clickable) continue;
+      // Dans le simulateur, évite de dupliquer le <button> et son <span> enfant identique
+      if (clickable && !atom && el.querySelector("span, p, div")) {
+        const direct = directText(el);
+        if (!direct && (el.textContent || "").trim().length > 0) {
+          // On garde le bouton cliquable mais on lui donne le texte global
+        }
+      }
 
       let rawText = "";
       if (tag === "input") {
@@ -624,6 +817,9 @@
       if (rawText.length < 2 && !/\d/.test(rawText)) continue;
 
       let contextText = rawText.slice(0, 140);
+      if (inSandbox) {
+        contextText = sandboxPhraseToFr(contextText).slice(0, 140);
+      }
       if (window.NKAP_LEXICON && Array.isArray(window.NKAP_LEXICON.entries)) {
         const findFr = (txt) => {
           const low = txt.toLowerCase();
@@ -673,11 +869,14 @@
     window.__nkapIdCounter = counter;
     return {
       type: "screen_context",
-      page: { url: location.href, title: document.title },
+      channel: inSandbox ? detectSandboxChannel() : "web",
+      page: { url: location.href, title: inSandbox ? "Safinum Banque démo" : document.title },
       screen_hint: state.step,
       nodes,
     };
   };
+
+  window.NKAP_IS_SAFINUM_SANDBOX = isSafinumSandbox;
 
   window.NKAP_SETTINGS = {
     get langOn() {
@@ -685,6 +884,7 @@
     },
     set langOn(v) {
       langOn = !!v;
+      if (isSafinumSandbox()) return;
       if (!langOn) restoreAll();
       else translateVisible();
     },
@@ -694,17 +894,19 @@
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.type === "settings") {
         langOn = !!msg.ewondoOn;
-        if (!langOn) restoreAll();
-        else translateVisible();
+        if (!isSafinumSandbox()) {
+          if (!langOn) restoreAll();
+          else translateVisible();
+        }
         if (msg.brainUrl !== undefined) window.NKAP_ASSISTANT?.setBrainUrl(msg.brainUrl);
       }
     });
   }
 
   function boot(cfg) {
-    langOn = !!cfg.ewondoOn;
+    langOn = isSafinumSandbox() ? false : !!cfg.ewondoOn;
     lastStep = detectScreenState().step;
-    if (langOn) translateVisible();
+    if (langOn && !isSafinumSandbox()) translateVisible();
     mo.observe(document.body, {
       childList: true,
       subtree: true,
@@ -712,9 +914,16 @@
       attributes: true,
       attributeFilter: ["class", "style", "hidden"],
     });
-    if (cfg.brainUrl) window.NKAP_ASSISTANT?.setBrainUrl(cfg.brainUrl);
+    const effectiveBrainUrl = (cfg.brainUrl || "").trim() || (isSafinumSandbox() ? DEFAULT_SANDBOX_BRAIN_URL : "");
+    if (effectiveBrainUrl) window.NKAP_ASSISTANT?.setBrainUrl(effectiveBrainUrl);
     window.NKAP_OVERLAY?.bubble?.(() => window.NKAP_ASSISTANT?.next());
-    console.log("[nkap] prêt sur", location.href, "— écran actif:", lastStep);
+    console.log(
+      "[nkap] prêt sur",
+      location.href,
+      "— écran actif:",
+      lastStep,
+      isSafinumSandbox() ? "(mode copilote SAFINUM sandbox, traduction DOM désactivée)" : ""
+    );
   }
 
   function start() {

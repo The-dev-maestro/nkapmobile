@@ -768,6 +768,7 @@ window.NKAP_ASSISTANT = (() => {
 
       if (O().setStatusPill) O().setStatusPill("speaking", "Cerveau M2…");
       requestBrainAnswer({
+        channel: ctx.channel || "web",
         transcript: q,
         lang_hint: "fr",
         context: ctx,
@@ -1021,7 +1022,12 @@ window.NKAP_ASSISTANT = (() => {
       chipsBox.appendChild(unseenChip);
     }
 
-    // 3. Chips des scénarios de l'écran actif (fixtures locales instantanées ; LLM réservé à l'inédit & au chat)
+    // 3. Chips des scénarios de l'écran actif : sur safinum.cm/sandbox/* avec cerveau M2 -> appel live /answer (montants réels) !
+    const useLiveSandboxBrain = !!(
+      brainUrl &&
+      typeof window.NKAP_IS_SAFINUM_SANDBOX === "function" &&
+      window.NKAP_IS_SAFINUM_SANDBOX()
+    );
     const screenScenarios = SCENARIOS_META[state.step] || SCENARIOS_META.home;
     screenScenarios.forEach((sc) => {
       const btn = document.createElement("button");
@@ -1029,24 +1035,40 @@ window.NKAP_ASSISTANT = (() => {
       btn.className = "nkap-chip-btn";
       btn.textContent = sc.label;
       btn.addEventListener("click", () => {
-        // Feedback tactile immédiat sans aucun temps mort
         btn.style.transform = "scale(0.96)";
         btn.style.background = "rgba(245,183,0,0.28)";
-        playParcours(sc.id);
+        if (useLiveSandboxBrain) {
+          askQuestion(sc.label, sc.id);
+        } else {
+          playParcours(sc.id);
+        }
       });
       chipsBox.appendChild(btn);
     });
     panelEl.appendChild(chipsBox);
 
-    // 4. Champ de chat sobre (sans icônes) pour poser des questions personnalisées au cerveau M2
+    // 4. Champ de chat + micro Push-to-Talk pour poser des questions au cerveau M2
     const chatForm = document.createElement("form");
     chatForm.style.cssText =
       "display:flex;align-items:center;gap:6px;padding-top:8px;" +
       "border-top:1px solid rgba(255,255,255,0.1);margin-top:2px;";
 
+    const micBtn = document.createElement("button");
+    micBtn.type = "button";
+    micBtn.textContent = "🎤";
+    micBtn.title = "Parler au micro";
+    micBtn.style.cssText =
+      "background:rgba(255,255,255,0.08);color:#F8FAFC;border:1px solid rgba(255,255,255,0.16);" +
+      "border-radius:10px;padding:6px 9px;font-size:13px;cursor:pointer;flex-shrink:0;";
+    micBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggleVoiceRecognition(micBtn);
+    });
+
     const chatInput = document.createElement("input");
     chatInput.type = "text";
-    chatInput.placeholder = "Poser une question personnalisée…";
+    chatInput.placeholder = "Pose une question (écran ou concept)…";
     chatInput.autocomplete = "off";
     chatInput.style.cssText =
       "flex:1;min-width:0;background:rgba(255,255,255,0.06);color:#F8FAFC;" +
@@ -1075,6 +1097,7 @@ window.NKAP_ASSISTANT = (() => {
       askQuestion(q);
     });
 
+    chatForm.appendChild(micBtn);
     chatForm.appendChild(chatInput);
     chatForm.appendChild(sendBtn);
     panelEl.appendChild(chatForm);

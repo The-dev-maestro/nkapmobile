@@ -1480,9 +1480,11 @@ class M2Service:
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
             + "\nRègles: tutoiement (« tu/ton/ta »), valeurs EXACTES de l'écran uniquement (jamais d'invention). "
             "« Mon solde » = Solde disponible (avant opération), PAS « Solde après opération ». "
-            "Si info absente/hors-sujet: {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}. "
-            "Sinon JSON compact 1 ligne: {\"spoken\":\"1 phrase simple en tu avec valeur exacte\",\"title\":\"2-4 mots\",\"rows\":[{\"label\":\"...\",\"value\":\"...\"}],\"targets\":[\"texte exact écran\"]}.\n"
-            f"Question: {transcript.text}"
+            "Si info absente/hors-sujet -> {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}. "
+            "Sinon réponds en JSON compact sur 1 ligne avec les clés spoken, title, rows, targets "
+            "(exemple: {\"spoken\":\"Ton solde disponible est de 50 000 FCFA.\",\"title\":\"Solde disponible\",\"rows\":[{\"label\":\"Solde disponible\",\"value\":\"50 000 FCFA\"}],\"targets\":[\"50 000 FCFA\"]}).\n"
+            f"Question: {transcript.text}\n"
+            "JSON:"
         )
 
     @classmethod
@@ -2054,6 +2056,19 @@ class M2Service:
         # Anti-écho : si un petit LLM 1.5B recopie mot pour mot la question de l'utilisateur sans répondre
         if raw_spoken_n and raw_spoken_n == self._norm(transcript.text):
             return self._build_out_of_scope_actions(transcript, screen_context)
+        # Filtre les recopies accidentelles de placeholders de schéma par un modèle 1.5B
+        if any(
+            ph in raw_spoken_n
+            for ph in ("phrase simple en tu", "valeur exacte", "phrases simples en tu", "texte exact")
+        ):
+            raw_spoken = ""
+            raw_spoken_n = ""
+        if any(
+            ph in self._norm(str(llm_payload.get("title") or ""))
+            for ph in ("2-4 mots", "2 a 4 mots", "c'est quoi ...")
+        ):
+            llm_payload = dict(llm_payload)
+            llm_payload["title"] = ""
 
         lang = transcript.lang or "fr"
         sb = _StreamBuilder(transcript, transcript.ts or 0)

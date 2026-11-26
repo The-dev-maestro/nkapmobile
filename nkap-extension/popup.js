@@ -2,9 +2,9 @@ const ewondo = document.getElementById("ewondoOn");
 const brain = document.getElementById("brainUrl");
 const save = document.getElementById("save");
 
-chrome.storage.sync.get({ ewondoOn: false, brainUrl: "" }, (cfg) => {
+chrome.storage.sync.get({ ewondoOn: false, brainUrl: "https://13.51.168.107.sslip.io" }, (cfg) => {
   ewondo.checked = cfg.ewondoOn;
-  brain.value = cfg.brainUrl;
+  brain.value = cfg.brainUrl || "https://13.51.168.107.sslip.io";
 });
 
 save.addEventListener("click", () => {
