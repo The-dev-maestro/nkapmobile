@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -47,6 +47,7 @@ class ScreenContext(Envelope):
     type: Literal["screen_context"] = "screen_context"
     app: Optional[AppContext] = None
     page: Optional[PageContext] = None
+    channel: Optional[str] = None
     screen_hint: str
     nodes: list[ScreenNode]
 
@@ -98,6 +99,43 @@ class NotebookLine(BaseModel):
     divider: Optional[bool] = None
 
 
+class FlowStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    value: Optional[str] = None
+    tone: Optional[str] = None
+
+
+class BarItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    value: float
+    amount_text: Optional[str] = None
+    tone: Optional[str] = None
+
+
+class ChoiceItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    value: str
+    key: Optional[str] = None
+    tone: Optional[str] = None
+
+
+class TurnMeta(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    channel: str = "web"
+    lang: str = "fr"
+    intent: str = "UNKNOWN"
+    params: dict[str, Any] = Field(default_factory=dict)
+    status: str = "ok"
+
+
 class ActionPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -111,6 +149,13 @@ class ActionPayload(BaseModel):
         "arrow",
         "frame",
         "notebook",
+        "callout",
+        "num",
+        "highlight",
+        "strike",
+        "check",
+        "cross",
+        "edit",
         "hide",
         "clear",
     ]
@@ -125,6 +170,7 @@ class ActionPayload(BaseModel):
     from_: Optional[ActionTarget] = Field(default=None, alias="from", validation_alias=AliasChoices("from", "from_"))
     to: Optional[ActionTarget] = None
     label: Optional[str] = None
+    step: Optional[int] = None
     size: Optional[int] = None
     backing: Optional[str] = None
     per_letter_ms: Optional[int] = None
@@ -133,6 +179,11 @@ class ActionPayload(BaseModel):
     vars: Optional[dict[str, str]] = None
     title: Optional[str] = None
     lines: Optional[list[NotebookLine]] = None
+    flow_steps: Optional[list[FlowStep]] = None
+    bars: Optional[list[BarItem]] = None
+    columns: Optional[list[str]] = None
+    rows: Optional[list[list[str]]] = None
+    choices: Optional[list[ChoiceItem]] = None
     anchor: Optional[ActionTarget] = None
 
     @property
@@ -190,6 +241,7 @@ class AnswerRequest(BaseModel):
 
     session_id: Optional[str] = "web_session"
     turn_id: Optional[str] = None
+    channel: Optional[str] = None
     transcript: str
     lang_hint: str = "fr"
     context: ScreenContext
@@ -200,4 +252,7 @@ class AnswerResponse(BaseModel):
 
     turn_id: str
     actions: list[ActionMessage]
+    meta: Optional[TurnMeta] = None
+    text_fallback: Optional[str] = None
+    choices: Optional[list[ChoiceItem]] = None
 

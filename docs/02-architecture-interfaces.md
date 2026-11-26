@@ -1,15 +1,15 @@
 # nkapmobile — Architecture & contrats d'interfaces
-### v1.1 · 9 nov. 2026 · LE document contrat de l'équipe
+### v1.2 · 26 nov. 2026 · LE document contrat de l'équipe (Finale Multicanale SAFINUM)
 
 > Règle du document : **chaque module se code contre ce document seul.** Tout
 > échange entre modules passe par un payload défini ici. Changer un payload =
 > proposer une modification versionnée de ce doc (v1.2…) — jamais à l'oral.
 >
-> **Changements v1 → v1.1** (décisions tranchées le 9 nov., voir §12) :
-> ① pivot WEB — l'extension Chrome est le livrable du 14, Android passe en finale ;
-> ② langue **douala** (locuteur natif dans l'équipe) en remplacement de l'ewondo ;
-> ③ transport web = **HTTP `POST /answer`** (la WebSocket reste le contrat finale) ;
-> ④ P6 (contenu inédit) formalisé **en 3 niveaux** ; ⑤ erratum MMS-TTS.
+> **Changements v1.1 → v1.2 (26 nov. 2026, voir §13) :**
+> ① **Passerelle officielle Finale SAFINUM (`POST /sandbox`)** : USSD (`*123#`, GSM-7 ≤ 182 car., `< 3 s`, `X-Trace-Id`) + Mobile/Web (`ui_translation` 65 clés `ewo`/`dua`, `{placeholders}` et `max_chars` vérifiés) + pré-support SMS/ATM/IVR ;
+> ② **Protocole `NkapTurn v1.2`** (100 % rétro-compatible v1.1) : `meta`, `text_fallback`, `choices[]`, 6 nouveaux gestes (`callout`, `num`, `highlight`, `strike`, `check`, `cross`) + `edit`, et `notebook.mode` (`lines | flow | bars | table | choices`) ;
+> ③ **Architecture SDK abstrait (`nkap-sdk/` Web + `moteur-rendu-ia/` Android)** : noyau 0-DOM + `HostAdapter` + `SurfaceRenderer` + `TextRenderer` ;
+> ④ **Double voie `cerveau/` (`qwen2.5:1.5b`)** : voie rapide déterministe (`< 50 ms`) + voie LLM JSON compact (`num_predict: 160`, jamais bridé à 10 tokens).
 
 ---
 
@@ -402,3 +402,60 @@ P6 testé avec 10 messages inédits maison les deux jours.
 | 8 | Erratum : `mms-tts-dua`/`mms-tts-ewo` n'existent pas (LID seulement) | v1 affirmait le contraire sans vérification ; corrigé et testé le 9 nov. |
 | 9 | LLM = API gratuite (type Groq) ou modèle ouvert auto-hébergé ; clé jamais côté client | consigne comité du 9 nov. : API payantes interdites |
 | 10 | Dégradation gracieuse obligatoire (serveur mort → fixtures locales) | 65/100 des points se gagnent par la robustesse |
+
+---
+
+## 13. Révision v1.2 — Finale Multicanale SAFINUM & Nkap SDK (26 nov. 2026)
+
+### 13.1 Passerelle officielle SAFINUM (`POST /sandbox` sur `cerveau/`)
+
+La sandbox finale (`https://safinum.cm/sandbox/docs`) envoie chaque tour en HTTP `POST` vers l'URL publique HTTPS de l'équipe (`POST /api/v1/sandbox/endpoint`, ex. `https://13.51.168.107.sslip.io/sandbox`) avec l'en-tête **`X-Trace-Id`** (à propager sur **tous** les appels `https://safinum.cm/api/v1/...` avec `X-Team-Key`).
+
+1. **Mobile & Web (`payload.type == "ui_translation"`)** :
+   - Entrée : `{ trace_id, channel: "mobile"|"web", type: "ui_translation", language, source_language, screen, strings: { key: { text, context, max_chars } } }`
+   - Sortie (`< 10 s`, UTF-8) : `{ "language": "ewo"|"dua"|"fr"|"en", "strings": { key: "traduction" } }`
+   - Invariants vérifiés : 0 placeholder `{amount}/{name}/{missing}/{max}/{fee}/{phone}/{operator}/{biller}` altéré, 0 dépassement de `max_chars`, langue déclarée honnête.
+2. **USSD (`channel == "ussd"`, `*123#`)** :
+   - Entrée : `{ trace_id, session_id, phone, language, input: { type: "text", text, ussd_text }, constraints: { max_chars: 182, charset: "gsm7", timeout_ms: 3000 }, bank_api: { base_url } }`
+   - Sortie (`< 3 s`) :
+     ```json
+     {
+       "response": { "text": "...", "end_session": false, "options": ["..."] },
+       "interpretation": { "intent": "BALANCE_INQUIRY", "parameters": {}, "language": "ewo" },
+       "transaction": { "id": null, "status": "none" }
+     }
+     ```
+   - Invariants vérifiés : **≤ 182 septets GSM-7** (transcodage automatique de `ɛ/ɔ/ŋ/ə/’` vers équivalents GSM-7), confirmation toujours dans un **tour séparé** (`POST /transactions` puis `POST /transactions/{ref}/confirm`), **13 intentions officielles** en MAJUSCULES (`BALANCE_INQUIRY`, `TRANSFER`, `FEE_INQUIRY`, `TRANSACTION_HISTORY`, `AIRTIME_PURCHASE`, `BILL_PAYMENT`, `CONFIRM`, `CANCEL`, `CORRECTION`, `CLARIFICATION_NEEDED`, `TERM_EXPLANATION`, `LANGUAGE_SWITCH`, `UNKNOWN`), aucune supposition en cas d'ambiguïté (`CLARIFICATION_NEEDED`).
+3. **Canaux bonus (`sms`, `atm`, `ivr`)** : même routeur `POST /sandbox` avec contraintes canal (`sms`: 160 car GSM-7 sans session ; `atm`: multiples de 5 000 FCFA ; `ivr`: `input.type == "audio"` → réponse texte).
+
+### 13.2 Extensions du payload visuel (`NkapTurn v1.2` — rétro-compatible v1.1)
+
+`AnswerResponse` (`POST /answer`) conserve `turn_id` + `actions[]` et ajoute des champs optionnels :
+- `meta`: `{ "channel": "web|mobile|ussd|atm|sms|ivr", "lang": "ewo|dua|fr", "intent": "...", "params": {}, "status": "ok|needs_clarification|corrected|error" }`
+- `text_fallback`: résumé court (≤ 182 car. GSM-7) utilisable directement sur canal texte sans écran.
+- `choices`: `[{ "id": "c1", "key": "1", "label": "...", "value": "..." }]` (boutons cliquables sur écran ou options `1/2/3` en USSD/SMS).
+
+**Nouveaux types d'actions `ActionPayload.t` (en plus des 11 types v1.1) :**
+| Type `t` | Rôle | Paramètres clés |
+|---|---|---|
+| `callout` | Curseur-compagnon + étiquette pilule anti-collision (`nameSpot`) + flèche fine | `target`, `label` / `text`, `color` |
+| `num` | Pastille numérotée ① ② ③ ancrée sur une cible (parcours & menus USSD/GAB) | `target`, `step` (1..5), `label?`, `color` |
+| `highlight` | Surligneur translucide non-intrusif | `target`, `color` |
+| `strike` | Rature manuscrite rouge sur une valeur corrigée (scénario Correction) | `target`, `color` |
+| `check` / `cross` | Coche verte ✓ ou croix rouge ✗ tracée au feutre | `target`, `color` |
+| `edit` | Met à jour une marque existante par son `id` sans effacer la scène | `id`, `text?`/`label?`/`color?`/`target?` |
+
+**Ardoise pédagogique modulaire (`notebook.mode`, toujours 1 marque dans le budget `≤ 3`) :**
+- `mode: "lines"` (défaut v1.1) : `lines[]` clé/valeur ou puces.
+- `mode: "flow"` : `flow_steps: [{ "label": "...", "value": "...", "tone": "ink|yellow|green|red" }]` (trajet d'argent).
+- `mode: "bars"` : `bars: [{ "label": "...", "value": 25000, "amount_text": "25 000 FCFA", "tone": "..." }]`.
+- `mode: "table"` : `columns: ["..."]`, `rows: [["..."]]`.
+- `mode: "choices"` : `choices: [{ "id": "...", "key": "1", "label": "...", "value": "..." }]` (clarification interactive).
+
+**Règle de sécurité inchangée** : `AmountGuard` (`validators.py` + `nkap-sdk/src/core/rules.js`) vérifie **100 %** des textes dans `callout`, `num`, `edit`, `flow_steps`, `bars`, `table` et `choices`.
+
+### 13.3 Double voie `cerveau/` (`qwen2.5:1.5b`) & Architecture `nkap-sdk/`
+
+- **Cerveau** : voie rapide déterministe (`< 50 ms`) pour `ui_translation`, menus USSD et intentions claires + voie LLM JSON compact (`num_predict: 160`, `temperature: 0.1`, préchauffé en RAM avec `keep_alive=-1`) pour questions ouvertes, terminologie, ambiguïtés et corrections → compilées de façon déterministe en `NkapTurn v1.2`.
+- **SDK Web (`nkap-sdk/`)** : 0 dépendance, découplé en `core/` (géométrie, `nameSpot` anti-collision, `AmountGuard`, normaliseur `actions[]`/`beats[]`), `adapters/dom-adapter.js` (calibré sur `/sandbox/channel/web`, `/mobile`, `/ussd` et toute app web), `renderers/svg-renderer.js` et `renderers/text-renderer.js`. Servi aussi par FastAPI sur `/sdk/nkap-sdk.js` et injecté par `nkap-extension/vendor/nkap-sdk.js`.
+

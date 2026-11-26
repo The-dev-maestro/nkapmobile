@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
+from app.api.sandbox import router as sandbox_router
 from app.api.websocket import router as ws_router, service
 from app.core.contracts import AnswerRequest, AnswerResponse, Transcript
 
@@ -18,6 +19,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 (STATIC_DIR / "audio").mkdir(exist_ok=True)
+(STATIC_DIR / "sdk").mkdir(exist_ok=True)
 
 
 @asynccontextmanager
@@ -46,11 +48,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Montage des fichiers statiques (servir les fichiers audios TTS pour le Membre 3 et Membre 1)
+# Montage des fichiers statiques (audio TTS + SDK Web drop-in /sdk/nkap-sdk.js)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/sdk", StaticFiles(directory=str(STATIC_DIR / "sdk")), name="sdk")
 
-# Routage WebSocket M2
+# Routage WebSocket M2 + Passerelle officielle SAFINUM Sandbox Finale
 app.include_router(ws_router)
+app.include_router(sandbox_router)
 
 
 @app.get("/health")
@@ -66,6 +70,8 @@ async def health() -> dict:
         },
         "endpoints": {
             "http_answer": "/answer",
+            "safinum_sandbox": "/sandbox",
+            "web_sdk": "/sdk/nkap-sdk.js",
             "websocket": "/ws/session/{session_id}",
             "static_audio": "/static/audio/",
         },
@@ -96,7 +102,19 @@ async def answer(req: AnswerRequest):
             status_code=422,
             content={"error": "harness_reject", "reason": str(exc)},
         )
-    return AnswerResponse(turn_id=turn_id, actions=actions)
+    meta, text_fallback, choices = service.build_turn_envelope(
+        transcript=transcript,
+        screen_context=req.context,
+        actions=actions,
+        channel=req.channel,
+    )
+    return AnswerResponse(
+        turn_id=turn_id,
+        actions=actions,
+        meta=meta,
+        text_fallback=text_fallback,
+        choices=choices,
+    )
 
 
 @app.get("/", response_class=HTMLResponse)

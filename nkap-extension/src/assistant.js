@@ -535,6 +535,54 @@ window.NKAP_ASSISTANT = (() => {
         );
         break;
       }
+      case "callout": {
+        const el = resolveTarget(action.target);
+        if (el && O().callout) {
+          O().callout(el, action.label || action.text || "", action.color || "yellow", action.duration_ms || 520, action.id);
+        }
+        break;
+      }
+      case "num": {
+        const el = resolveTarget(action.target);
+        if (el && O().num) {
+          O().num(el, action.step || 1, action.label || "", action.color || "yellow", action.id);
+        }
+        break;
+      }
+      case "highlight": {
+        const el = resolveTarget(action.target);
+        if (el && O().highlight) {
+          O().highlight(el, action.color || "yellow", action.duration_ms || 420, action.id);
+        }
+        break;
+      }
+      case "strike": {
+        const el = resolveTarget(action.target);
+        if (el && O().strike) {
+          O().strike(el, action.color || "red", action.duration_ms || 360, action.id);
+        }
+        break;
+      }
+      case "check": {
+        const el = resolveTarget(action.target);
+        if (el && O().check) {
+          O().check(el, action.color || "green", action.duration_ms || 380, action.id);
+        }
+        break;
+      }
+      case "cross": {
+        const el = resolveTarget(action.target);
+        if (el && O().cross) {
+          O().cross(el, action.color || "red", action.duration_ms || 380, action.id);
+        }
+        break;
+      }
+      case "edit": {
+        if (action.id && O().edit) {
+          O().edit(action.id, action);
+        }
+        break;
+      }
       case "hide":
         O().hide(action.id);
         break;
@@ -576,7 +624,7 @@ window.NKAP_ASSISTANT = (() => {
 
         (step.do || []).forEach((act) => {
           if (!act || !act.t) return;
-          const isDraw = /^(circle|box|underline|arrow|frame)$/.test(act.t);
+          const isDraw = /^(circle|box|underline|arrow|frame|callout|num|highlight|strike|check|cross)$/.test(act.t);
           const actDelay = baseDelay + cumulativeDrawDelay;
 
           // Si deux gestes de tracé se trouvent dans la même étape, on les enchaîne
@@ -736,7 +784,7 @@ window.NKAP_ASSISTANT = (() => {
           let hasClearAction = false;
           res.actions.forEach((item, idx) => {
             const act = item.action || item;
-            const isDraw = /^(circle|box|underline|arrow|frame)$/.test(act.t);
+            const isDraw = /^(circle|box|underline|arrow|frame|callout|num|highlight|strike|check|cross)$/.test(act.t);
             const hasExplicitDelay = item.run_after_ms !== undefined && item.run_after_ms !== null;
             let actDelay = hasExplicitDelay ? item.run_after_ms : idx * 750;
             if (isDraw) {

@@ -9,19 +9,40 @@ from app.core.contracts import ActionMessage, ScreenContext
 ALLOWED_ACTIONS = {
     "speak",
     "circle",
+    "box",
     "write",
     "caption",
     "underline",
     "arrow",
     "frame",
     "notebook",
+    "callout",
+    "num",
+    "highlight",
+    "strike",
+    "check",
+    "cross",
+    "edit",
     "hide",
     "clear",
 }
 
-# Actions qui créent une marque visuelle à l'écran
-VISUAL_ACTIONS = {"circle", "underline", "arrow", "frame", "write", "notebook", "box"}
-ALLOWED_ACTIONS.add("box")
+# Actions qui créent une marque visuelle à l'écran (`edit` modifie une marque existante sans en ajouter)
+VISUAL_ACTIONS = {
+    "circle",
+    "underline",
+    "arrow",
+    "frame",
+    "write",
+    "notebook",
+    "box",
+    "callout",
+    "num",
+    "highlight",
+    "strike",
+    "check",
+    "cross",
+}
 
 
 def normalize_text(value: str | None) -> str:
@@ -183,7 +204,18 @@ def validate_action_stream(
                     f"Action 'arrow' avec destination 'to' invalide ou absente: {action.to}"
                 )
 
-        if action_type in {"circle", "box", "underline", "frame"} and action.target is None:
+        if action_type in {
+            "circle",
+            "box",
+            "underline",
+            "frame",
+            "callout",
+            "num",
+            "highlight",
+            "strike",
+            "check",
+            "cross",
+        } and action.target is None:
             raise ValueError(f"L'action '{action_type}' requiert une cible 'target' valide.")
 
         # Règle 3 : Limite de 3 marques visuelles simultanées
@@ -210,6 +242,12 @@ def validate_action_stream(
                 raise ValueError(
                     f"Texte ou montant financier non autorisé dans '{action_type}': {action.text}"
                 )
+        if action_type in {"callout", "num", "edit", "frame"}:
+            for field in (action.text, action.label):
+                if field and not text_is_covered(field, screen_context, kb_terms):
+                    raise ValueError(
+                        f"Texte ou montant financier non autorisé dans '{action_type}': {field}"
+                    )
         if action_type == "notebook":
             if action.title and not text_is_covered(action.title, screen_context, kb_terms):
                 raise ValueError(f"Titre de carnet non autorisé: {action.title}")
@@ -217,5 +255,24 @@ def validate_action_stream(
                 for field in (line.label, line.value, line.text):
                     if field and not text_is_covered(field, screen_context, kb_terms):
                         raise ValueError(f"Ligne de carnet non autorisée: {field}")
+            for step in action.flow_steps or []:
+                for field in (step.label, step.value):
+                    if field and not text_is_covered(field, screen_context, kb_terms):
+                        raise ValueError(f"Étape flow non autorisée: {field}")
+            for bar in action.bars or []:
+                for field in (bar.label, bar.amount_text):
+                    if field and not text_is_covered(field, screen_context, kb_terms):
+                        raise ValueError(f"Barre comparative non autorisée: {field}")
+            for col in action.columns or []:
+                if col and not text_is_covered(col, screen_context, kb_terms):
+                    raise ValueError(f"Colonne tableau non autorisée: {col}")
+            for row in action.rows or []:
+                for cell in row:
+                    if cell and not text_is_covered(cell, screen_context, kb_terms):
+                        raise ValueError(f"Cellule tableau non autorisée: {cell}")
+            for ch in action.choices or []:
+                for field in (ch.label, ch.value):
+                    if field and not text_is_covered(field, screen_context, kb_terms):
+                        raise ValueError(f"Choix non autorisé: {field}")
 
     return actions

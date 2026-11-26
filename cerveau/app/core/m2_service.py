@@ -10,10 +10,14 @@ from app.core.contracts import (
     ActionMessage,
     ActionPayload,
     ActionTarget,
+    BarItem,
+    ChoiceItem,
+    FlowStep,
     NotebookLine,
     ScreenContext,
     ScreenNode,
     Transcript,
+    TurnMeta,
 )
 from app.core.validators import extract_amounts, text_is_covered, validate_action_stream
 from app.llm import LLMAdapter
@@ -191,7 +195,18 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
 }
 DOUALA_FR_GLOSSES = LOCAL_LANG_TO_FR
 
-ALLOWED_HIGHLIGHT_STYLES = {"box", "circle", "frame", "underline"}
+ALLOWED_HIGHLIGHT_STYLES = {
+    "box",
+    "circle",
+    "frame",
+    "underline",
+    "callout",
+    "num",
+    "highlight",
+    "strike",
+    "check",
+    "cross",
+}
 ALLOWED_COLORS = {"ink", "yellow", "red", "green"}
 
 
@@ -308,6 +323,8 @@ class _StreamBuilder:
         duration_ms: int = 620,
         run_after_ms: int = 0,
         label: str | None = None,
+        step: int | None = None,
+        text: str | None = None,
     ) -> None:
         self.add(
             run_after_ms,
@@ -318,6 +335,8 @@ class _StreamBuilder:
                 color=color,
                 duration_ms=duration_ms,
                 label=label,
+                step=step,
+                text=text,
             ),
         )
 
@@ -347,18 +366,31 @@ class _StreamBuilder:
         self,
         nb_id: str,
         title: str,
-        lines: list[NotebookLine],
+        lines: list[NotebookLine] | None = None,
         anchor_id: str | None = None,
         run_after_ms: int = 0,
+        *,
+        mode: str = "lines",
+        flow_steps: list[FlowStep] | None = None,
+        bars: list[BarItem] | None = None,
+        columns: list[str] | None = None,
+        rows: list[list[str]] | None = None,
+        choices: list[ChoiceItem] | None = None,
     ) -> None:
         self.add(
             run_after_ms,
             ActionPayload(
                 t="notebook",
                 id=nb_id,
+                mode=mode,
                 title=title,
                 anchor=ActionTarget(node_id=anchor_id) if anchor_id else None,
                 lines=lines,
+                flow_steps=flow_steps,
+                bars=bars,
+                columns=columns,
+                rows=rows,
+                choices=choices,
             ),
         )
 
@@ -982,7 +1014,7 @@ class M2Service:
         return None, None
 
     def _build_llm_prompt(self, transcript: Transcript, screen_context: ScreenContext) -> str:
-        """Construit un prompt compact avec préfixe d'écran stable (optimisé pour le cache KV d'Ollama et ~300ms de latence)."""
+        """Construit un prompt JSON compact (calibré qwen2.5:1.5b, ~150 tokens, préfixe écran stable pour KV cache)."""
         semantics = self._analyze_screen(screen_context)
         rows = semantics["rows"]
         prompt_lines: list[str] = []
@@ -995,17 +1027,38 @@ class M2Service:
                 last_zone = zone
             prompt_lines.append(f"- {row_text}")
 
+        main_pairs = [p for p in semantics["field_pairs"] if p["zone"] == "main"]
+        if main_pairs:
+            prompt_lines.append("Champs clés:")
+            for p in main_pairs[:8]:
+                prompt_lines.append(f"  * {p['label']} -> {p['value']}")
+        if semantics["alerts"]:
+            prompt_lines.append("Alertes:")
+            for a in semantics["alerts"][:3]:
+                prompt_lines.append(f"  ! {a['text']}")
+
         page_title = screen_context.page.title if screen_context.page and screen_context.page.title else "Safinum"
         hint = screen_context.screen_hint or "home"
+        channel = screen_context.channel or "web"
 
         return (
-            f"Tu es NKAP, copilote bancaire vocal et visuel style HeyClicky. Application: {page_title} (étape: {hint}).\n"
-            "Contenu structuré de l'écran:\n"
+            f"Tu es NKAP, copilote bancaire vocal et visuel (App: {page_title}, canal: {channel}, étape: {hint}).\n"
+            "Contenu de l'écran:\n"
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
-            + "\n\nConsigne: indique l'élément exact de l'écran (valeur ou libellé de bouton) qui répond à la question, ou 0 si absent ou hors-sujet.\n"
-            "Réponds en 1 à 4 mots maximum (valeur exacte, pas d'explication).\n"
-            f"Question: {transcript.text}\n"
-            "Élément:"
+            + "\n\nRègles:\n"
+            "- TUTOIEMENT obligatoire (« tu/ton/ta/tes », jamais « vous » ni « mon »).\n"
+            "- Utilise UNIQUEMENT les valeurs exactes affichées ; n'invente aucun montant ni bouton.\n"
+            "- Hors-sujet / info absente -> {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}.\n"
+            "- Réponds en JSON compact sur une ligne avec les clés : "
+            "\"intent\" (BALANCE_INQUIRY|TRANSFER|FEE_INQUIRY|TRANSACTION_HISTORY|CORRECTION|CLARIFICATION_NEEDED|TERM_EXPLANATION|UNKNOWN), "
+            "\"visual_mode\" (default|flow|bars|table|steps|correction|clarify), "
+            "\"spoken\" (1-2 phrases simples en tu avec valeurs exactes), "
+            "\"spoken_after\" (courte phrase de guidage), "
+            "\"title\" (2-5 mots), "
+            "\"rows\" (2-3 objets {\"label\":\"...\",\"value\":\"...\"} ou puces \"• ...\"), "
+            "\"targets\" (1-2 textes EXACTS de l'écran), "
+            "\"color\" (ink|yellow|red|green).\n"
+            f"Question: {transcript.text}"
         )
 
     @classmethod
@@ -1863,13 +1916,54 @@ class M2Service:
             sb.clear(7200)
             return sb.actions
 
+        visual_mode = str(llm_payload.get("visual_mode") or "default").lower().strip()
+        if visual_mode == "default" and not used_explicit_node_ids and llm_payload.get("notebook_lines") is None:
+            if any(k in q_norm for k in ("corriger", "changer le montant", "finalement", "modifier le montant")):
+                visual_mode = "correction"
+            elif any(k in q_norm for k in ("trajet", "combien il me restera", "solde apres", "total a debiter")) and len(grounded_facts) >= 2:
+                visual_mode = "flow"
+
         if nb_title and compiled_lines:
+            # Mode v1.2 enrichi : compile un carnet `flow` ou `bars` déterministe quand les paires chiffrées existent
+            nb_mode = "lines"
+            flow_steps: list[FlowStep] | None = None
+            bar_items: list[BarItem] | None = None
+            if visual_mode == "flow" and len(grounded_facts) >= 2:
+                flow_steps = [
+                    FlowStep(
+                        label=self._safe_text_for_harness(lbl, screen_context, kb_terms, fallback=lbl)[:28],
+                        value=self._safe_text_for_harness(val, screen_context, kb_terms, fallback=val)[:32],
+                        tone="green" if ("0 fcfa" in val.lower() or "gratuit" in val.lower()) else ("yellow" if i == 0 else "ink"),
+                    )
+                    for i, (lbl, val) in enumerate(grounded_facts[:3])
+                ]
+                nb_mode = "flow"
+            elif visual_mode == "bars" and len(grounded_facts) >= 2:
+                parsed_bars: list[BarItem] = []
+                for i, (lbl, val) in enumerate(grounded_facts[:3]):
+                    digits = re.sub(r"\D+", "", val)
+                    if digits:
+                        parsed_bars.append(
+                            BarItem(
+                                label=self._safe_text_for_harness(lbl, screen_context, kb_terms, fallback=lbl)[:26],
+                                value=float(int(digits)),
+                                amount_text=self._safe_text_for_harness(val, screen_context, kb_terms, fallback=val)[:28],
+                                tone="yellow" if i == 0 else "green",
+                            )
+                        )
+                if len(parsed_bars) >= 2:
+                    bar_items = parsed_bars
+                    nb_mode = "bars"
+
             sb.notebook(
                 "nb-guide",
                 nb_title[:48],
-                compiled_lines,
+                compiled_lines if nb_mode == "lines" else None,
                 anchor_id=first_node_id,
                 run_after_ms=0,
+                mode=nb_mode,
+                flow_steps=flow_steps,
+                bars=bar_items,
             )
             remaining_visual_budget -= 1  # Reste 2 marques visuelles
 
@@ -2017,8 +2111,8 @@ class M2Service:
         prompt = self._build_llm_prompt(transcript, screen_context)
         llm_payload = self.llm.generate(
             prompt,
-            options={"temperature": 0.0, "num_predict": 10, "num_thread": 2, "stop": ["\n", ";"]},
-            format_type=None,
+            options={"temperature": 0.1, "num_predict": 160},
+            format_type="json",
         )
 
         # Compatibilité avec l'ancien format mocké par les tests unitaires existants
@@ -2039,6 +2133,47 @@ class M2Service:
                 self._turn_cache.pop(next(iter(self._turn_cache)))
 
         return actions
+
+    def build_turn_envelope(
+        self,
+        transcript: Transcript,
+        screen_context: ScreenContext,
+        actions: list[ActionMessage],
+        channel: str | None = None,
+    ) -> tuple[TurnMeta, str, list[ChoiceItem] | None]:
+        """Construit les métadonnées multicanales v1.2 + text_fallback GSM-7 + choices éventuels."""
+        q_n = self._norm(transcript.text)
+        if any(k in q_n for k in ("solde", "reste", "disponible", "itan", "nden")):
+            intent = "BALANCE_INQUIRY"
+        elif any(k in q_n for k in ("frais", "combien coute", "mbug", "mabala")):
+            intent = "FEE_INQUIRY"
+        elif any(k in q_n for k in ("historique", "operation", "transaction", "itang", "bebolo")):
+            intent = "TRANSACTION_HISTORY"
+        elif any(k in q_n for k in ("corriger", "modifier", "changer", "finalement")):
+            intent = "CORRECTION"
+        elif any(k in q_n for k in ("c'est quoi", "cest quoi", "veut dire", "definition", "plafond")):
+            intent = "TERM_EXPLANATION"
+        elif any(k in q_n for k in ("transfert", "envoyer", "lomo", "loma")):
+            intent = "TRANSFER"
+        else:
+            intent = "UNKNOWN"
+
+        speaks = [m.action.text.strip() for m in actions if m.action.t == "speak" and m.action.text]
+        fallback = " ".join(speaks)[:180].strip() or "Consultez votre ecran."
+        choices: list[ChoiceItem] | None = None
+        for m in actions:
+            if m.action.t == "notebook" and m.action.choices:
+                choices = m.action.choices
+                break
+
+        meta = TurnMeta(
+            channel=channel or screen_context.channel or ("mobile" if screen_context.app else "web"),
+            lang=transcript.lang or "fr",
+            intent=intent,
+            params={},
+            status="needs_clarification" if choices else ("corrected" if intent == "CORRECTION" else "ok"),
+        )
+        return meta, fallback, choices
 
     def handle_turn(
         self, transcript: Transcript, screen_context: ScreenContext

@@ -120,9 +120,8 @@ class LLMAdapter:
             headers["Authorization"] = f"Bearer {self.ollama_bearer_token}"
 
         opts: dict[str, Any] = {
-            "temperature": 0.0,
-            "num_predict": 12,
-            "num_thread": 2,
+            "temperature": 0.1,
+            "num_predict": 160,
         }
         if options:
             opts.update(options)
@@ -224,10 +223,6 @@ class LLMAdapter:
         else:
             prev_err = f"{self.last_error} | " if self.last_error else ""
             self.last_error = f"{prev_err}Ollama local indisponible (cooldown)"
-
-        # 3. Repli heuristique local (100% hors-ligne, zéro API cloud, zéro plantage)
-        self.last_engine = "heuristic"
-        return self._fallback_response(prompt)
 
         # 3. Repli heuristique local (100% hors-ligne, zéro API cloud, zéro plantage)
         self.last_engine = "heuristic"
