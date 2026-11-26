@@ -71,6 +71,9 @@ class SafinumBankClient:
     def create_transaction(self, body: dict[str, Any]) -> tuple[bool, int, dict[str, Any]]:
         return self.call("POST", "/transactions", body)
 
+    def update(self, reference: str, body: dict[str, Any]) -> tuple[bool, int, dict[str, Any]]:
+        return self.call("POST", f"/transactions/{_q(reference)}/update", body)
+
     def confirm(self, reference: str) -> tuple[bool, int, dict[str, Any]]:
         return self.call("POST", f"/transactions/{_q(reference)}/confirm", {})
 

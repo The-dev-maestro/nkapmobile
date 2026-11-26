@@ -245,7 +245,14 @@ def _do_history(phone: str, bank: SafinumBankClient, lang: str, max_septets: int
         kind = str(item.get("type") or "op")[:8]
         amt = _money(item.get("amount", 0))
         st = str(item.get("status") or "")[:7]
-        who = str(item.get("to_name") or item.get("biller") or _local_phone(item.get("to")) or "")[:12]
+        who = str(
+            item.get("beneficiary")
+            or item.get("to_name")
+            or item.get("biller")
+            or item.get("operator")
+            or _local_phone(item.get("to"))
+            or ""
+        )[:12]
         lines.append(f"- {kind} {who} {amt} ({st})".replace("  ", " ").strip())
     declared = resolve_lang(lang)
     header = {"ewo": "Itang mvet:", "dua": "Bebolo:", "en": "History:"}.get(declared, "Historique:")
@@ -290,7 +297,16 @@ def _resolve_beneficiary_or_clarify(
     if not ok:
         return _bank_error(data, "TRANSFER", lang, max_septets=max_septets)
 
-    items = data.get("beneficiaries") or data.get("items") or data.get("data") or []
+    raw_items = data.get("beneficiaries") or data.get("items") or data.get("data") or []
+    # Déduplique par téléphone (l'API SAFINUM peut renvoyer un même bénéficiaire sur plusieurs institutions)
+    dedup_by_phone: dict[str, dict[str, Any]] = {}
+    for it in raw_items:
+        ph = str(it.get("phone") or "").strip()
+        if not ph:
+            continue
+        if ph not in dedup_by_phone or str(it.get("institution") or "").upper() == "SAFINUM":
+            dedup_by_phone[ph] = it
+    items = list(dedup_by_phone.values()) if dedup_by_phone else raw_items
     if not items:
         return _bank_error({"error": "UNKNOWN_BENEFICIARY"}, "TRANSFER", lang, max_septets=max_septets)
     if len(items) > 1:
