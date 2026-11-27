@@ -3,7 +3,7 @@
   "name": "Banque Démo SAFINUM (Web & Mobile)",
   "match_packages": ["cm.nkapmobile.engine"],
   "match_urls": ["safinum.cm/sandbox", "banque-demo.sandbox", "safinum.cm/hackathon-test"],
-  "match_text_cues": ["banque demo", "banque-demo.sandbox", "lomo moni", "mbembe kiri", "mbole"],
+  "match_text_cues": ["banque demo", "banque-demo.sandbox", "lomo moni", "loma moni", "mbembe kiri", "mbole"],
   "ui_translations": {
     "nda": "Accueil",
     "mboa": "Accueil",
@@ -25,10 +25,30 @@
     "mod a non": "Bénéficiaire",
     "mukusa": "Bénéficiaire",
     "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
+    "nimero a telefone nga dina": "Numéro de téléphone ou nom",
     "bot bam ba non moni": "Mes bénéficiaires",
     "bakusa bam": "Mes bénéficiaires",
     "itan": "Montant",
     "moni": "Montant",
+    "mbug": "Frais",
+    "mabala": "Frais",
+    "ntolan wog": "Total à débiter",
+    "botali ba busa": "Total à débiter",
+    "itan e li'i": "Solde après opération",
+    "moni ombusa": "Solde après opération",
+    "itan mfefe": "Nouveau solde",
+    "moni ma pene ma dia": "Nouveau solde",
+    "nombo ndem": "Référence",
+    "edun": "Référence",
+    "tob isae": "Choisir le service",
+    "pona ebolo": "Choisir le service",
+    "kalara": "Facture",
+    "kalati": "Facture",
+    "kredi": "Crédit",
+    "nsaa telefon": "Opérateur",
+    "singi": "Opérateur",
+    "nombo ya lomo kredi": "Numéro à recharger",
+    "nimero ya kredi": "Numéro à recharger",
     "vaa": "Annuler",
     "buka": "Annuler",
     "kele obusu": "Continuer",
@@ -40,89 +60,326 @@
     "bulan": "Retour",
     "timba": "Retour",
     "wog": "Écouter",
-    "senga": "Écouter"
+    "senga": "Écouter",
+    "kui": "Déconnexion",
+    "busa": "Déconnexion"
   },
   "action_buttons": [
     "envoyer de l'argent", "payer une facture", "acheter du credit", "mes operations",
-    "continuer", "annuler", "confirmer", "modifier", "retour", "ecouter",
-    "lomo moni", "loma moni", "kele obusu", "ala oboso", "yemban", "bamse", "vaa", "buka"
+    "continuer", "annuler", "confirmer", "modifier", "retour", "ecouter", "termine",
+    "lomo moni", "loma moni", "yaan mfie ai kalara", "sawedi kalati", "kus kredi telefon",
+    "ande kredi telefone", "itang mvet yam", "bebolo bam",
+    "kele obusu", "ala oboso", "yemban", "bamse", "tyende", "tukwa", "vaa", "buka",
+    "bulan", "timba", "wog", "senga", "facture", "credit", "kalara", "kalati", "kredi"
+  ],
+  "screen_detectors": [
+    {
+      "screen": "receipt",
+      "url_any": ["/receipt"],
+      "text_any": [
+        "operation reussie", "mvet o boban mben", "ebolo e tilabe na bwam", "transaction successful",
+        "nouveau solde", "itan mfefe", "moni ma pene ma dia",
+        "mvet o vaban. te ke", "ebolo e bukabe. to moni", "operation annulee. aucun montant"
+      ]
+    },
+    {
+      "screen": "review",
+      "url_any": ["/review", "/recap"],
+      "text_any": [
+        "verifiez avant de confirmer", "fombo ossussua eneu wa yemban", "ombwa oboso ba bamse",
+        "check before you confirm", "l'argent part des que vous confirmez",
+        "moni a ke di a te wa yemban", "moni ma ma-ala dibokimene"
+      ]
+    },
+    {
+      "screen": "transfer",
+      "url_any": ["/transfer"],
+      "text_any": [
+        "mes beneficiaires", "bot bam ba non moni", "bakusa bam", "my beneficiaries",
+        "nombo telefon nge dzoe", "nimero a telefone nga dina",
+        "jusqu'a 500 000", "akui 500 000", "tinga 500 000", "up to 500 000"
+      ]
+    },
+    {
+      "screen": "pay_airtime",
+      "text_any": [
+        "numero a recharger", "nombo ya lomo kredi", "nimero ya kredi", "number to top up",
+        "operateur detecte", "nsaa a yenban", "singi e yenbe",
+        "nombo woe nge mod mfe", "nimero ango nga moto mpepe"
+      ]
+    },
+    {
+      "screen": "pay_bill",
+      "text_any": ["choisir le service", "tob isae", "pona ebolo", "choose the service"]
+    },
+    {
+      "screen": "pay",
+      "url_any": ["/pay"],
+      "text_all_groups": [
+        ["facture", "credit"],
+        ["kalara", "kredi"],
+        ["kalati", "kredi"],
+        ["bills", "airtime"]
+      ],
+      "not_text_any": ["solde disponible", "itan ineu", "moni ma pene", "available balance"]
+    },
+    {
+      "screen": "history",
+      "url_any": ["/history"],
+      "text_any": ["historique des operations"],
+      "text_all_groups": [
+        ["recus", "envoyes"],
+        ["bi bi", "bi lom"],
+        ["ma-poy", "ma-ala"],
+        ["incoming", "outgoing"]
+      ],
+      "not_text_any": ["solde disponible", "itan ineu", "moni ma pene", "available balance"]
+    },
+    {
+      "screen": "home",
+      "url_any": ["/home"],
+      "text_any": [
+        "solde disponible", "itan ineu", "moni ma pene", "available balance",
+        "que voulez-vous faire", "za dzam wa yi bo", "nje o tondi bola"
+      ]
+    }
   ],
   "screen_guides": {
     "home": {
+      "llm_summary": "Accueil Banque Démo SAFINUM : solde disponible en haut, 4 actions rapides (Envoyer de l'argent, Payer une facture, Acheter du crédit, Mes opérations) et dernières opérations en bas.",
       "spoken": "Tu es sur ton accueil bancaire. En haut tu vois ton solde disponible, au milieu les boutons pour envoyer de l'argent, payer une facture ou acheter du crédit, et en bas tes dernières opérations.",
       "highlights": [
-        {"match": ["envoyer de l'argent", "lomo moni", "loma moni"], "style": "frame", "label": "Envoyer", "color": "yellow"}
+        {"match": ["envoyer de l'argent", "lomo moni", "loma moni", "send money"], "style": "frame", "label": "Envoyer", "color": "yellow"}
       ]
     },
     "transfer": {
-      "spoken": "Ici tu prépares un transfert : 1. Choisis un bénéficiaire dans la liste ou tape son numéro ; 2. Saisis le montant à envoyer ; 3. Appuie sur Continuer.",
+      "llm_summary": "Écran Transfert SAFINUM (déjà ouvert) : champ Bénéficiaire (ou liste Mes bénéficiaires à droite), champ Montant (l'indice en dessous est juste le plafond), boutons Annuler et Continuer.",
+      "spoken": "Ici tu prépares un transfert : commence par choisir un bénéficiaire dans la liste ou tape son numéro, saisis ensuite le montant à envoyer, puis appuie sur Continuer.",
       "highlights": [
-        {"match": ["beneficiaire", "mod a non moni", "mukusa"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
-        {"match": ["montant", "itan"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso"], "style": "frame", "label": "3. Continuer", "color": "red"}
+        {"match": ["beneficiaire", "mod a non moni", "mukusa", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
+        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+      ]
+    },
+    "pay_bill": {
+      "llm_summary": "Écran Payer une facture SAFINUM (déjà ouvert) : choisir le fournisseur (ENEO, CAMWATER, CANAL, CAMTEL), entrer le montant et appuyer sur Continuer.",
+      "spoken": "Tu es sur l'écran Paiement de facture : choisis d'abord le fournisseur (ENEO, CAMWATER, CANAL ou CAMTEL), entre ensuite le montant à payer, puis appuie sur Continuer.",
+      "highlights": [
+        {"match": ["choisir le service", "tob isae", "pona ebolo", "choose the service"], "style": "num", "step": 1, "label": "Fournisseur", "color": "yellow"},
+        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+      ]
+    },
+    "pay_airtime": {
+      "llm_summary": "Écran Achat de crédit téléphonique SAFINUM (déjà ouvert) : numéro à recharger, opérateur détecté, montant et bouton Continuer.",
+      "spoken": "Tu es sur l'écran Crédit téléphonique : tape d'abord le numéro à recharger, vérifie l'opérateur et entre le montant, puis appuie sur Continuer.",
+      "highlights": [
+        {"match": ["numero a recharger", "nombo ya lomo kredi", "nimero ya kredi", "number to top up"], "style": "num", "step": 1, "label": "Numéro", "color": "yellow"},
+        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     "pay": {
+      "llm_summary": "Écran Payer SAFINUM : onglets Facture (ENEO/CAMWATER/CANAL/CAMTEL) et Crédit téléphonique, puis Continuer.",
       "spoken": "Ici tu paies une facture ou achètes du crédit : choisis l'onglet Facture ou Crédit, sélectionne le fournisseur ou le numéro, entre le montant puis appuie sur Continuer.",
       "highlights": [
-        {"match": ["continuer", "kele obusu", "ala oboso"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     "review": {
+      "llm_summary": "Écran Récapitulatif avant validation SAFINUM : Bénéficiaire/Service, Montant, Frais, Total à débiter, Solde après opération ; boutons Confirmer, Modifier, Annuler.",
       "spoken": "Tu es sur le récapitulatif avant validation : vérifie bien le bénéficiaire, le montant, les frais et ton solde après opération, puis appuie sur Confirmer si tout est exact.",
       "highlights": [
-        {"match": ["confirmer", "yemban", "bamse"], "style": "frame", "label": "Confirmer", "color": "red"}
+        {"match": ["confirmer", "yemban", "bamse", "confirm"], "style": "frame", "label": "Confirmer", "color": "red"}
       ]
     },
     "recap": {
+      "llm_summary": "Écran Récapitulatif avant validation SAFINUM : vérifier bénéficiaire, montant, frais et solde après opération avant Confirmer.",
       "spoken": "Tu es sur le récapitulatif avant validation : vérifie bien le bénéficiaire, le montant, les frais et ton solde après opération, puis appuie sur Confirmer si tout est exact.",
       "highlights": [
-        {"match": ["confirmer", "yemban", "bamse"], "style": "frame", "label": "Confirmer", "color": "red"}
+        {"match": ["confirmer", "yemban", "bamse", "confirm"], "style": "frame", "label": "Confirmer", "color": "red"}
       ]
     },
     "receipt": {
-      "spoken": "Ton opération est confirmée et enregistrée : tu peux vérifier ton nouveau solde et noter le numéro de référence comme preuve.",
-      "highlights": []
+      "llm_summary": "Écran Reçu / Confirmation SAFINUM : opération enregistrée (ou annulée), numéro de référence et nouveau solde.",
+      "spoken": "Ton opération est terminée : vérifie ton nouveau solde et garde le numéro de référence comme preuve en cas de besoin.",
+      "highlights": [
+        {"match": ["reference", "nombo ndem", "edun"], "style": "highlight", "color": "green"}
+      ]
     },
     "history": {
+      "llm_summary": "Écran Historique SAFINUM : filtres Tout / Reçus / Envoyés et tableau Date, Opération, Statut (Confirmé, En attente, Annulé, Échoué), Montant.",
       "spoken": "Ici tu consultes toutes tes opérations passées : utilise les boutons Tout, Reçus ou Envoyés pour filtrer et vérifier si chaque paiement est confirmé ou annulé.",
-      "highlights": []
+      "highlights": [
+        {"match": ["recus", "bi bi", "ma-poy", "incoming"], "style": "num", "step": 1, "label": "Reçus", "color": "yellow"},
+        {"match": ["envoyes", "bi lom", "ma-ala", "outgoing"], "style": "num", "step": 2, "label": "Envoyés", "color": "yellow"}
+      ]
     }
   },
   "qa_shortcuts": [
     {
+      "id": "sbx_home_transfer",
+      "screens": ["home"],
+      "triggers": ["envoyer", "envoie", "envoi", "transferer", "faire un transfert", "lomo", "loma"],
+      "spoken": "Appuie ici sur Envoyer de l'argent pour choisir un bénéficiaire et saisir le montant à envoyer.",
+      "target_match": ["envoyer de l'argent", "lomo moni", "loma moni", "send money"],
+      "style": "frame",
+      "label": "Appuie ici",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_home_bill",
+      "screens": ["home"],
+      "triggers": ["facture", "eneo", "camwater", "canal", "camtel", "payer une facture", "kalara", "kalati"],
+      "spoken": "Appuie ici sur Payer une facture pour régler ENEO, CAMWATER, CANAL ou CAMTEL.",
+      "target_match": ["payer une facture", "yaan mfie ai kalara", "sawedi kalati", "pay a bill"],
+      "style": "frame",
+      "label": "Factures",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_home_airtime",
+      "screens": ["home"],
+      "triggers": ["credit telephon", "acheter du credit", "recharger", "unites", "airtime", "kredi"],
+      "spoken": "Appuie ici sur Acheter du crédit pour recharger ton numéro ou celui d'un proche.",
+      "target_match": ["acheter du credit", "kus kredi telefon", "ande kredi telefone", "buy airtime"],
+      "style": "frame",
+      "label": "Crédit",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_home_history",
+      "screens": ["home"],
+      "triggers": ["voir tout", "toutes mes operations", "mes operations", "ouvrir l'historique", "voir l'historique"],
+      "spoken": "Appuie ici sur Mes opérations pour ouvrir tout ton historique et filtrer les entrées et sorties.",
+      "target_match": ["mes operations", "itang mvet yam", "bebolo bam", "tout voir", "fombo mese", "ombwa mese"],
+      "style": "frame",
+      "label": "Historique",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_transfer_already_here",
+      "screens": ["transfer", "beneficiary"],
+      "triggers": ["envoyer de l'argent", "je veux envoyer", "comment envoyer", "faire un transfert", "faire un envoi"],
+      "spoken": "Tu es déjà sur l'écran de transfert ! Choisis un bénéficiaire dans la liste ou tape son numéro, saisis le montant, puis appuie sur Continuer.",
+      "highlights": [
+        {"match": ["beneficiaire", "mod a non moni", "mukusa", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
+        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+      ]
+    },
+    {
       "id": "sbx_saved_contacts",
       "screens": ["transfer", "beneficiary"],
-      "triggers": ["mes beneficiaires", "liste", "contacts", "enregistres", "blaise", "brenda", "carine", "ibrahim", "bot bam"],
+      "triggers": ["mes beneficiaires", "liste", "contacts", "enregistres", "blaise", "brenda", "carine", "ibrahim", "bot bam", "bakusa"],
       "spoken": "C'est ta liste de contacts déjà enregistrés : appuie directement sur un nom pour remplir automatiquement le champ Bénéficiaire sans risque de faute de frappe.",
-      "target_match": ["mes beneficiaires", "bot bam ba non moni", "bakusa bam"],
+      "target_match": ["mes beneficiaires", "bot bam ba non moni", "bakusa bam", "my beneficiaries"],
       "style": "highlight",
       "color": "yellow"
     },
     {
       "id": "sbx_transfer_limit",
       "screens": ["transfer", "beneficiary"],
-      "triggers": ["500 000", "500000", "jusqu'a", "maximum", "akui", "limite par operation"],
+      "triggers": ["500 000", "500000", "jusqu'a", "maximum", "akui", "tinga", "limite par operation"],
       "spoken": "Ce message indique seulement le plafond maximum autorisé par transfert : tu n'es pas obligé d'envoyer ce montant, tu peux taper n'importe quelle petite somme dans le champ Montant.",
-      "target_match": ["jusqu'a", "500 000", "akui"],
+      "target_match": ["jusqu'a", "500 000", "akui", "tinga", "up to"],
       "style": "highlight",
       "color": "yellow"
     },
     {
+      "id": "sbx_pay_bill_already_here",
+      "screens": ["pay_bill", "pay"],
+      "triggers": ["payer une facture", "eneo", "camwater", "canal", "camtel", "electricite", "eau"],
+      "spoken": "Tu es déjà sur l'écran de paiement ! Sélectionne ton fournisseur, entre le montant puis appuie sur Continuer.",
+      "highlights": [
+        {"match": ["choisir le service", "tob isae", "pona ebolo", "choose the service"], "style": "num", "step": 1, "label": "Fournisseur", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+      ]
+    },
+    {
+      "id": "sbx_pay_switch_to_airtime",
+      "screens": ["pay_bill"],
+      "triggers": ["credit", "recharger", "airtime", "unites", "kredi"],
+      "spoken": "Appuie sur l'onglet Crédit juste en haut pour passer à la recharge téléphonique.",
+      "target_match": ["credit", "kredi", "airtime"],
+      "style": "frame",
+      "label": "Crédit",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_pay_airtime_already_here",
+      "screens": ["pay_airtime"],
+      "triggers": ["credit", "recharger", "airtime", "unites", "operateur", "mtn", "orange"],
+      "spoken": "Tu es déjà sur l'écran Crédit ! Tape le numéro à recharger (l'opérateur est détecté automatiquement), entre le montant puis appuie sur Continuer.",
+      "highlights": [
+        {"match": ["numero a recharger", "nombo ya lomo kredi", "nimero ya kredi", "number to top up"], "style": "num", "step": 1, "label": "Numéro", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+      ]
+    },
+    {
+      "id": "sbx_pay_switch_to_bill",
+      "screens": ["pay_airtime"],
+      "triggers": ["facture", "eneo", "camwater", "canal", "kalara", "kalati"],
+      "spoken": "Appuie sur l'onglet Facture juste en haut pour payer une facture ENEO, CAMWATER, CANAL ou CAMTEL.",
+      "target_match": ["facture", "kalara", "kalati", "bills"],
+      "style": "frame",
+      "label": "Facture",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_review_confirm",
+      "screens": ["review", "recap"],
+      "triggers": ["confirmer", "valider", "envoyer maintenant", "yemban", "bamse"],
+      "spoken": "Relis une dernière fois le bénéficiaire, le montant et les frais, puis appuie ici sur Confirmer : l'argent part dès que tu confirmes.",
+      "target_match": ["confirmer", "yemban", "bamse", "confirm"],
+      "style": "frame",
+      "label": "Confirmer",
+      "color": "red"
+    },
+    {
+      "id": "sbx_review_edit",
+      "screens": ["review", "recap"],
+      "triggers": ["modifier", "corriger", "changer", "erreur", "me suis trompe", "tyende", "tukwa"],
+      "spoken": "Rien n'est encore débité : appuie ici sur Modifier pour revenir changer le montant ou le bénéficiaire.",
+      "target_match": ["modifier", "tyende", "tukwa", "edit"],
+      "style": "frame",
+      "label": "Modifier",
+      "color": "yellow"
+    },
+    {
       "id": "sbx_cancel_transfer",
-      "screens": ["transfer", "review", "recap", "pay"],
-      "triggers": ["annuler", "revenir", "quitter", "me suis trompe", "vaa", "buka"],
+      "screens": ["transfer", "beneficiary", "review", "recap", "pay", "pay_bill", "pay_airtime"],
+      "triggers": ["annuler", "revenir", "quitter", "abandonner", "vaa", "buka"],
       "spoken": "Appuie ici sur Annuler pour abandonner sans rien débiter de ton compte.",
-      "target_match": ["annuler", "vaa", "buka"],
+      "target_match": ["annuler", "vaa", "buka", "cancel"],
       "style": "frame",
       "label": "Annuler",
       "color": "red"
     },
     {
+      "id": "sbx_receipt_proof",
+      "screens": ["receipt"],
+      "triggers": ["preuve", "reference", "est parti", "reussi", "recu", "nombo ndem", "edun"],
+      "spoken": "Oui, l'opération est enregistrée ! Note ou garde le numéro de référence affiché ici comme preuve, et vérifie ton nouveau solde.",
+      "target_match": ["reference", "nombo ndem", "edun"],
+      "style": "highlight",
+      "color": "green"
+    },
+    {
+      "id": "sbx_history_filters",
+      "screens": ["history"],
+      "triggers": ["filtrer", "trier", "seulement les recus", "seulement les envoyes", "statut", "en attente", "annule", "echoue"],
+      "spoken": "Tu peux filtrer la liste avec Tout, Reçus ou Envoyés. Chaque ligne indique son statut : Confirmé, En attente, Annulé ou Échoué.",
+      "highlights": [
+        {"match": ["recus", "bi bi", "ma-poy", "incoming"], "style": "num", "step": 1, "label": "Reçus", "color": "yellow"},
+        {"match": ["envoyes", "bi lom", "ma-ala", "outgoing"], "style": "num", "step": 2, "label": "Envoyés", "color": "yellow"}
+      ]
+    },
+    {
       "id": "sbx_listen_btn",
       "triggers": ["bouton ecouter", "haut parleur", "wog", "senga", "lire l'ecran"],
       "spoken": "Ce bouton lit à voix haute le contenu traduit de l'écran dans ta langue.",
-      "target_match": ["ecouter", "wog", "senga"],
+      "target_match": ["ecouter", "wog", "senga", "listen"],
       "style": "circle",
       "color": "yellow"
     }

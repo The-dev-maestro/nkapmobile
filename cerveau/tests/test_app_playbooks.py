@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from fastapi.testclient import TestClient
 
+from app.core.app_kb import AppPlaybookStore
+from app.core.contracts import ScreenNode
 from app.main import app
 
 
@@ -20,8 +22,9 @@ class _FakeResp:
         return {"response": json.dumps(self._payload, ensure_ascii=False)}
 
 
-# Arbre d'accessibilité RÉEL capturé sur Wave Android (com.wave.personal) via uiautomator dump
-# Note : volontairement dans l'ordre XML réel où la liste de transactions arrive AVANT le solde du haut !
+# ── WAVE : écrans réels capturés sur TECNO KN4 (com.wave.personal) ──────────
+
+# 1. Wave Home (ordre XML réel où la liste de transactions arrive AVANT le solde du haut !)
 WAVE_REAL_CTX = {
     "type": "screen_context",
     "app": {"package": "com.wave.personal", "activity": "PersonalHomeActivity"},
@@ -41,7 +44,83 @@ WAVE_REAL_CTX = {
     ],
 }
 
-# Écran RÉEL `banque-demo.sandbox/transfer` en Ewondo (capture utilisateur)
+# 2. Wave Send Money (écran réel des captures utilisateur : ← Send Money / To / Enter a new number / Scan to send / Contacts)
+WAVE_SEND_MONEY_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "PersonalHomeActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "w_back", "tag": "span", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "w_title", "tag": "span", "text": "Send Money", "clickable": False, "bounds": [126, 98, 344, 146], "tone": "light"},
+        {"node_id": "w_to", "tag": "span", "text": "To", "clickable": False, "bounds": [28, 194, 72, 224], "tone": "light"},
+        {"node_id": "w_new", "tag": "span", "text": "Enter a new number", "clickable": False, "bounds": [132, 316, 420, 360], "tone": "light"},
+        {"node_id": "w_scan", "tag": "span", "text": "Scan to send", "clickable": False, "bounds": [132, 444, 330, 488], "tone": "light"},
+        {"node_id": "w_contacts", "tag": "span", "text": "Contacts", "clickable": False, "bounds": [28, 566, 178, 604], "tone": "light"},
+        {"node_id": "w_c1", "tag": "span", "text": ".Djunette", "clickable": False, "bounds": [126, 650, 290, 684], "tone": "light"},
+        {"node_id": "w_c1n", "tag": "span", "text": "680 78 18 01", "clickable": False, "bounds": [126, 690, 310, 720], "tone": "light"},
+    ],
+}
+
+# 3. Wave Send Amount
+WAVE_SEND_AMOUNT_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "SendAmountActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "wa_back", "tag": "span", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "wa_title", "tag": "span", "text": "Send Money", "clickable": False, "bounds": [126, 98, 344, 146], "tone": "light"},
+        {"node_id": "wa_sa", "tag": "span", "text": "Send Amount", "clickable": False, "bounds": [32, 320, 260, 360], "tone": "light"},
+        {"node_id": "wa_ra", "tag": "span", "text": "Receive Amount", "clickable": False, "bounds": [32, 460, 280, 500], "tone": "light"},
+        {"node_id": "wa_btn", "tag": "button", "text": "Send", "clickable": True, "bounds": [60, 1360, 660, 1450], "tone": "light"},
+    ],
+}
+
+# 4. Wave Vault / Bills / Settings / Fullscreen QR
+WAVE_VAULT_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "VaultActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "wv_back", "tag": "span", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "wv_title", "tag": "span", "text": "My Vault", "clickable": False, "bounds": [126, 98, 300, 146], "tone": "light"},
+        {"node_id": "wv_tr", "tag": "button", "text": "Transfer to Vault", "clickable": True, "bounds": [40, 500, 680, 570], "tone": "light"},
+        {"node_id": "wv_wd", "tag": "button", "text": "Withdraw from Vault", "clickable": True, "bounds": [40, 600, 680, 670], "tone": "light"},
+    ],
+}
+
+WAVE_CARD_QR_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "com.wave.customer.CardFullScreenActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "wq_back", "tag": "span", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 100, 70, 142], "tone": "light"},
+    ],
+}
+
+
+# ── SAFINUM SANDBOX : les 6 écrans complets (Web & Mobile, FR & Ewondo) ────
+
+SAFINUM_HOME_CTX = {
+    "type": "screen_context",
+    "channel": "web",
+    "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Banque démo"},
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "h_bal_lbl", "tag": "span", "text": "Itan ineu", "clickable": False, "bounds": [420, 210, 520, 230], "tone": "dark"},
+        {"node_id": "h_bal", "tag": "span", "text": "102 096 FCFA", "clickable": False, "bounds": [420, 240, 620, 290], "tone": "dark"},
+        {"node_id": "h_q", "tag": "h3", "text": "Za dzam wa yi bo?", "clickable": False, "bounds": [680, 210, 860, 235], "tone": "light"},
+        {"node_id": "h_tr", "tag": "button", "text": "Lomo moni", "clickable": True, "bounds": [680, 260, 820, 310], "tone": "light"},
+        {"node_id": "h_bill", "tag": "button", "text": "Yaan mfie ai kalara", "clickable": True, "bounds": [840, 260, 1020, 310], "tone": "light"},
+        {"node_id": "h_air", "tag": "button", "text": "Kus kredi telefon", "clickable": True, "bounds": [680, 330, 820, 380], "tone": "light"},
+        {"node_id": "h_hist", "tag": "button", "text": "Itang mvet yam", "clickable": True, "bounds": [840, 330, 1020, 380], "tone": "light"},
+        {"node_id": "h_wog", "tag": "button", "text": "Wog", "clickable": True, "bounds": [980, 120, 1050, 155], "tone": "light"},
+    ],
+}
+
 SAFINUM_TRANSFER_CTX = {
     "type": "screen_context",
     "channel": "web",
@@ -60,6 +139,87 @@ SAFINUM_TRANSFER_CTX = {
         {"node_id": "n_10", "tag": "span", "text": "237652084938", "clickable": False, "bounds": [1030, 360, 1140, 385], "tone": "light"},
     ],
 }
+
+SAFINUM_PAY_BILL_CTX = {
+    "type": "screen_context",
+    "channel": "web",
+    "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Banque démo"},
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "pb_h", "tag": "h2", "text": "Yaan", "clickable": False, "bounds": [540, 210, 640, 240], "tone": "light"},
+        {"node_id": "pb_tab1", "tag": "button", "text": "Kalara", "clickable": True, "bounds": [540, 260, 630, 295], "tone": "light"},
+        {"node_id": "pb_tab2", "tag": "button", "text": "Kredi", "clickable": True, "bounds": [645, 260, 735, 295], "tone": "light"},
+        {"node_id": "pb_srv", "tag": "label", "text": "Tob isae", "clickable": False, "bounds": [540, 320, 680, 345], "tone": "light"},
+        {"node_id": "pb_eneo", "tag": "button", "text": "ENEO", "clickable": True, "bounds": [540, 360, 640, 400], "tone": "light"},
+        {"node_id": "pb_amt", "tag": "label", "text": "Itan", "clickable": False, "bounds": [540, 430, 620, 455], "tone": "light"},
+        {"node_id": "pb_go", "tag": "button", "text": "Kele obusu", "clickable": True, "bounds": [700, 520, 820, 560], "tone": "light"},
+    ],
+}
+
+SAFINUM_PAY_AIRTIME_CTX = {
+    "type": "screen_context",
+    "channel": "web",
+    "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Banque démo"},
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "pa_tab1", "tag": "button", "text": "Kalara", "clickable": True, "bounds": [540, 260, 630, 295], "tone": "light"},
+        {"node_id": "pa_tab2", "tag": "button", "text": "Kredi", "clickable": True, "bounds": [645, 260, 735, 295], "tone": "light"},
+        {"node_id": "pa_phone", "tag": "label", "text": "Nombo ya lomo kredi", "clickable": False, "bounds": [540, 320, 760, 345], "tone": "light"},
+        {"node_id": "pa_op", "tag": "span", "text": "Nsaa a yenban: MTN", "clickable": False, "bounds": [540, 390, 740, 415], "tone": "light"},
+        {"node_id": "pa_amt", "tag": "label", "text": "Itan", "clickable": False, "bounds": [540, 430, 620, 455], "tone": "light"},
+        {"node_id": "pa_go", "tag": "button", "text": "Kele obusu", "clickable": True, "bounds": [700, 520, 820, 560], "tone": "light"},
+    ],
+}
+
+SAFINUM_REVIEW_CTX = {
+    "type": "screen_context",
+    "channel": "web",
+    "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Banque démo"},
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "rv_t", "tag": "h2", "text": "Fombo ossussua eneu wa yemban", "clickable": False, "bounds": [540, 210, 860, 240], "tone": "light"},
+        {"node_id": "rv_warn", "tag": "p", "text": "Moni a ke di a te wa yemban.", "clickable": False, "bounds": [540, 260, 860, 285], "tone": "light"},
+        {"node_id": "rv_edit", "tag": "button", "text": "Tyende", "clickable": True, "bounds": [540, 520, 640, 560], "tone": "light"},
+        {"node_id": "rv_cancel", "tag": "button", "text": "Vaa", "clickable": True, "bounds": [650, 520, 730, 560], "tone": "light"},
+        {"node_id": "rv_ok", "tag": "button", "text": "Yemban", "clickable": True, "bounds": [740, 520, 860, 560], "tone": "light"},
+    ],
+}
+
+SAFINUM_RECEIPT_CTX = {
+    "type": "screen_context",
+    "channel": "web",
+    "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Banque démo"},
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "rc_ok", "tag": "h2", "text": "Mvet o boban mben", "clickable": False, "bounds": [540, 210, 820, 240], "tone": "light"},
+        {"node_id": "rc_ref", "tag": "span", "text": "Nombo ndem", "clickable": False, "bounds": [540, 310, 680, 335], "tone": "light"},
+        {"node_id": "rc_refv", "tag": "span", "text": "TX-98412", "clickable": False, "bounds": [700, 310, 820, 335], "tone": "light"},
+        {"node_id": "rc_bal", "tag": "span", "text": "Itan mfefe", "clickable": False, "bounds": [540, 360, 680, 385], "tone": "light"},
+        {"node_id": "rc_balv", "tag": "span", "text": "101 596 FCFA", "clickable": False, "bounds": [700, 360, 840, 385], "tone": "light"},
+    ],
+}
+
+SAFINUM_HISTORY_CTX = {
+    "type": "screen_context",
+    "channel": "web",
+    "page": {"url": "https://safinum.cm/sandbox/channel/web", "title": "Safinum Banque démo"},
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "hi_t", "tag": "h2", "text": "Itang mvet", "clickable": False, "bounds": [540, 210, 720, 240], "tone": "light"},
+        {"node_id": "hi_all", "tag": "button", "text": "Mese", "clickable": True, "bounds": [540, 260, 610, 295], "tone": "light"},
+        {"node_id": "hi_in", "tag": "button", "text": "Bi bi", "clickable": True, "bounds": [620, 260, 690, 295], "tone": "light"},
+        {"node_id": "hi_out", "tag": "button", "text": "Bi lom", "clickable": True, "bounds": [700, 260, 780, 295], "tone": "light"},
+    ],
+}
+
+
+def test_header_guard_never_frames_page_titles():
+    nodes = [
+        ScreenNode(node_id="title_android", tag="span", text="Send Money", clickable=False, bounds=[126, 98, 344, 146]),
+        ScreenNode(node_id="title_web", tag="h2", text="Envoyer de l'argent", clickable=False, bounds=[540, 220, 740, 250]),
+    ]
+    assert AppPlaybookStore.find_matching_node(nodes, ["send"], prefer_button=True) is None
+    assert AppPlaybookStore.find_matching_node(nodes, ["envoyer de l'argent"], prefer_button=True) is None
 
 
 def test_wave_real_screen_balance_and_beginner_scenarios(monkeypatch):
@@ -83,7 +243,7 @@ def test_wave_real_screen_balance_and_beginner_scenarios(monkeypatch):
     assert circle_targets == ["n_09"]
     assert all(a["action"]["t"] != "notebook" for a in acts_bal)
 
-    # 2. "Comment envoyer de l'argent ?" sur Wave -> cadre directement `Send` (n_01), JAMAIS Hors contexte !
+    # 2. "Comment envoyer de l'argent ?" sur Wave Home -> cadre directement `Send` (n_01)
     r_send = client.post("/answer", json={"transcript": "Comment envoyer de l'argent ?", "lang_hint": "fr", "context": WAVE_REAL_CTX})
     assert r_send.status_code == 200
     acts_send = r_send.json()["actions"]
@@ -91,7 +251,7 @@ def test_wave_real_screen_balance_and_beginner_scenarios(monkeypatch):
     assert "incapable" not in spoken_send and "hors contexte" not in spoken_send
     assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "n_01" for a in acts_send)
 
-    # 3. Scénarios débutants Wave (QR code, Vault/Coffre, Bills, Hide balance, "Je dois faire quoi ici ?")
+    # 3. Scénarios débutants Wave Home
     r_qr = client.post("/answer", json={"transcript": "À quoi sert le QR code ?", "lang_hint": "fr", "context": WAVE_REAL_CTX})
     assert "scanner" in " ".join(a["action"].get("text", "") for a in r_qr.json()["actions"] if a["action"]["t"] == "speak").lower()
 
@@ -106,27 +266,106 @@ def test_wave_real_screen_balance_and_beginner_scenarios(monkeypatch):
     assert "wave" in spoken_guide and "qr code" in spoken_guide
 
 
-def test_safinum_transfer_screen_guide_never_hallucinates_limit_or_contact():
-    # 1. "Je dois faire quoi ici ?" sur /transfer -> guide en 3 étapes, JAMAIS "Tu dois envoyer 500 000 FCFA à Blaise Tchami" !
-    r_guide = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
-    assert r_guide.status_code == 200
-    acts = r_guide.json()["actions"]
+def test_wave_send_money_subscreen_never_frames_header_and_guides_user():
+    # Régression exacte de la capture utilisateur : DÉJÀ sur Wave `Send Money`, demande "Je veux envoyer de l'argent"
+    r = client.post("/answer", json={"transcript": "Je veux envoyer de l'argent", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    assert r.status_code == 200
+    acts = r.json()["actions"]
     spoken = " ".join(a["action"].get("text", "") for a in acts if a["action"]["t"] == "speak").lower()
-    assert "blaise" not in spoken and "500 000" not in spoken
-    assert "bénéficiaire" in spoken and "montant" in spoken and "continuer" in spoken
+    assert "déjà sur l'écran d'envoi" in spoken
+    assert "enter a new number" in spoken and "scan to send" in spoken
     target_ids = [a["action"]["target"]["node_id"] for a in acts if a["action"].get("target")]
-    assert "n_02" in target_ids and "n_04" in target_ids and "n_07" in target_ids
+    assert "w_title" not in target_ids  # JAMAIS encadrer le titre "Send Money" !
+    assert "w_new" in target_ids and "w_scan" in target_ids
 
-    # 2. Question débutant sur le plafond "500 000 FCFA"
+    # "Je dois faire quoi ici ?" sur Send Money
+    r_g = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    acts_g = r_g.json()["actions"]
+    assert all((a["action"].get("target") or {}).get("node_id") != "w_title" for a in acts_g)
+    assert any((a["action"].get("target") or {}).get("node_id") == "w_new" for a in acts_g)
+
+    # "Comment envoyer à un nouveau numéro ?" -> cadre `Enter a new number`
+    r_new = client.post("/answer", json={"transcript": "Comment envoyer à un nouveau numéro pas dans mes contacts ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "w_new" for a in r_new.json()["actions"])
+
+    # "Comment scanner un QR code ?" -> cadre `Scan to send`
+    r_sc = client.post("/answer", json={"transcript": "Comment scanner un QR code ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "w_scan" for a in r_sc.json()["actions"])
+
+    # "Comment revenir en arrière ?" -> cercle sur `Back`
+    r_bk = client.post("/answer", json={"transcript": "Comment revenir en arrière ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    assert any(a["action"]["t"] == "circle" and a["action"]["target"]["node_id"] == "w_back" for a in r_bk.json()["actions"])
+
+
+def test_wave_other_subscreens_amount_vault_card_qr():
+    # Send Amount
+    r_amt = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": WAVE_SEND_AMOUNT_CTX})
+    spoken_amt = " ".join(a["action"].get("text", "") for a in r_amt.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "send amount" in spoken_amt and "frais" in spoken_amt
+
+    # Vault
+    r_v = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": WAVE_VAULT_CTX})
+    spoken_v = " ".join(a["action"].get("text", "") for a in r_v.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "coffre" in spoken_v
+
+    # Fullscreen QR
+    r_q = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": WAVE_CARD_QR_CTX})
+    spoken_q = " ".join(a["action"].get("text", "") for a in r_q.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "qr code" in spoken_q
+
+
+def test_safinum_all_six_screens_flows():
+    # 1. HOME : "Je veux envoyer de l'argent" -> cadre `Lomo moni`
+    r_h = client.post("/answer", json={"transcript": "Je veux envoyer de l'argent", "lang_hint": "fr", "context": SAFINUM_HOME_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "h_tr" for a in r_h.json()["actions"])
+
+    # 2. TRANSFER : "Je veux envoyer de l'argent" (déjà dessus!) -> JAMAIS cadre sur h2 `n_01`, guide 1-2-3 !
+    r_t_send = client.post("/answer", json={"transcript": "Je veux envoyer de l'argent", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
+    acts_ts = r_t_send.json()["actions"]
+    spoken_ts = " ".join(a["action"].get("text", "") for a in acts_ts if a["action"]["t"] == "speak").lower()
+    assert "déjà sur l'écran de transfert" in spoken_ts
+    tids_ts = [a["action"]["target"]["node_id"] for a in acts_ts if a["action"].get("target")]
+    assert "n_01" not in tids_ts
+    assert "n_02" in tids_ts and "n_04" in tids_ts and "n_07" in tids_ts
+
+    # 2b. TRANSFER : "Je dois faire quoi ici ?", plafond, liste contacts, annuler
+    r_guide = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
+    spoken_g = " ".join(a["action"].get("text", "") for a in r_guide.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "blaise" not in spoken_g and "500 000" not in spoken_g
+    assert "bénéficiaire" in spoken_g and "montant" in spoken_g and "continuer" in spoken_g
+
     r_lim = client.post("/answer", json={"transcript": "Je dois envoyer 500 000 FCFA ?", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
-    spoken_lim = " ".join(a["action"].get("text", "") for a in r_lim.json()["actions"] if a["action"]["t"] == "speak").lower()
-    assert "plafond" in spoken_lim or "maximum" in spoken_lim
+    assert "plafond" in " ".join(a["action"].get("text", "") for a in r_lim.json()["actions"] if a["action"]["t"] == "speak").lower()
 
-    # 3. Question sur la liste de contacts enregistrés ("Mes bénéficiaires")
     r_list = client.post("/answer", json={"transcript": "C'est quoi la liste à droite avec Blaise Tchami ?", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
-    spoken_list = " ".join(a["action"].get("text", "") for a in r_list.json()["actions"] if a["action"]["t"] == "speak").lower()
-    assert "contacts" in spoken_list or "enregistrés" in spoken_list
+    assert "contacts" in " ".join(a["action"].get("text", "") for a in r_list.json()["actions"] if a["action"]["t"] == "speak").lower()
 
-    # 4. Comment annuler -> cadre sur Annuler (n_06)
-    r_cancel = client.post("/answer", json={"transcript": "Comment annuler si je me suis trompé ?", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
+    r_cancel = client.post("/answer", json={"transcript": "Comment annuler ?", "lang_hint": "fr", "context": SAFINUM_TRANSFER_CTX})
     assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "n_06" for a in r_cancel.json()["actions"])
+
+    # 3. PAY_BILL : guide + bascule vers onglet Crédit (`Kredi`)
+    r_pb = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": SAFINUM_PAY_BILL_CTX})
+    assert "facture" in " ".join(a["action"].get("text", "") for a in r_pb.json()["actions"] if a["action"]["t"] == "speak").lower()
+    r_pb_sw = client.post("/answer", json={"transcript": "Je veux acheter du crédit", "lang_hint": "fr", "context": SAFINUM_PAY_BILL_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "pb_tab2" for a in r_pb_sw.json()["actions"])
+
+    # 4. PAY_AIRTIME : guide + bascule vers onglet Facture (`Kalara`)
+    r_pa = client.post("/answer", json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": SAFINUM_PAY_AIRTIME_CTX})
+    assert "crédit" in " ".join(a["action"].get("text", "") for a in r_pa.json()["actions"] if a["action"]["t"] == "speak").lower()
+    r_pa_sw = client.post("/answer", json={"transcript": "Je veux payer une facture ENEO", "lang_hint": "fr", "context": SAFINUM_PAY_AIRTIME_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "pa_tab1" for a in r_pa_sw.json()["actions"])
+
+    # 5. REVIEW : modifier (`Tyende`) et confirmer (`Yemban`)
+    r_rv_ed = client.post("/answer", json={"transcript": "Comment modifier si je me suis trompé ?", "lang_hint": "fr", "context": SAFINUM_REVIEW_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "rv_edit" for a in r_rv_ed.json()["actions"])
+    r_rv_ok = client.post("/answer", json={"transcript": "Comment confirmer ?", "lang_hint": "fr", "context": SAFINUM_REVIEW_CTX})
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "rv_ok" for a in r_rv_ok.json()["actions"])
+
+    # 6. RECEIPT : preuve / référence (`Nombo ndem`)
+    r_rc = client.post("/answer", json={"transcript": "L'argent est bien parti ? Où est la preuve ?", "lang_hint": "fr", "context": SAFINUM_RECEIPT_CTX})
+    assert any(a["action"]["target"]["node_id"] == "rc_ref" for a in r_rc.json()["actions"] if a["action"].get("target"))
+
+    # 7. HISTORY : filtres (`Bi bi` / `Bi lom`)
+    r_hi = client.post("/answer", json={"transcript": "Comment filtrer seulement les reçus ?", "lang_hint": "fr", "context": SAFINUM_HISTORY_CTX})
+    tids_hi = [a["action"]["target"]["node_id"] for a in r_hi.json()["actions"] if a["action"].get("target")]
+    assert "hi_in" in tids_hi and "hi_out" in tids_hi

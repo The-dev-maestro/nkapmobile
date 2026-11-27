@@ -1,65 +1,73 @@
 # Guide M5 — Connaissance applicative & Scénarios débutants (SAFINUM · Wave · Max it)
 
-> Ce document décrit la couche de connaissance applicative **M5 KB** (`cerveau/m5_kb/<app>/playbook.json`) qui permet au harnais NkapMobile de guider un utilisateur peu familier des services financiers numériques avec **zéro hallucination**, même sur un modèle local léger (1,5B).
+> Ce document décrit la couche de connaissance applicative **M5 KB** (`cerveau/m5_kb/<app>/playbook.json`) qui permet au harnais NkapMobile de guider un utilisateur peu familier des services financiers numériques **écran par écran** avec **zéro hallucination**, même sur un modèle local léger (1,5B).
 
 ---
 
-## 1. Principe architectural (Harnais + Playbook M5)
+## 1. Principe architectural (Harnais + Playbook M5 multi-écrans)
 
-Un petit LLM local (`qwen2.5:1.5b`) excelle pour reformuler et comprendre une intention, mais il ne connaît pas les pièges propres à chaque application (ex. un texte d'aide *« Jusqu'à 500 000 FCFA par opération »* confondu avec un montant à envoyer, ou un solde sans libellé au sommet de Wave).
+Un petit LLM local (`qwen2.5:1.5b`) excelle pour reformuler et comprendre une intention, mais il ne connaît pas les pièges propres à chaque application ni la navigation entre écrans (ex. un texte d'aide *« Jusqu'à 500 000 FCFA par opération »* confondu avec un montant à envoyer, un solde sans libellé au sommet de Wave, ou un titre de page `Send Money` confondu avec le bouton `Send` de l'accueil).
 
-Chaque application prise en charge dispose donc d'une fiche déclarative `cerveau/m5_kb/<app>/playbook.json` chargée par `AppPlaybookStore` (`cerveau/app/core/app_kb.py`) :
+Chaque application prise en charge dispose d'une fiche déclarative `cerveau/m5_kb/<app>/playbook.json` chargée par `AppPlaybookStore` (`cerveau/app/core/app_kb.py`) :
 - **`match_packages` / `match_urls` / `match_text_cues`** : identification automatique de l'application active.
-- **`ui_translations` & `action_buttons`** : normalisation FR/EN/Ewondo/Duálá et détection des icônes cliquables (même quand le `TextView` enfant renvoie `clickable=false`).
-- **`screen_guides`** : réponse guidée immédiate quand l'utilisateur demande *« Je dois faire quoi ici ? »*, *« Explique-moi cet écran »*, *« Je suis perdu »*.
-- **`qa_shortcuts`** : réponses ciblées aux questions fréquentes d'un débutant sur cette application (QR code, Coffre/Vault, contacts enregistrés, plafond, annulation, masquage de solde…).
+- **`screen_detectors`** : détection déterministe de l'écran exact (`home`, `send_money`, `send_new_number`, `send_amount`, `bills`, `vault`, `more`, `settings`, `card_qr` sur Wave ; `home`, `transfer`, `pay_bill`, `pay_airtime`, `review`, `receipt`, `history` sur SAFINUM) via l'`activity` Android, l'URL et les indices textuels avec clauses d'exclusion (`not_text_any`).
+- **Protection anti-en-tête (`_is_non_clickable_header`)** : en mode bouton (`style="frame"`), le harnais refuse d'encadrer les balises `<h1>`/`<h2>` et les titres d'en-tête Android non cliquables situés dans la barre supérieure à droite de `←`, et interdit qu'un mot court (`"send"`) matche un titre composé (`"send money"`).
+- **`screen_guides`** : réponse guidée immédiate quand l'utilisateur demande *« Je dois faire quoi ici ? »*, *« Explique-moi cet écran »*, *« Où appuyer ? »*, *« Je suis perdu »* + résumé `llm_summary` injecté dans le prompt LLM pour les questions ouvertes.
+- **`qa_shortcuts`** : raccourcis **scopés par écran (`screens: [...]`)** avec support multi-repères (`highlights: [...]` jusqu'à 3 marques simultanées) — un raccourci d'accueil ne se déclenche jamais sur un sous-écran.
 
 ---
 
 ## 2. Environnement de test SAFINUM (`banque-demo.sandbox` — Web & Mobile)
 
-Fiche : `cerveau/m5_kb/safinum-sandbox/playbook.json`
+Fiche : `cerveau/m5_kb/safinum-sandbox/playbook.json` (calibrée sur les 90 clés officielles FR / EN / Ewondo / Duálá de `cerveau/app/sandbox/translations/{ewo,dua,en}.json`).
 
-| Écran | Contenu réel | Questions débutant typiques | Comportement Nkap |
+| Écran | Contenu réel (FR · Ewondo · Duálá) | Questions débutant typiques | Comportement Nkap |
 |---|---|---|---|
-| **Accueil (`/home`)** | Solde disponible (`Itan ineu` / `Moni ma pene`), 4 raccourcis (`Lomo moni`, `Yaan mfie ai kalara`, `Kus kredi telefon`, `Itang mvet yam`), dernières opérations, bouton `Wog`/`Senga` | *« Quel est mon solde ? »*<br>*« Comment envoyer de l'argent ? »*<br>*« Je dois faire quoi ici ? »*<br>*« À quoi sert le bouton Wog ? »* | Cercle doré seul sur le solde (sans tableau redondant) ; cadre `Appuie ici` sur `Lomo moni` ; guide complet sur *« Je dois faire quoi ici ? »*. |
-| **Transfert (`/transfer`)** | Champs `Bénéficiaire` (`Mod a non moni`) et `Montant` (`Itan`), indice **`Jusqu'à 500 000 FCFA par opération`** (`Akui 500 000 FCFA a mvet wuo`), liste **`Mes bénéficiaires`** (`Blaise Tchami`, `Brenda Nana`, `Carine Njoya`, `Ibrahim Essomba`), boutons `Annuler` (`Vaa`) & `Continuer` (`Kele obusu`) | *« Je dois faire quoi ici ? »*<br>*« Je dois envoyer 500 000 FCFA ? »*<br>*« C'est quoi la liste à droite ? »*<br>*« Comment annuler ? »* | **① Bénéficiaire → ② Montant → cadre ③ Continuer**. L'indice `500 000 FCFA` est marqué `role=hint` (jamais confondu avec un montant saisi) et les contacts enregistrés sont expliqués comme raccourcis cliquables. |
-| **Payer (`/pay`)** | Onglets `Facture` (`Kalara`) / `Crédit` (`Kredi`), fournisseur (`ENEO`, `CAMWATER`, `CANAL`, `CAMTEL`), numéro, montant, `Continuer` | *« Je dois faire quoi ici ? »*<br>*« Comment payer ENEO ? »* | Guide pas-à-pas + cadre sur `Continuer`. |
-| **Récapitulatif (`/review`)** | Bénéficiaire, Montant, Frais (`Mbug`), Total à débiter (`Ntolan wog`), Solde après opération (`Itan e li'i`), boutons `Confirmer` (`Yemban`), `Modifier` (`Tyende`), `Annuler` | *« Combien il me restera après ? »*<br>*« Je dois faire quoi ici ? »*<br>*« Je veux corriger le montant »* | Ardoise `flow` tracée en direct (`Montant → Frais → Solde après`) ; cadre sur `Confirmer` ; rature rouge `strike` en cas de correction. |
-| **Reçu (`/receipt`)** | `Opération réussie`, référence (`Nombo ndem`), nouveau solde (`Itan mfefe`) | *« L'argent est bien parti ? »* | Confirmation claire + mise en valeur du nouveau solde et de la référence. |
-| **Historique (`/history`)** | Filtres `Tout` / `Reçus` / `Envoyés`, statuts (`Confirmé`, `En attente`, `Annulé`, `Échoué`) | *« Quelles sont mes dernières opérations ? »* | Liste/barres tracées progressivement + coches vertes / croix rouges selon le statut. |
+| **Accueil (`/home`)** | Solde disponible (`Itan ineu` / `Moni ma pene`), 4 raccourcis (`Lomo moni`, `Yaan mfie ai kalara`, `Kus kredi telefon`, `Itang mvet yam`), dernières opérations, `Wog`/`Senga` | *« Quel est mon solde ? »*<br>*« Comment envoyer de l'argent ? »*<br>*« Comment payer une facture ? »*<br>*« Comment acheter du crédit ? »*<br>*« Je dois faire quoi ici ? »* | Cercle doré seul sur le solde ; cadre `Appuie ici` sur l'action demandée (`Lomo moni`, `Yaan mfie ai kalara`, `Kus kredi telefon`, `Itang mvet yam`). |
+| **Transfert (`/transfer`)** | Titre `Envoyer de l'argent` (`Lomo moni`), champs `Bénéficiaire` (`Mod a non moni` / `Mukusa`) et `Montant` (`Itan` / `Moni`), indice **`Jusqu'à 500 000 FCFA par opération`** (`Akui 500 000` / `Tinga 500 000`), liste **`Mes bénéficiaires`** (`Bot bam ba non moni` / `Bakusa bam`), `Annuler` (`Vaa` / `Buka`), `Continuer` (`Kele obusu` / `Ala oboso`) | *« Je veux envoyer de l'argent »* (déjà sur `/transfer`)<br>*« Je dois faire quoi ici ? »*<br>*« Je dois envoyer 500 000 FCFA ? »*<br>*« C'est quoi la liste à droite ? »*<br>*« Comment annuler ? »* | Indique **« Tu es déjà sur l'écran de transfert ! »** avec **① Bénéficiaire → ② Montant → cadre ③ Continuer** (jamais le titre `<h2>`!). L'indice `500 000 FCFA` est marqué `role=hint`. |
+| **Payer — Facture (`pay_bill`)** | Onglets `Facture` (`Kalara` / `Kalati`) et `Crédit` (`Kredi`), `Choisir le service` (`Tob isae` / `Pona ebolo`), 4 facturiers (`ENEO`, `CAMWATER`, `CANAL`, `CAMTEL`), `Montant`, `Continuer` | *« Je dois faire quoi ici ? »*<br>*« Comment payer ENEO ? »*<br>*« Je veux acheter du crédit »* | Guide pas-à-pas **① Fournisseur → ② Montant → ③ Continuer** ; bascule sur l'onglet `Crédit` si l'utilisateur veut recharger. |
+| **Payer — Crédit (`pay_airtime`)** | `Numéro à recharger` (`Nombo ya lomo kredi` / `Nimero ya kredi`), `Opérateur détecté` (`Nsaa a yenban` / `Singi e yenbe`), `Montant`, `Continuer` | *« Je dois faire quoi ici ? »*<br>*« Comment recharger mon numéro ? »*<br>*« Je veux payer une facture »* | Guide **① Numéro → ② Montant → ③ Continuer** ; bascule sur l'onglet `Facture` si l'utilisateur veut payer ENEO/CAMWATER. |
+| **Récapitulatif (`/review`)** | `Vérifiez avant de confirmer` (`Fombo ossussua eneu wa yemban` / `Ombwa oboso ba bamse`), Bénéficiaire/Service, Montant, Frais (`Mbug` / `Mabala`), Total (`Ntolan wog` / `Botali ba busa`), Solde après (`Itan e li'i` / `Moni ombusa`), avertissement irréversible, `Confirmer` (`Yemban` / `Bamse`), `Modifier` (`Tyende` / `Tukwa`), `Annuler` | *« Combien il me restera après ? »*<br>*« Je dois faire quoi ici ? »*<br>*« Comment modifier / corriger ? »*<br>*« Comment confirmer ? »*<br>*« Comment annuler ? »* | Cadre rouge `Confirmer` avec rappel de vérification ; cadre `Modifier` si erreur (rien n'est débité) ; ardoise `flow` pour la décomposition Montant → Frais → Solde après. |
+| **Reçu (`/receipt`)** | `Opération réussie` (`Mvet o boban mben` / `Ebolo e tilabe na bwam`) ou `Opération annulée`, `Référence` (`Nombo ndem` / `Edun`), `Nouveau solde` (`Itan mfefe` / `Moni ma pene ma dia`), `Terminé` / `Retour` | *« L'argent est bien parti ? »*<br>*« Où est ma preuve / référence ? »* | Surligne la référence en vert et rassure sur le statut + nouveau solde. |
+| **Historique (`/history`)** | Filtres `Tout` (`Mese`), `Reçus` (`Bi bi` / `Ma-poy`), `Envoyés` (`Bi lom` / `Ma-ala`), statuts `Confirmé`, `En attente`, `Annulé`, `Échoué` | *« Je dois faire quoi ici ? »*<br>*« Comment filtrer les reçus ? »*<br>*« Que veut dire En attente / Annulé ? »* | Marque **① Reçus → ② Envoyés** et explique les 4 statuts clairement. |
 
 ---
 
 ## 3. Wave Mobile Money (`com.wave.personal` — Sponsor officiel)
 
-Fiche : `cerveau/m5_kb/wave/playbook.json` (calibrée sur dump `uiautomator` réel de Wave Android)
+Fiche : `cerveau/m5_kb/wave/playbook.json` (calibrée sur dumps `uiautomator` réels et captures multi-écrans sur TECNO KN4).
 
-Particularités techniques de l'arbre d'accessibilité Wave observées sur appareil réel :
-1. Dans le XML Android, la **liste de transactions** (`y=834`, ex. `GIMAC transfer ... | 1.500F`) apparaît **avant** le bandeau supérieur fixe (`1.500F` centré en `y=157, h=72px`, accompagné de `content-desc="Hide balance"` en `y=186`). Le cerveau trie donc les nœuds en ordre visuel `(y, x)` et identifie prioritairement le grand montant en tête d'écran / adjacent à `Hide balance` comme **`Solde disponible`**.
+Particularités techniques de l'arbre d'accessibilité Wave :
+1. Sur `PersonalHomeActivity`, la **liste de transactions** (`y=834`, ex. `GIMAC transfer ... | 1.500F`) apparaît **avant** le bandeau supérieur fixe (`1.500F` centré en `y=157, h=72px`, accompagné de `content-desc="Hide balance"` en `y=186`). Le cerveau trie les nœuds en ordre visuel `(y, x)` et identifie prioritairement le grand montant en tête d'écran / adjacent à `Hide balance` comme **`Solde disponible`**.
 2. Les 4 icônes principales (`Send`, `Bills`, `Vault`, `More`) ont `clickable=false` sur leur `TextView` enfant (le conteneur parent porte le clic). Le playbook les classe explicitement en `role=button`.
+3. Sur les sous-écrans (`Send Money`, `Bills`, `Vault`, `Settings`), la barre du haut affiche `←` puis le **titre de la page** (`Send Money`, non cliquable). Grâce aux `screen_detectors` + au garde-fou anti-en-tête, Nkap sait que l'utilisateur est **déjà** sur le sous-écran et n'encadre jamais le titre de page.
 
-Scénarios débutants couverts sur Wave :
-- *« Quel est mon solde ? »* → Cercle doré uniquement sur le **`1.500F` du haut** (jamais sur la transaction du bas), 1 phrase vocale + sous-titre court.
-- *« Comment envoyer de l'argent ? »* → Cadre `Appuie ici` directement sur **`Send`** (jamais `Hors contexte`).
-- *« Comment payer une facture ? »* → Cadre `Appuie ici` sur **`Bills`**.
-- *« C'est quoi Vault / le coffre ? »* → Cadre sur **`Vault`** + explication simple de l'épargne Wave.
-- *« À quoi sert le QR code ? »* → Explication claire dépôt/retrait/paiement marchand sans dicter son numéro.
-- *« Comment cacher mon solde ? »* → Cercle sur l'icône œil **`Hide balance`**.
-- *« Je dois faire quoi ici ? »* → Tour d'horizon complet de l'écran d'accueil Wave.
+Parcours complet Wave couvert (9 écrans) :
+
+| Écran Wave | Détection | Scénarios débutants couverts |
+|---|---|---|
+| **`home`** (`PersonalHomeActivity`) | `Hide balance` / `Show balance` ou trio `Send + Bills + Vault` | Solde du haut (`1.500F`, jamais la transaction du bas), `Send` (cadre `Appuie ici`), `Bills`, `Vault` (Coffre), `More`, `QR code` central, œil `Hide balance`, roue `Settings`, *« Je dois faire quoi ici ? »*. |
+| **`send_money`** (Choix destinataire) | `Scan to send` ou `Enter a new number + Contacts` | *« Je veux envoyer de l'argent »* / *« Je dois faire quoi ici ? »* → dit **« Tu es déjà sur l'écran d'envoi ! »** et pointe **① `Enter a new number`**, **② `Scan to send`**, **③ `Contacts`** (n'encadre jamais le titre `Send Money` !). Questions dédiées sur `To`, nouveau numéro, scanner QR, retour `←`. |
+| **`send_new_number`** | `Full Name` / `Nom complet` + `Next` / `Suivant` | Guide saisie nom + numéro (vérifier chaque chiffre) + cadre `Next`. |
+| **`send_amount`** | `Send Amount` / `Receive Amount` / `Wave fee` | Guide saisie montant, différence entre montant envoyé et montant reçu (frais Wave), validation. |
+| **`card_qr`** (`CardFullScreenActivity`) | `CardFullScreenActivity` / `Scan to pay` | Explique l'usage du QR plein écran (dépôt/retrait agent, réception) + retour `←`. |
+| **`bills`** | `Search by name` / `Electricity` / `ENEO` / `CAMWATER` / `Canal+` | Guide sélection fournisseur, référence client et montant. |
+| **`vault`** | `Lock vault` / `Transfer to vault` / `Withdraw from vault` | Explique l'épargne séparée dans le Coffre, dépôt et retrait vers le solde principal. |
+| **`more`** | `Airtime` / `Rewards` / `Transport` (hors `home`) | Présente le crédit téléphonique et les services complémentaires. |
+| **`settings`** | `Reset secret code` / `Call support` / `Find nearby agents` / `Verify your limit` | Explique changement de code secret, plafonds, agents proches et support Wave. |
 
 ---
 
 ## 4. Orange Max it (`com.orange` / `maxit`)
 
-Fiche : `cerveau/m5_kb/maxit/playbook.json` (calibrée sur captures réelles sur TECNO KN4)
+Fiche : `cerveau/m5_kb/maxit/playbook.json` (calibrée sur captures réelles sur TECNO KN4).
 
 Particularités gérées :
 - Fusion automatique dans `ScreenReaderService.kt` des `TextView` séparés `Nombre + Devise` (`"24 828,58"` + `"FCFA"` → `"24 828,58 FCFA"` ; `"1,04"` + `"U"` → `"1,04 U"`).
-- Mapping anglais → français (`Main Account` → `Solde disponible`, `Money transfer` → `Envoyer de l'argent`, `Cancel transaction` → `Annuler une transaction`, `Buy a bundle` → `Acheter un forfait`, `Top Up` → `Recharger du crédit`, `My Credits` → `Mon crédit d'appel`).
+- Raccourcis d'accueil scopés à `screens: ["home"]` (`Money transfer`, `Cancel transaction`, `Buy a bundle`, `Top Up`) + écran `transfer` dédié pour ne jamais reboucler vers l'accueil une fois dans le formulaire d'envoi.
 
 ---
 
 ## 5. Ajouter une nouvelle banque / fintech en 5 minutes
 
-Créez simplement `cerveau/m5_kb/<nom-banque>/playbook.json` en suivant le schéma de `wave/playbook.json` et redémarrez `nkap-cerveau` : le chargeur `AppPlaybookStore` détecte et active la nouvelle application automatiquement, sans modifier une seule ligne de code Python ou Kotlin.
+Créez simplement `cerveau/m5_kb/<nom-banque>/playbook.json` avec `screen_detectors`, `screen_guides` et `qa_shortcuts` scopés par écran, puis redémarrez `nkap-cerveau` : `AppPlaybookStore` détecte et active la nouvelle application automatiquement, sans modifier une seule ligne de code Python ou Kotlin.

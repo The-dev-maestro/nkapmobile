@@ -20,18 +20,36 @@
     "money transfer", "buy a bundle", "top up", "pay your purchases",
     "cancel transaction", "om loyalty", "hide balance", "show balance", "see all"
   ],
+  "screen_detectors": [
+    {
+      "screen": "transfer",
+      "text_any": ["enter amount", "montant a envoyer", "recipient number", "numero du beneficiaire"],
+      "not_text_any": ["main account", "my credits", "om loyalty"]
+    },
+    {
+      "screen": "home",
+      "text_any": ["main account", "my credits", "om loyalty", "buy a bundle"]
+    }
+  ],
   "screen_guides": {
     "home": {
+      "llm_summary": "Accueil Orange Max it : solde Orange Money (Main Account) et QR code en haut, crédit d'appel (My Credits) au milieu, raccourcis (Buy a bundle, Top Up, Money transfer, Cancel transaction).",
       "spoken": "Tu es sur l'accueil d'Orange Max it. En haut tu vois ton solde Orange Money (Main Account) et ton QR code, puis ton crédit d'appel, et en dessous les raccourcis pour envoyer de l'argent, acheter un forfait ou annuler un transfert.",
       "highlights": [
         {"match": ["money transfer", "envoyer de l'argent"], "style": "frame", "label": "Envoyer", "color": "yellow"}
       ]
+    },
+    "transfer": {
+      "llm_summary": "Écran Transfert Orange Money (déjà ouvert) : saisir le numéro du bénéficiaire et le montant avant de valider avec ton code secret.",
+      "spoken": "Tu es déjà sur l'écran de transfert Orange Money : indique le numéro du destinataire, le montant à envoyer, puis vérifie bien les informations avant de valider.",
+      "highlights": []
     }
   },
   "qa_shortcuts": [
     {
       "id": "maxit_transfer",
-      "triggers": ["envoyer", "transferer", "transfert", "money transfer"],
+      "screens": ["home"],
+      "triggers": ["envoyer", "envoie", "envoi", "transferer", "transfert", "money transfer"],
       "spoken": "Appuie ici sur Money transfer pour envoyer de l'argent depuis ton compte Orange Money.",
       "target_match": ["money transfer", "envoyer de l'argent"],
       "style": "frame",
@@ -39,7 +57,16 @@
       "color": "yellow"
     },
     {
+      "id": "maxit_transfer_already_here",
+      "screens": ["transfer"],
+      "triggers": ["envoyer", "envoie", "envoi", "transferer", "transfert"],
+      "spoken": "Tu es déjà sur l'écran d'envoi Orange Money ! Saisis le numéro du destinataire et le montant, puis vérifie bien avant de valider.",
+      "target_match": [],
+      "style": "none"
+    },
+    {
       "id": "maxit_cancel",
+      "screens": ["home"],
       "triggers": ["annuler une transaction", "annuler un transfert", "erreur d'envoi", "cancel transaction"],
       "spoken": "Appuie ici sur Cancel transaction si tu viens d'envoyer de l'argent au mauvais numéro et que tu veux demander l'annulation.",
       "target_match": ["cancel transaction", "annuler une transaction"],
@@ -49,6 +76,7 @@
     },
     {
       "id": "maxit_bundle",
+      "screens": ["home"],
       "triggers": ["forfait", "internet", "data", "bundle", "pass"],
       "spoken": "Appuie ici sur Buy a bundle pour acheter un forfait internet ou appels.",
       "target_match": ["buy a bundle", "acheter un forfait"],
@@ -58,6 +86,7 @@
     },
     {
       "id": "maxit_topup",
+      "screens": ["home"],
       "triggers": ["recharger", "credit d'appel", "credit telephon", "top up"],
       "spoken": "Appuie ici sur Top Up pour recharger du crédit d'appel sur ton numéro ou celui d'un proche.",
       "target_match": ["top up", "recharger"],

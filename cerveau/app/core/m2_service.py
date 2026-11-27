@@ -1019,9 +1019,10 @@ class M2Service:
 
     @classmethod
     def _is_usable_node(cls, node: ScreenNode) -> bool:
-        if node.password or not node.text:
+        label = (node.text or "").strip() or (node.content_desc or "").strip()
+        if node.password or not label:
             return False
-        txt_n = cls._norm(node.text)
+        txt_n = cls._norm(label)
         return not any(ex in txt_n for ex in JURY_DRAWER_EXCLUDES)
 
     @classmethod
@@ -1565,14 +1566,19 @@ class M2Service:
             for a in semantics["alerts"][:2]:
                 prompt_lines.append(f"  ! {a['text']}")
 
-        page_title = screen_context.page.title if screen_context.page and screen_context.page.title else "Safinum"
-        hint = screen_context.screen_hint or "home"
+        page_title = screen_context.page.title if screen_context.page and screen_context.page.title else (
+            screen_context.app.package if screen_context.app and screen_context.app.package else "Safinum"
+        )
+        pb = self.playbooks.detect_playbook(screen_context)
+        hint = self.playbooks.infer_screen_key(pb, screen_context) if pb is not None else (screen_context.screen_hint or "home")
+        pb_line = (self.playbooks.get_screen_prompt_hint(pb, hint) + "\n") if pb is not None else ""
 
         return (
             f"Tu es NKAP, assistant bancaire (App: {page_title}, étape: {hint}).\n"
-            "Écran:\n"
+            + pb_line
+            + "Écran:\n"
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
-            + "\nRègles: tutoiement (« tu/ton/ta »), valeurs EXACTES de l'écran uniquement (jamais d'invention). "
+            + "\nRègles: tutoiement (« tu/ton/ta »), phrases courtes et COMPLÈTES, valeurs EXACTES de l'écran uniquement (jamais d'invention). "
             "« Mon solde » = Solde disponible (avant opération), PAS « Solde après opération ». "
             "Si info absente/hors-sujet -> {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}. "
             "Sinon réponds en JSON compact sur 1 ligne avec les clés spoken, title, rows, targets "
@@ -3042,10 +3048,38 @@ class M2Service:
         spoken = self._safe_text_for_harness(str(sc.get("spoken") or ""), screen_context, self.kb.terms, fallback=str(sc.get("spoken") or ""))
         sb.speak("playbook_shortcut", spoken, lang, 0)
 
+        usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+        highlights = sc.get("highlights")
+        cursor_ms = 260
+        if isinstance(highlights, list) and highlights:
+            marks_added = 0
+            for h in highlights:
+                if marks_added >= 3:
+                    break
+                h_style = str(h.get("style") or "highlight")
+                node = self.playbooks.find_matching_node(
+                    usable, h.get("match", []), prefer_button=(h_style == "frame")
+                )
+                if not node:
+                    continue
+                sb.draw(
+                    h_style,
+                    f"pb-sc-{marks_added + 1}",
+                    node.node_id,
+                    color=str(h.get("color") or "yellow"),
+                    duration_ms=540,
+                    run_after_ms=cursor_ms,
+                    label=h.get("label"),
+                    step=h.get("step"),
+                )
+                marks_added += 1
+                cursor_ms += 720
+            sb.clear(max(cursor_ms + 4500, 8000))
+            return sb.actions
+
         style = str(sc.get("style") or "none")
         target_match = sc.get("target_match") or []
         if style != "none" and target_match:
-            usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
             node = self.playbooks.find_matching_node(usable, target_match, prefer_button=(style == "frame"))
             if node:
                 sb.draw(
@@ -3110,7 +3144,7 @@ class M2Service:
             prompt = self._build_llm_prompt(transcript, screen_context)
             llm_payload = self.llm.generate(
                 prompt,
-                options={"temperature": 0.05, "num_predict": 110, "num_ctx": 1024},
+                options={"temperature": 0.05, "num_predict": 155, "num_ctx": 1024},
                 format_type="json",
             )
 
