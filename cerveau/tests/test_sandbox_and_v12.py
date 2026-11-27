@@ -359,8 +359,8 @@ def test_http_answer_explains_financial_concepts_and_distinguishes_balances(monk
         spoken = " ".join(a["action"].get("text", "") for a in body["actions"] if a["action"]["t"] == "speak").lower()
         assert "incapable" not in spoken and "hors contexte" not in spoken
         assert expected_word in spoken
-        nb = next(a["action"] for a in body["actions"] if a["action"]["t"] == "notebook")
-        assert nb["title"] != "Hors contexte"
+        # Définitions simples -> voix + sous-titres légers sans encombrer l'écran d'un tableau inutile
+        assert all(a["action"].get("title") != "Hors contexte" for a in body["actions"] if a["action"]["t"] == "notebook")
     assert len(llm_calls) == 0
 
     # 2. Concept financier non listé dans le glossaire ("c'est quoi une caution bancaire ?") -> passe au LLM conceptuel (jamais bloqué Hors contexte)

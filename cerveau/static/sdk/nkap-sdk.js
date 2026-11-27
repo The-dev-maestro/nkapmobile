@@ -2016,11 +2016,27 @@
           noteSvg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;";
           card.appendChild(noteSvg);
 
+          // Helper HeyClicky : écrit un texte lettre par lettre dans un élément DOM
+          let typeCursorMs = 240;
+          const typeInto = (el, fullText, msPerChar = 16) => {
+            const str = String(fullText || "");
+            el.textContent = "";
+            if (!str) return;
+            const start = typeCursorMs;
+            const step = Math.max(10, msPerChar);
+            // Par lots de 2 caractères pour une fluidité 60fps ultra légère
+            for (let i = 2; i <= str.length + 1; i += 2) {
+              const slice = str.slice(0, Math.min(str.length, i));
+              timers.push(setTimeout(() => { el.textContent = slice; }, start + (i - 2) * step * 0.5));
+            }
+            typeCursorMs = start + str.length * step * 0.52 + 70;
+          };
+
           if (config.title) {
             const titleEl = document.createElement("div");
-            titleEl.style.cssText = "font-weight:700;font-size:16.5px;color:#F5B700;margin-bottom:14px;padding-right:34px;";
-            titleEl.textContent = config.title;
+            titleEl.style.cssText = "font-weight:700;font-size:16.5px;color:#F5B700;margin-bottom:14px;padding-right:34px;min-height:22px;";
             card.appendChild(titleEl);
+            typeInto(titleEl, config.title, 20);
           }
 
           const body = document.createElement("div");
@@ -2035,16 +2051,24 @@
               node.style.cssText =
                 `display:flex;justify-content:space-between;align-items:center;gap:10px;` +
                 `background:rgba(255,255,255,0.05);border:1.5px solid ${col};border-radius:11px;padding:9px 13px;` +
-                `opacity:0;transform:translateY(6px);transition:opacity 0.22s ease,transform 0.22s ease;`;
-              node.innerHTML = `<span style="color:#CBD5E1;font-size:13.5px;">${st.label || ""}</span>` +
-                `<span style="font-weight:700;color:${col};font-size:15px;">${st.value || ""}</span>`;
+                `opacity:0;transform:translateY(6px);transition:opacity 0.24s ease,transform 0.24s ease;`;
+              const lSpan = document.createElement("span");
+              lSpan.style.cssText = "color:#CBD5E1;font-size:13.5px;";
+              const vSpan = document.createElement("span");
+              vSpan.style.cssText = `font-weight:700;color:${col};font-size:15px;`;
+              node.appendChild(lSpan);
+              node.appendChild(vSpan);
               body.appendChild(node);
-              timers.push(setTimeout(() => { node.style.opacity = "1"; node.style.transform = "translateY(0)"; }, idx * 240));
+              const showAt = typeCursorMs;
+              timers.push(setTimeout(() => { node.style.opacity = "1"; node.style.transform = "translateY(0)"; }, showAt));
+              typeInto(lSpan, st.label || "", 14);
+              typeInto(vSpan, st.value || "", 16);
               if (idx < config.flow_steps.length - 1) {
                 const sep = document.createElement("div");
                 sep.textContent = "↓";
-                sep.style.cssText = "text-align:center;color:#F5B700;font-weight:700;font-size:15px;line-height:1;";
+                sep.style.cssText = "text-align:center;color:#F5B700;font-weight:700;font-size:15px;line-height:1;opacity:0;transition:opacity 0.2s ease;";
                 body.appendChild(sep);
+                timers.push(setTimeout(() => { sep.style.opacity = "1"; }, typeCursorMs));
               }
             });
           } else if (mode === "bars" && Array.isArray(config.bars)) {
@@ -2059,7 +2083,7 @@
                 `<span style="color:#CBD5E1;">${b.label || ""}</span>` +
                 `<span style="font-weight:700;color:${col};">${b.amount_text || b.value}</span></div>` +
                 `<div style="height:10px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden;">` +
-                `<div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:999px;transform-origin:left;animation:nkapBarGrow 0.45s ${idx * 0.14}s ease-out both;"></div></div>`;
+                `<div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:999px;transform-origin:left;animation:nkapBarGrow 0.45s ${0.25 + idx * 0.2}s ease-out both;"></div></div>`;
               body.appendChild(wrap);
             });
           } else if (mode === "table" && Array.isArray(config.columns)) {
@@ -2068,18 +2092,18 @@
             const thead = document.createElement("tr");
             config.columns.forEach((c) => {
               const th = document.createElement("th");
-              th.textContent = c;
               th.style.cssText = "text-align:left;padding:5px 6px;color:#F5B700;border-bottom:1.5px solid rgba(248,250,252,0.28);";
               thead.appendChild(th);
+              typeInto(th, c, 14);
             });
             tbl.appendChild(thead);
             (config.rows || []).forEach((r) => {
               const tr = document.createElement("tr");
               (Array.isArray(r) ? r : []).forEach((cell) => {
                 const td = document.createElement("td");
-                td.textContent = cell;
                 td.style.cssText = "padding:6px;border-bottom:1px solid rgba(255,255,255,0.08);color:#F8FAFC;";
                 tr.appendChild(td);
+                typeInto(td, cell, 13);
               });
               tbl.appendChild(tr);
             });
@@ -2098,43 +2122,61 @@
               body.appendChild(btn);
             });
           } else {
-            // Mode `lines` (rétro-compatible v1.1)
+            // Mode `lines` : écriture progressive ligne par ligne façon HeyClicky !
             (config.lines || []).forEach((line, idx) => {
               const lineId = line.id || `${id}_l${idx + 1}`;
               if (line.divider) {
                 const hr = document.createElement("div");
-                hr.style.cssText = "height:1px;background:rgba(248,250,252,0.25);margin:2px 0;";
+                hr.style.cssText =
+                  "height:1px;background:rgba(248,250,252,0.28);margin:2px 0;transform:scaleX(0);transform-origin:left;transition:transform 0.28s ease-out;";
                 body.appendChild(hr);
+                const tDiv = typeCursorMs;
+                timers.push(setTimeout(() => { hr.style.transform = "scaleX(1)"; }, tDiv));
+                typeCursorMs += 110;
                 return;
               }
               const col = CHALK[line.color] || "#F8FAFC";
               const row = document.createElement("div");
               row.setAttribute("data-nkap-id", lineId);
-              row.style.cssText = `display:flex;justify-content:space-between;gap:12px;font-size:${line.bold ? "15.5px" : "14px"};font-weight:${line.bold ? "700" : "400"};color:${col};line-height:1.4;`;
+              row.style.cssText = `display:flex;justify-content:space-between;gap:12px;font-size:${line.bold ? "15.5px" : "14px"};font-weight:${line.bold ? "700" : "400"};color:${col};line-height:1.4;min-height:20px;`;
               if (line.label != null && line.value != null) {
-                row.innerHTML = `<span style="color:#CBD5E1;">${line.label}</span><span data-nkap-id="${lineId}-val" style="font-weight:700;color:${col};text-align:right;">${line.value}</span>`;
+                const lSpan = document.createElement("span");
+                lSpan.style.color = "#CBD5E1";
+                const vSpan = document.createElement("span");
+                vSpan.setAttribute("data-nkap-id", `${lineId}-val`);
+                vSpan.style.cssText = `font-weight:700;color:${col};text-align:right;`;
+                row.appendChild(lSpan);
+                row.appendChild(vSpan);
+                body.appendChild(row);
+                typeInto(lSpan, line.label, 14);
+                typeInto(vSpan, line.value, 16);
               } else {
-                row.textContent = line.text || "";
+                body.appendChild(row);
+                typeInto(row, line.text || "", 14);
               }
-              body.appendChild(row);
             });
           }
 
           document.documentElement.appendChild(card);
 
-          // Cadre wireframe esquissé à la craie
+          // Cadre wireframe esquissé à la craie — se TRACE progressivement via stroke-dashoffset (façon HeyClicky !)
           const gen = clearGen;
           requestAnimationFrame(() => {
             if (gen !== clearGen || !card.isConnected) return;
             const wire = geom().handBox(3, 3, card.offsetWidth - 6, card.offsetHeight - 6, id + "::wire");
+            const len = Math.max(1, wire.len || (card.offsetWidth + card.offsetHeight) * 2.1);
             const p = svgEl("path", {
               d: wire.d,
               fill: "none",
-              stroke: "rgba(248,250,252,0.5)",
-              "stroke-width": "2",
+              stroke: "rgba(245,183,0,0.72)",
+              "stroke-width": "2.2",
               "stroke-linecap": "round",
+              "stroke-dasharray": `${len} ${len + 12}`,
+              "stroke-dashoffset": String(len),
             });
+            p.style.transition = "stroke-dashoffset 0.48s cubic-bezier(0.22,1,0.36,1)";
             noteSvg.appendChild(p);
+            requestAnimationFrame(() => { p.setAttribute("stroke-dashoffset", "0"); });
           });
 
           marks.set(id, {
@@ -2154,11 +2196,15 @@
         else renderCard();
       },
 
-      caption(text, subFr = null, wordDelayMs = 70) {
+      caption(text, subFr = null, wordDelayMs = 65) {
         ensureLayers();
         if (wordTimer) {
           clearInterval(wordTimer);
           wordTimer = null;
+        }
+        if (capLayer && capLayer.__chunkTimers) {
+          capLayer.__chunkTimers.forEach((t) => clearTimeout(t));
+          capLayer.__chunkTimers = [];
         }
         if (!text || !String(text).trim()) {
           capLayer.style.opacity = "0";
@@ -2171,32 +2217,70 @@
           }, 160);
           return;
         }
-        capLayer.innerHTML = "";
-        capLayer.style.display = "block";
-        requestAnimationFrame(() => (capLayer.style.opacity = "1"));
-        const mainLine = document.createElement("div");
-        mainLine.style.fontWeight = "700";
-        const spans = String(text).trim().split(/\s+/).map((w) => {
-          const s = document.createElement("span");
-          s.className = "nkap-word";
-          s.textContent = w;
-          mainLine.appendChild(s);
-          return s;
-        });
-        capLayer.appendChild(mainLine);
-        if (subFr) {
-          const sub = document.createElement("div");
-          sub.textContent = subFr;
-          sub.style.cssText = "font-size:13px;color:#CBD5E1;margin-top:2px;";
-          capLayer.appendChild(sub);
+
+        // Sous-titres courts qui défilent phrase par phrase (1 à 2 lignes max, façon HeyClicky !)
+        const clean = String(text).replace(/\s+/g, " ").trim();
+        const maxChars = 76;
+        const chunks = [];
+        for (const sent of clean.split(/(?<=[.!?;])\s+/)) {
+          if (sent.length <= maxChars) {
+            chunks.push(sent);
+          } else {
+            let cur = "";
+            for (const w of sent.split(" ")) {
+              const cand = cur ? `${cur} ${w}` : w;
+              if (cand.length > maxChars && cur) {
+                chunks.push(cur);
+                cur = w;
+              } else {
+                cur = cand;
+              }
+            }
+            if (cur) chunks.push(cur);
+          }
         }
-        let idx = 0;
-        const next = () => {
-          if (idx < spans.length) spans[idx++].classList.add("visible");
-          else if (wordTimer) { clearInterval(wordTimer); wordTimer = null; }
+
+        const renderChunk = (chunkText, showSub) => {
+          if (wordTimer) { clearInterval(wordTimer); wordTimer = null; }
+          capLayer.innerHTML = "";
+          capLayer.style.display = "block";
+          requestAnimationFrame(() => (capLayer.style.opacity = "1"));
+          const mainLine = document.createElement("div");
+          mainLine.style.fontWeight = "700";
+          const spans = chunkText.split(/\s+/).map((w) => {
+            const s = document.createElement("span");
+            s.className = "nkap-word";
+            s.textContent = w;
+            mainLine.appendChild(s);
+            return s;
+          });
+          capLayer.appendChild(mainLine);
+          if (showSub && subFr) {
+            const sub = document.createElement("div");
+            sub.textContent = subFr;
+            sub.style.cssText = "font-size:13px;color:#CBD5E1;margin-top:2px;";
+            capLayer.appendChild(sub);
+          }
+          let idx = 0;
+          const next = () => {
+            if (idx < spans.length) spans[idx++].classList.add("visible");
+            else if (wordTimer) { clearInterval(wordTimer); wordTimer = null; }
+          };
+          next();
+          wordTimer = setInterval(next, wordDelayMs);
         };
-        next();
-        wordTimer = setInterval(next, wordDelayMs);
+
+        capLayer.__chunkTimers = [];
+        let accMs = 0;
+        chunks.forEach((ch, idx) => {
+          if (idx === 0) {
+            renderChunk(ch, chunks.length === 1);
+          } else {
+            const tid = setTimeout(() => renderChunk(ch, idx === chunks.length - 1), accMs);
+            capLayer.__chunkTimers.push(tid);
+          }
+          accMs += Math.max(1750, Math.min(4400, ch.length * 56));
+        });
       },
 
       hide(id) {

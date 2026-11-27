@@ -1914,6 +1914,7 @@ class M2Service:
             ),
         }
         if concept["key"] in table_concepts:
+            # Concepts comparatifs : un petit tableau comparatif apporte une vraie clarté visuelle
             cols, tbl_rows = table_concepts[concept["key"]]
             sb.notebook(
                 "nb-concept",
@@ -1925,35 +1926,10 @@ class M2Service:
                 columns=cols,
                 rows=tbl_rows,
             )
-        else:
-            nb_lines: list[NotebookLine] = []
-            for idx, bullet in enumerate(concept["bullets"][:3]):
-                nb_lines.append(
-                    NotebookLine(
-                        id=f"nb-c{idx + 1}",
-                        text=bullet,
-                        color="yellow" if idx == 0 else None,
-                    )
-                )
-            nb_lines.append(NotebookLine(divider=True))
-            nb_lines.append(
-                NotebookLine(
-                    id="nb-c-tip",
-                    text=concept["tip"],
-                    color="green",
-                    bold=True,
-                    underline=True,
-                )
-            )
-            sb.notebook(
-                "nb-concept",
-                concept["title"],
-                nb_lines,
-                anchor_id=anchor_nid,
-                run_after_ms=0,
-            )
+        # Pour les définitions simples (frais, plafond, microfinance, PIN, bénéficiaire...),
+        # la voix + sous-titres courts suffisent sans encombrer l'écran d'un tableau inutile !
         if anchor_nid and anchor_nid in semantics["usable_nodes"]:
-            sb.draw("highlight", "v-concept-1", anchor_nid, color="yellow", duration_ms=520, run_after_ms=900)
+            sb.draw("highlight", "v-concept-1", anchor_nid, color="yellow", duration_ms=520, run_after_ms=600)
         sb.clear(9500)
         return sb.actions
 

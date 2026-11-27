@@ -118,14 +118,20 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
             val nb: NkapAction.Notebook,
             val anchorY: Float?,
             override val startedAt: Long,
-            override val drawMs: Long = 260,
+            override val drawMs: Long = 3200,
+            var borderPath: HandPath? = null,
+            var cachedW: Float = 0f,
+            var cachedH: Float = 0f,
+            var cachedTop: Float = 0f,
         ) : Mark()
     }
 
     private val marks = LinkedHashMap<String, Mark>()
-    private var captionText: String? = null
+    private var captionChunks: List<String> = emptyList()
+    private var captionChunkStartsMs: LongArray = LongArray(0)
     private var captionSub: String? = null
-    private var captionUpdatedAt: Long = 0L
+    private var captionStartedAt: Long = 0L
+    private var captionTotalMs: Long = 0L
 
     init {
         tag = cm.nkapmobile.sdk.context.ViewTreeScanner.OVERLAY_TAG
@@ -256,10 +262,73 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         putMark(Mark.NotebookMark(nb.id, nb, ay, now()))
     }
 
+    private fun splitCaptionChunks(raw: String, maxChars: Int = 66): List<String> {
+        val clean = raw.replace(Regex("\\s+"), " ").trim()
+        if (clean.isEmpty()) return emptyList()
+        if (clean.length <= maxChars) return listOf(clean)
+
+        val sentences = clean.split(Regex("(?<=[.!?;])\\s+")).filter { it.isNotBlank() }
+        val out = ArrayList<String>()
+        for (sent in sentences) {
+            if (sent.length <= maxChars) {
+                out.add(sent)
+                continue
+            }
+            // Découpe les longues phrases sur virgule / deux-points puis sur espace
+            val clauses = sent.split(Regex("(?<=[,:])\\s+")).filter { it.isNotBlank() }
+            val cur = StringBuilder()
+            for (cl in clauses) {
+                val cand = if (cur.isEmpty()) cl else "$cur $cl"
+                if (cand.length <= maxChars) {
+                    cur.clear().append(cand)
+                } else {
+                    if (cur.isNotEmpty()) {
+                        out.add(cur.toString())
+                        cur.clear()
+                    }
+                    if (cl.length <= maxChars) {
+                        cur.append(cl)
+                    } else {
+                        for (w in cl.split(" ")) {
+                            val t = if (cur.isEmpty()) w else "$cur $w"
+                            if (t.length > maxChars && cur.isNotEmpty()) {
+                                out.add(cur.toString())
+                                cur.clear().append(w)
+                            } else {
+                                cur.clear().append(t)
+                            }
+                        }
+                    }
+                }
+            }
+            if (cur.isNotEmpty()) out.add(cur.toString())
+        }
+        return out
+    }
+
     fun showCaption(text: String?, subFr: String? = null) {
-        captionText = text?.takeIf { it.isNotBlank() }
+        val clean = text?.trim().orEmpty()
+        if (clean.isEmpty()) {
+            captionChunks = emptyList()
+            captionChunkStartsMs = LongArray(0)
+            captionSub = null
+            captionTotalMs = 0L
+            postInvalidateOnAnimation()
+            return
+        }
+        val chunks = splitCaptionChunks(clean, maxChars = 66)
+        val starts = LongArray(chunks.size)
+        var acc = 0L
+        for (i in chunks.indices) {
+            starts[i] = acc
+            val dur = (chunks[i].length * 56L).coerceIn(1700L, 4200L)
+            acc += dur
+        }
+        captionChunks = chunks
+        captionChunkStartsMs = starts
+        captionTotalMs = acc
         captionSub = subFr?.takeIf { it.isNotBlank() }
-        captionUpdatedAt = now()
+        captionStartedAt = now()
         postInvalidateOnAnimation()
     }
 
@@ -270,8 +339,10 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
 
     fun clearAll() {
         synchronized(marks) { marks.clear() }
-        captionText = null
+        captionChunks = emptyList()
+        captionChunkStartsMs = LongArray(0)
         captionSub = null
+        captionTotalMs = 0L
         postInvalidateOnAnimation()
     }
 
@@ -328,15 +399,14 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
                         if (chars < m.text.length) animating = true
                     }
                     is Mark.NotebookMark -> {
-                        drawNotebook(canvas, m, prog)
-                        if (prog < 1f) animating = true
+                        if (drawNotebook(canvas, m, elapsed)) animating = true
                     }
                 }
             }
         }
 
-        if (captionText != null) {
-            drawCaptionPill(canvas)
+        if (captionChunks.isNotEmpty()) {
+            if (drawCaptionPill(canvas, t)) animating = true
         }
 
         if (animating) postInvalidateOnAnimation()
@@ -444,7 +514,14 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         return out
     }
 
-    private fun drawNotebook(canvas: Canvas, m: Mark.NotebookMark, alpha: Float) {
+    /**
+     * Ardoise HeyClicky dessinée et écrite EN DIRECT :
+     * 1. Le cadre manuscrit se trace au trait (0 -> 440 ms) pendant que le fond apparaît doucement
+     * 2. Le titre s'écrit lettre par lettre, le séparateur se trace de gauche à droite
+     * 3. Chaque ligne/puce/cellule s'écrit progressivement (jamais d'apparition brusque !)
+     * Retourne true tant que l'animation d'écriture est en cours.
+     */
+    private fun drawNotebook(canvas: Canvas, m: Mark.NotebookMark, elapsedMs: Long): Boolean {
         val nb = m.nb
         val cardW = (width - 28f * density).coerceAtMost(356f * density)
         val left = (width - cardW) / 2f
@@ -472,7 +549,6 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         val itemGap = 6f * density
         val barBlockH = 36f * density
 
-        // Pré-calcul exact des lignes wrappées pour ne JAMAIS tronquer une phrase
         val wrappedLines = ArrayList<Triple<NotebookLine, List<String>, Paint>>()
         var contentH = 0f
         when (nb.mode) {
@@ -482,9 +558,7 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
                 wrappedLines.add(Triple(NotebookLine(text = flowText), fl, bodyPaint))
                 contentH = (fl.size.coerceAtLeast(1) * lineStep) + itemGap
             }
-            "bars" -> {
-                contentH = nb.lines.size.coerceAtLeast(1) * barBlockH
-            }
+            "bars" -> contentH = nb.lines.size.coerceAtLeast(1) * barBlockH
             "table" -> {
                 val rowsTotal = (if (nb.headers.isNotEmpty()) 1 else 0) + nb.rows.size
                 contentH = rowsTotal.coerceAtLeast(1) * 24f * density
@@ -527,44 +601,86 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         val maxTop = (height - cardH - 125f * density).coerceAtLeast(56f * density)
         val top = preferredTop.coerceIn(56f * density, maxTop)
 
-        val rect = RectF(left, top, left + cardW, top + cardH)
-        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb((alpha * 242).toInt(), 20, 16, 13) }
-        val bd = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 1.4f * density
-            color = Color.argb((alpha * 190).toInt(), 245, 183, 0)
+        if (m.borderPath == null || m.cachedW != cardW || m.cachedH != cardH || m.cachedTop != top) {
+            m.borderPath = handBox(left, top, cardW, cardH, m.id + "::frame")
+            m.cachedW = cardW
+            m.cachedH = cardH
+            m.cachedTop = top
         }
-        canvas.drawRoundRect(rect, 16f * density, 16f * density, bg)
-        canvas.drawRoundRect(rect, 16f * density, 16f * density, bd)
 
+        // 1. Fond translucide en fondu doux + cadre manuscrit qui se DESSINE au trait (0 -> 440 ms)
+        val bgAlpha = (elapsedMs / 320f).coerceIn(0f, 1f)
+        val borderProg = (elapsedMs / 440f).coerceIn(0f, 1f)
+        val rect = RectF(left, top, left + cardW, top + cardH)
+        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb((bgAlpha * 238).toInt(), 20, 16, 13) }
+        canvas.drawRoundRect(rect, 16f * density, 16f * density, bg)
+
+        val bp = trimmed(m.borderPath!!.path, borderProg)
+        if (!bp.isEmpty) {
+            canvas.drawPath(bp, strokePaint(Color.argb(215, 245, 183, 0), 2.1f * density))
+        }
+
+        var stillAnimating = borderProg < 1f
+
+        // 2. Titre écrit lettre par lettre (démarre à 200 ms, 20 ms/car)
+        val titleStr = nb.title.ifBlank { "Explication" }
+        var cursorMs = 200L
+        val titleChars = ((elapsedMs - cursorMs) / 20L).toInt().coerceIn(0, titleStr.length)
+        if (titleChars < titleStr.length) stillAnimating = true
         var y = top + 24f * density
-        canvas.drawText(nb.title.ifBlank { "Explication" }, left + pad, y, titlePaint)
+        if (titleChars > 0) {
+            canvas.drawText(titleStr.take(titleChars), left + pad, y, titlePaint)
+        }
+        cursorMs += (titleStr.length * 20L).coerceAtMost(420L)
+
+        // 3. Séparateur horizontal tracé de gauche à droite
         y += 10f * density
-        canvas.drawLine(left + pad, y, left + cardW - pad, y, Paint().apply { color = Color.argb(65, 245, 183, 0); strokeWidth = density })
+        val sepProg = ((elapsedMs - cursorMs) / 180f).coerceIn(0f, 1f)
+        if (sepProg < 1f) stillAnimating = true
+        if (sepProg > 0f) {
+            canvas.drawLine(
+                left + pad, y,
+                left + pad + innerW * sepProg, y,
+                Paint().apply { color = Color.argb(95, 245, 183, 0); strokeWidth = density }
+            )
+        }
+        cursorMs += 110L
         y += 20f * density
 
+        val msPerChar = 15L
+
         when (nb.mode) {
-            "flow" -> {
+            "flow", "choices" -> {
                 for ((_, linesList, p) in wrappedLines) {
                     for (sub in linesList) {
-                        canvas.drawText(sub, left + pad, y, p)
+                        val nChars = ((elapsedMs - cursorMs) / msPerChar).toInt().coerceIn(0, sub.length)
+                        if (nChars < sub.length) stillAnimating = true
+                        if (nChars > 0) canvas.drawText(sub.take(nChars), left + pad, y, p)
+                        cursorMs += sub.length * msPerChar + 40L
                         y += lineStep
                     }
+                    y += itemGap
                 }
             }
             "bars" -> {
                 val maxVal = nb.lines.mapNotNull { it.pct }.maxOrNull()?.takeIf { it > 0f } ?: 100f
                 for (ln in nb.lines) {
                     val accent = inks[ln.color] ?: Color.parseColor("#F5B700")
-                    canvas.drawText(ln.text, left + pad, y, bodyPaint)
-                    if (ln.value.isNotBlank()) canvas.drawText(ln.value, left + cardW - pad, y, valPaint)
+                    val lblChars = ((elapsedMs - cursorMs) / msPerChar).toInt().coerceIn(0, ln.text.length)
+                    val barProg = ((elapsedMs - cursorMs - 100L) / 360f).coerceIn(0f, 1f)
+                    if (lblChars < ln.text.length || barProg < 1f) stillAnimating = true
+                    if (lblChars > 0) canvas.drawText(ln.text.take(lblChars), left + pad, y, bodyPaint)
+                    if (ln.value.isNotBlank() && barProg > 0.15f) canvas.drawText(ln.value, left + cardW - pad, y, valPaint)
                     val barY = y + 6f * density
                     val raw = ln.pct ?: (maxVal * 0.65f)
                     val ratio = (if (maxVal > 100f) raw / maxVal else raw / 100f).coerceIn(0.08f, 1f)
-                    canvas.drawRoundRect(left + pad, barY, left + pad + innerW, barY + 7f * density, 4f * density, 4f * density,
-                        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(40, 255, 255, 255) })
-                    canvas.drawRoundRect(left + pad, barY, left + pad + innerW * ratio * alpha, barY + 7f * density, 4f * density, 4f * density,
-                        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+                    if (barProg > 0f) {
+                        canvas.drawRoundRect(left + pad, barY, left + pad + innerW, barY + 7f * density, 4f * density, 4f * density,
+                            Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(40, 255, 255, 255) })
+                        canvas.drawRoundRect(left + pad, barY, left + pad + innerW * ratio * barProg, barY + 7f * density, 4f * density, 4f * density,
+                            Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+                    }
+                    cursorMs += 260L
                     y += barBlockH
                 }
             }
@@ -573,86 +689,110 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
                 val colW = innerW / cols
                 if (nb.headers.isNotEmpty()) {
                     val hp = Paint(titlePaint).apply { textSize = 11.5f * density }
-                    nb.headers.forEachIndexed { idx, h -> canvas.drawText(h.take(18), left + pad + idx * colW, y, hp) }
+                    val hProg = ((elapsedMs - cursorMs) / 220f).coerceIn(0f, 1f)
+                    if (hProg < 1f) stillAnimating = true
+                    if (hProg > 0f) {
+                        hp.alpha = (hProg * 255).toInt()
+                        nb.headers.forEachIndexed { idx, h -> canvas.drawText(h.take(18), left + pad + idx * colW, y, hp) }
+                    }
+                    cursorMs += 180L
                     y += 24f * density
                 }
                 for (r in nb.rows) {
-                    r.forEachIndexed { idx, cell -> canvas.drawText(cell.take(18), left + pad + idx * colW, y, bodyPaint) }
-                    y += 24f * density
-                }
-            }
-            "choices" -> {
-                for ((_, linesList, p) in wrappedLines) {
-                    for (sub in linesList) {
-                        canvas.drawText(sub, left + pad, y, p)
-                        y += lineStep
+                    r.forEachIndexed { idx, cell ->
+                        val cStr = cell.take(20)
+                        val nc = ((elapsedMs - cursorMs) / msPerChar).toInt().coerceIn(0, cStr.length)
+                        if (nc < cStr.length) stillAnimating = true
+                        if (nc > 0) canvas.drawText(cStr.take(nc), left + pad + idx * colW, y, bodyPaint)
                     }
-                    y += itemGap
+                    cursorMs += 240L
+                    y += 24f * density
                 }
             }
             else -> {
                 for ((ln, linesList, p) in wrappedLines) {
                     if (ln.divider) {
-                        canvas.drawLine(left + pad, y - 6f * density, left + cardW - pad, y - 6f * density,
-                            Paint().apply { color = Color.argb(55, 255, 255, 255); strokeWidth = density })
+                        val dProg = ((elapsedMs - cursorMs) / 160f).coerceIn(0f, 1f)
+                        if (dProg < 1f) stillAnimating = true
+                        if (dProg > 0f) {
+                            canvas.drawLine(
+                                left + pad, y - 6f * density,
+                                left + pad + innerW * dProg, y - 6f * density,
+                                Paint().apply { color = Color.argb(65, 255, 255, 255); strokeWidth = density }
+                            )
+                        }
+                        cursorMs += 100L
                         y += 12f * density
                         continue
                     }
-                    if (ln.value.isNotBlank()) {
-                        canvas.drawText(ln.value, left + cardW - pad, y, valPaint)
-                    }
+                    val itemStart = cursorMs
                     for (sub in linesList) {
-                        canvas.drawText(sub, left + pad, y, p)
+                        val nChars = ((elapsedMs - cursorMs) / msPerChar).toInt().coerceIn(0, sub.length)
+                        if (nChars < sub.length) stillAnimating = true
+                        if (nChars > 0) canvas.drawText(sub.take(nChars), left + pad, y, p)
+                        cursorMs += sub.length * msPerChar + 25L
                         y += lineStep
                     }
+                    if (ln.value.isNotBlank()) {
+                        val vChars = ((elapsedMs - itemStart - 80L) / msPerChar).toInt().coerceIn(0, ln.value.length)
+                        if (vChars < ln.value.length) stillAnimating = true
+                        if (vChars > 0) {
+                            val valY = y - (linesList.size.coerceAtLeast(1) * lineStep)
+                            canvas.drawText(ln.value.take(vChars), left + cardW - pad, valY, valPaint)
+                        }
+                    }
+                    cursorMs += 70L
                     y += itemGap
                 }
             }
         }
+        return stillAnimating
     }
 
-    private fun drawCaptionPill(canvas: Canvas) {
-        val txt = captionText ?: return
-        val maxW = width - 36f * density
+    /** Sous-titre compact façon HeyClicky (1 à 2 lignes max, défilement phrase par phrase). */
+    private fun drawCaptionPill(canvas: Canvas, nowMs: Long): Boolean {
+        if (captionChunks.isEmpty()) return false
+        val elapsed = (nowMs - captionStartedAt).coerceAtLeast(0L)
+        var idx = 0
+        for (i in captionChunkStartsMs.indices) {
+            if (elapsed >= captionChunkStartsMs[i]) idx = i else break
+        }
+        val chunkText = captionChunks[idx]
+        val chunkAge = elapsed - captionChunkStartsMs[idx]
+        val fadeIn = (chunkAge / 160f).coerceIn(0f, 1f)
+
+        val maxW = width - 40f * density
         val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = fontBold
-            textSize = 14.5f * density
+            textSize = 14f * density
             color = Color.WHITE
+            alpha = (fadeIn * 255).toInt()
             textAlign = Paint.Align.CENTER
         }
-        val words = txt.split(" ")
-        val lines = ArrayList<String>()
-        val cur = StringBuilder()
-        for (w in words) {
-            val test = if (cur.isEmpty()) w else "$cur $w"
-            if (tp.measureText(test) > maxW - 28f * density && cur.isNotEmpty()) {
-                lines.add(cur.toString()); cur.clear().append(w)
-            } else {
-                cur.clear().append(test)
-            }
-        }
-        if (cur.isNotEmpty()) lines.add(cur.toString())
+        val lines = wrapText(chunkText, tp, maxW - 28f * density).take(2)
+        if (lines.isEmpty()) return false
 
-        val lineH = 20f * density
-        val pillH = lines.size * lineH + 20f * density
-        val pillW = (lines.maxOfOrNull { tp.measureText(it) } ?: 120f) + 32f * density
+        val lineH = 19.5f * density
+        val pillH = lines.size * lineH + 18f * density
+        val pillW = (lines.maxOfOrNull { tp.measureText(it) } ?: 110f) + 32f * density
         val left = (width - pillW) / 2f
         val bottom = height - 74f * density
         val rect = RectF(left, bottom - pillH, left + pillW, bottom)
 
-        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(220, 12, 16, 26) }
+        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb((fadeIn * 218).toInt(), 12, 16, 26) }
         val bd = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 1.2f * density
-            color = Color.argb(120, 245, 183, 0)
+            color = Color.argb((fadeIn * 125).toInt(), 245, 183, 0)
         }
         canvas.drawRoundRect(rect, 18f * density, 18f * density, bg)
         canvas.drawRoundRect(rect, 18f * density, 18f * density, bd)
 
-        var y = rect.top + 22f * density
+        var y = rect.top + 21f * density
         for (l in lines) {
             canvas.drawText(l, rect.centerX(), y, tp)
             y += lineH
         }
+        return idx < captionChunks.lastIndex || fadeIn < 1f
     }
 }
