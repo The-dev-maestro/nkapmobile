@@ -655,3 +655,83 @@ def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
     assert r_bars.status_code == 200
     nb_bars = next(a["action"] for a in r_bars.json()["actions"] if a["action"]["t"] == "notebook")
     assert nb_bars["mode"] == "bars" and len(nb_bars["bars"]) >= 2
+
+
+def test_harness_skips_redundant_notebook_on_single_target_and_uses_v12_gestures(monkeypatch):
+    """Sobriété visuelle du harnais : 1 valeur ou 1 bouton = geste direct (circle/frame/highlight+check), sans tableau redondant."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    class _FakeResp:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": json.dumps(self._payload, ensure_ascii=False)}
+
+    client = TestClient(app)
+
+    simple_ctx = {
+        "type": "screen_context",
+        "app": {"package": "com.orange.maxit", "activity": "Home"},
+        "channel": "mobile",
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "n_01", "tag": "span", "text": "Main Account", "clickable": False, "bounds": [60, 420, 300, 460], "tone": "dark"},
+            {"node_id": "n_02", "tag": "span", "text": "24 828,58 FCFA", "clickable": False, "bounds": [60, 480, 340, 540], "tone": "dark"},
+            {"node_id": "n_03", "tag": "button", "text": "Money transfer", "clickable": True, "bounds": [40, 920, 220, 1080], "tone": "dark"},
+            {"node_id": "n_04", "tag": "span", "text": "Frais", "clickable": False, "bounds": [40, 1120, 180, 1160], "tone": "dark"},
+            {"node_id": "n_05", "tag": "span", "text": "0 FCFA (Gratuit)", "clickable": False, "bounds": [220, 1120, 440, 1160], "tone": "dark"},
+        ],
+    }
+
+    # 1. Solde unique -> circle sur 24 828,58 FCFA, PAS de notebook redondant
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResp({
+            "spoken": "Ton solde disponible est de 24 828,58 FCFA.",
+            "title": "Solde disponible",
+            "rows": ["Solde disponible : 24 828,58 FCFA"],
+            "targets": ["24 828,58 FCFA"],
+            "color": "yellow",
+        }),
+    )
+    r_bal = client.post("/answer", json={"transcript": "C'est quoi mon solde ?", "lang_hint": "fr", "context": simple_ctx})
+    assert r_bal.status_code == 200
+    t_bal = [a["action"]["t"] for a in r_bal.json()["actions"]]
+    assert "notebook" not in t_bal and "arrow" not in t_bal and "circle" in t_bal
+
+    # 2. Bouton unique -> frame sur Money transfer, PAS de notebook redondant
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResp({
+            "spoken": "Appuie sur Money transfer pour envoyer de l'argent.",
+            "title": "Envoyer de l'argent",
+            "rows": ["Bouton : Money transfer"],
+            "targets": ["Money transfer"],
+            "color": "yellow",
+        }),
+    )
+    r_btn = client.post("/answer", json={"transcript": "Comment envoyer de l'argent ?", "lang_hint": "fr", "context": simple_ctx})
+    assert r_btn.status_code == 200
+    t_btn = [a["action"]["t"] for a in r_btn.json()["actions"]]
+    assert "notebook" not in t_btn and "frame" in t_btn
+
+    # 3. Frais gratuits (0 FCFA) -> highlight + check vert, PAS de notebook redondant
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResp({
+            "spoken": "Les frais sont gratuits, 0 FCFA.",
+            "title": "Frais",
+            "rows": ["Frais : 0 FCFA"],
+            "targets": ["0 FCFA (Gratuit)"],
+            "color": "green",
+        }),
+    )
+    r_fee = client.post("/answer", json={"transcript": "Combien coûtent les frais ?", "lang_hint": "fr", "context": simple_ctx})
+    assert r_fee.status_code == 200
+    t_fee = [a["action"]["t"] for a in r_fee.json()["actions"]]
+    assert "notebook" not in t_fee and "highlight" in t_fee and "check" in t_fee

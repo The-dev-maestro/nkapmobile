@@ -2656,8 +2656,54 @@ class M2Service:
             elif any(k in q_norm for k in ("trajet", "combien il me restera", "solde apres", "total a debiter", "detail du transfert", "recapitulatif")) and len(money_pairs) >= 2:
                 visual_mode = "flow"
 
+        # Règle de sobriété visuelle du harnais (1.5B -> décision déterministe) :
+        # Ne dessine PAS d'ardoise redondante quand on pointe simplement 1 bouton ou 1 valeur unique à l'écran
+        # (ex: "Quel est mon solde ?" -> cercle sur 102 096 FCFA + voix ; "Comment envoyer ?" -> cadre sur le bouton + voix).
+        is_redundant_single_notebook = (
+            is_live_llm
+            and not used_explicit_node_ids
+            and llm_payload.get("notebook_lines") is None
+            and visual_mode == "default"
+            and first_role not in {"alert", "security"}
+            and len(valid_highlights) == 1
+            and len(grounded_facts) <= 1
+            and not any(
+                k in q_norm
+                for k in (
+                    "historique", "transaction", "operation", "compar", "recap",
+                    "detail", "arnaqu", "securite", "alerte", "erreur", "pourquoi",
+                )
+            )
+        )
+
+        # Pour une cible unique sans ardoise, choisit l'outil v1.2 le plus naturel et lisible directement sur l'UI
+        if is_redundant_single_notebook and valid_highlights:
+            h0 = valid_highlights[0]
+            n0 = usable_nodes.get(h0["node_id"])
+            n0_txt = (n0.text or "").strip() if n0 else ""
+            n0_low = self._norm(n0_txt)
+            is_free_zero = bool(re.search(r"(?:^|[^\d])0\s*fcfa\b", n0_low)) or "gratuit" in n0_low
+            is_ok_status = any(w in n0_low for w in ("confirme", "reussi"))
+            if first_role == "button" or h0.get("style") == "frame":
+                h0["style"] = "frame"
+                h0["label"] = h0.get("label") or "Appuie ici"
+            elif is_free_zero or is_ok_status:
+                h0["style"] = "highlight"
+                h0["color"] = "green"
+                valid_highlights.append({"node_id": h0["node_id"], "style": "check", "color": "green"})
+            elif any(w in n0_low for w in ("echoue", "annule", "insuffisant", "refuse")):
+                h0["style"] = "box"
+                h0["color"] = "red"
+                valid_highlights.append({"node_id": h0["node_id"], "style": "cross", "color": "red"})
+            elif extract_amounts(n0_txt):
+                h0["style"] = "circle"
+                h0["color"] = "yellow"
+            else:
+                h0["style"] = "highlight"
+                h0["color"] = "yellow"
+
         used_non_line_notebook = False
-        if nb_title and compiled_lines:
+        if nb_title and compiled_lines and not is_redundant_single_notebook:
             # Mode v1.2 enrichi : compile un carnet `flow` ou `bars` déterministe quand c'est judicieux
             nb_mode = "lines"
             flow_steps: list[FlowStep] | None = None
@@ -2719,7 +2765,8 @@ class M2Service:
                     h0["style"] = "highlight"
 
         # 3. Tracés visuels (<= 3 marques au total)
-        cursor_ms = 1400 if (nb_title and compiled_lines) else 250
+        emitted_notebook = bool(nb_title and compiled_lines and not is_redundant_single_notebook)
+        cursor_ms = 1400 if emitted_notebook else 250
         arrow_drawn = False
         spoken_after_emitted = False
 
@@ -2791,6 +2838,9 @@ class M2Service:
                     cand_after = "Regarde exactement l'élément entouré ici."
                 spoken_after = self._safe_text_for_harness(cand_after, screen_context, kb_terms, fallback="Regarde exactement ici.")
 
+        # Pour une cible unique sans ardoise, une seule phrase claire suffit (évite une 2e phrase redondante)
+        if is_redundant_single_notebook:
+            spoken_after = ""
         # Évite de répéter mot pour mot la même phrase vocale en `spoken` et `spoken_after`
         if spoken_after and (
             self._norm(spoken_after) == self._norm(spoken)
@@ -2808,7 +2858,7 @@ class M2Service:
             color = str(h.get("color") or default_color).lower()
             if color not in ALLOWED_COLORS:
                 color = "yellow"
-            elif color in {"ink", "green"} and not used_explicit_node_ids and style != "check":
+            elif color in {"ink", "green"} and not used_explicit_node_ids and style not in {"check", "highlight"}:
                 color = "yellow"  # Jaune feutre contrasté sur fonds sombres (Safinum) sans vert ni encre sombre quasi invisible
             if style == "check" and not used_explicit_node_ids:
                 color = "green"
@@ -2819,7 +2869,7 @@ class M2Service:
             arrow_pref = h.get("arrow_from_notebook")
             wants_arrow = (False if use_dual_highlight else (idx == 0)) if arrow_pref is None else bool(arrow_pref)
 
-            if wants_arrow and arrow_source_id and not arrow_drawn and remaining_visual_budget >= 2:
+            if emitted_notebook and wants_arrow and arrow_source_id and not arrow_drawn and remaining_visual_budget >= 2:
                 sb.arrow("a-guide", arrow_source_id, nid, color=color, duration_ms=620, run_after_ms=cursor_ms)
                 arrow_drawn = True
                 remaining_visual_budget -= 1
