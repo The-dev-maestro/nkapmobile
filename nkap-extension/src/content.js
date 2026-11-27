@@ -457,46 +457,53 @@
 
     let step = "home";
 
-    // Étape 5 : Reçu / Confirmation (FR + EN + EWO/DUA sandbox)
+    // Étape 5 : Reçu / Confirmation (FR + EN + EWO + DUA)
     if (
-      /transfert confirme|transfert effectue|operation reussie|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|itan mfefe/.test(fullText)
+      /transfert confirme|transfert effectue|operation reussie|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|itan mfefe|epetele|essele\. moni mu si lomabe/.test(fullText)
     ) {
       step = "receipt";
     }
-    // Étape 4 : Récapitulatif avant confirmation (FR + EN + EWO/DUA sandbox)
+    // Étape 4 : Récapitulatif avant confirmation (FR + EN + EWO + DUA)
     else if (
-      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse/.test(fullText) ||
+      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|check before you confirm|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse|timba la mbusa si titi/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Confirmer le transfert") || window.NKAP_QUERY("Bamse loma")) && !window.NKAP_QUERY("Nom du bénéficiaire"))
     ) {
-      step = "recap";
+      step = isSafinumSandbox() ? "review" : "recap";
     }
-    // Étape 3 : Saisie / Vérification du bénéficiaire (FR + EN + EWO/DUA sandbox)
+    // Transfert / Bénéficiaire (FR + EN + EWO + DUA)
     else if (
-      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero|bot bam ba non moni|bakusa bam/.test(fullText) ||
+      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero|mes beneficiaires|bot bam ba non moni|bakusa bam|bakuse moni|jusqu'a 500 000|akui 500 000|moni mudene/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Nom du bénéficiaire") || window.NKAP_QUERY("Dina la mukusa") || window.NKAP_QUERY("Renseignez les informations du destinataire")))
     ) {
-      step = "beneficiary";
+      step = isSafinumSandbox() ? "transfer" : "beneficiary";
     }
-    // Étape 2 : Frais de transfert & Montant (FR + EN)
+    // Historique des opérations (FR + EN + EWO + DUA) — AVANT Paiement pour éviter collision Facture/Crédit !
+    else if (
+      !/solde disponible|itan ineu|moni ma pene|available balance|que voulez-vous faire|za dzam wa yi bo|wa pula bola nje/.test(fullText) &&
+      (/entrants.*sortants|sortants.*entrants|recus.*envoyes|bi bi.*bi lom|moni mu mingeye.*moni mu mabuse|incoming.*outgoing|historique des operations|itang mvet/.test(fullText))
+    ) {
+      step = "history";
+    }
+    // Paiement Crédit téléphonique (FR + EN + EWO + DUA)
+    else if (
+      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
+      (/numero a recharger|nombo ya lomo kredi|nimero ya kredi|number to top up|operateur detecte|nsaa a yenban|miiyo :|numb'a ngo/.test(fullText))
+    ) {
+      step = "pay_airtime";
+    }
+    // Paiement Facture (FR + EN + EWO + DUA)
+    else if (
+      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
+      (/choisir le service|tob isae|pona ebolo|choose the service|\bposo\b/.test(fullText))
+    ) {
+      step = "pay_bill";
+    }
+    // Étape 2 : Frais de transfert & Montant (legacy hackathon-test)
     else if (
       /frais de transfert|choisissez le type de transfert|type d'operation|montant a envoyer|transfer fees|choose the transfer type|operation type|amount to send|balance after transfer|mabala ma loma|moni ma loma|botali ba busa|moni ma dia ombusa/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Frais de transfert") || window.NKAP_QUERY("Mabála ma loma") || window.NKAP_QUERY("Montant à envoyer")))
     ) {
       step = "fees";
-    }
-    // Historique des opérations (FR + EN + EWO + DUA)
-    else if (
-      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
-      (/entrants.*sortants|sortants.*entrants|recus.*envoyes|bi bi.*bi lom|moni mu mingeye.*moni mu mabuse|incoming.*outgoing|historique des operations|itang mvet/.test(fullText))
-    ) {
-      step = "history";
-    }
-    // Paiement Factures & Crédit (FR + EN + EWO + DUA)
-    else if (
-      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
-      (/choisir le service|tob isae|pona ebolo|choose the service|numero a recharger|nombo ya lomo kredi|nimero ya kredi|number to top up|operateur detecte|nsaa a yenban|miiyo :/.test(fullText))
-    ) {
-      step = "pay";
     }
     // Étape 1 : Solde & Accueil
     else {
@@ -649,6 +656,7 @@
           }
         } else {
           lastStep = state.step;
+          window.NKAP_OVERLAY?.pruneDetachedMarks?.();
           if (window.NKAP_ASSISTANT?.hasPendingGoal?.()) {
             window.NKAP_ASSISTANT.checkPendingGoal(state.step);
           }

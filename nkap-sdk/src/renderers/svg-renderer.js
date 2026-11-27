@@ -705,8 +705,34 @@
       raf = requestAnimationFrame(step);
     }
 
+    function pruneDetachedMarks() {
+      let removedAny = false;
+      for (const [id, m] of Array.from(marks.entries())) {
+        if (!m.anchorEl) continue;
+        if (!m.anchorEl.isConnected) {
+          removeMarkImmediate(id);
+          removedAny = true;
+          continue;
+        }
+        try {
+          const r = m.anchorEl.getBoundingClientRect();
+          if (r.width < 1 || r.height < 1) {
+            removeMarkImmediate(id);
+            removedAny = true;
+          }
+        } catch (_) {
+          removeMarkImmediate(id);
+          removedAny = true;
+        }
+      }
+      if (removedAny && marks.size === 0) {
+        hideCursor();
+      }
+    }
+
     function repositionAll() {
       syncFrameAnchoredChrome();
+      pruneDetachedMarks();
       for (const [, m] of marks) {
         if (!m.anchorEl || !m.baseRect || !m.anchorEl.isConnected) continue;
         const cur = m.anchorEl.getBoundingClientRect();
@@ -1700,6 +1726,7 @@
             orbSyncTimer = null;
             return;
           }
+          if (marks.size > 0) pruneDetachedMarks();
           syncFrameAnchoredChrome();
           if (!orbFloatingTarget && !isDraggingOrb) {
             const h = getOrbHomePosition();
@@ -1709,7 +1736,7 @@
               applyOrbCoords(h.x, h.y, h.size);
             }
           }
-        }, 500);
+        }, 220);
         return bubbleEl;
       },
 
@@ -1718,6 +1745,7 @@
       floatOrbNear,
       returnOrbHome,
       positionPanelUnderOrb,
+      pruneDetachedMarks,
       getPanelEl() { return panelEl; },
 
       destroy() {

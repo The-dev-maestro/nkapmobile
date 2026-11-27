@@ -159,6 +159,60 @@ window.NKAP_ASSISTANT = (() => {
     receipt: "Étape 5 · Confirmation",
   };
 
+  // Chips contextuels dédiés au bac à sable officiel SAFINUM (Web & Mobile — 6 écrans réels)
+  const SANDBOX_STEP_TITLES = {
+    home: "Banque Démo · Accueil",
+    transfer: "Banque Démo · Envoyer",
+    pay_bill: "Banque Démo · Factures",
+    pay_airtime: "Banque Démo · Crédit",
+    review: "Banque Démo · Récapitulatif",
+    receipt: "Banque Démo · Reçu",
+    history: "Banque Démo · Historique",
+  };
+
+  const SANDBOX_SCENARIOS_META = {
+    home: [
+      { id: "sbx-bal", label: "Quel est mon solde ?" },
+      { id: "sbx-send", label: "Comment envoyer de l'argent ?" },
+      { id: "sbx-bill", label: "Comment payer une facture ?" },
+      { id: "sbx-guide", label: "Je dois faire quoi ici ?" },
+    ],
+    transfer: [
+      { id: "sbx-tr-guide", label: "Je dois faire quoi ici ?" },
+      { id: "sbx-tr-list", label: "C'est quoi la liste Mes bénéficiaires ?" },
+      { id: "sbx-tr-limit", label: "Je dois envoyer 500 000 FCFA ?" },
+      { id: "sbx-tr-bal", label: "Quel est mon solde ?" },
+    ],
+    pay_bill: [
+      { id: "sbx-pb-guide", label: "Je dois faire quoi ici ?" },
+      { id: "sbx-pb-eneo", label: "Comment payer une facture ENEO ?" },
+      { id: "sbx-pb-air", label: "Je veux plutôt acheter du crédit" },
+      { id: "sbx-pb-bal", label: "Quel est mon solde ?" },
+    ],
+    pay_airtime: [
+      { id: "sbx-pa-guide", label: "Je dois faire quoi ici ?" },
+      { id: "sbx-pa-free", label: "Est-ce gratuit d'acheter du crédit ?" },
+      { id: "sbx-pa-bill", label: "Je veux plutôt payer une facture" },
+      { id: "sbx-pa-bal", label: "Quel est mon solde ?" },
+    ],
+    review: [
+      { id: "sbx-rv-guide", label: "Je dois faire quoi ici ?" },
+      { id: "sbx-rv-after", label: "Combien il me restera après l'opération ?" },
+      { id: "sbx-rv-edit", label: "Comment modifier si je me suis trompé ?" },
+      { id: "sbx-rv-ok", label: "Comment confirmer ?" },
+    ],
+    receipt: [
+      { id: "sbx-rc-proof", label: "L'argent est bien parti ? Où est la preuve ?" },
+      { id: "sbx-rc-bal", label: "Quel est mon nouveau solde ?" },
+      { id: "sbx-rc-hist", label: "Quelles sont mes dernières opérations ?" },
+    ],
+    history: [
+      { id: "sbx-hi-list", label: "Quelles sont mes dernières opérations ?" },
+      { id: "sbx-hi-filt", label: "Comment filtrer les entrants et sortants ?" },
+      { id: "sbx-hi-bal", label: "Quel est mon solde ?" },
+    ],
+  };
+
   const SCENARIOS_BY_SCREEN = Object.fromEntries(
     Object.entries(SCENARIOS_META).map(([k, list]) => [k, list.map((x) => x.id)])
   );
@@ -1095,8 +1149,13 @@ window.NKAP_ASSISTANT = (() => {
 
     const titleCol = document.createElement("div");
     titleCol.style.cssText = "display:flex;flex-direction:column;min-width:0;";
+    const isSandboxPage =
+      typeof window.NKAP_IS_SAFINUM_SANDBOX === "function" &&
+      window.NKAP_IS_SAFINUM_SANDBOX();
     const title = document.createElement("div");
-    title.textContent = STEP_TITLES[state.step] || "Assistant Nkap";
+    title.textContent =
+      (isSandboxPage ? SANDBOX_STEP_TITLES[state.step] : STEP_TITLES[state.step]) ||
+      "Assistant Nkap";
     title.style.cssText =
       "font-size:13.5px;font-weight:700;color:#FDE68A;letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
     const subTitle = document.createElement("div");
@@ -1197,13 +1256,11 @@ window.NKAP_ASSISTANT = (() => {
       chipsBox.appendChild(unseenChip);
     }
 
-    // 3. Chips des suggestions contextuelles (apparition échelonnée fluide)
-    const useLiveSandboxBrain = !!(
-      brainUrl &&
-      typeof window.NKAP_IS_SAFINUM_SANDBOX === "function" &&
-      window.NKAP_IS_SAFINUM_SANDBOX()
-    );
-    const screenScenarios = SCENARIOS_META[state.step] || SCENARIOS_META.home;
+    // 3. Chips des suggestions contextuelles (adaptés à SAFINUM Sandbox Web/Mobile ou maquette legacy)
+    const useLiveSandboxBrain = !!(brainUrl && isSandboxPage);
+    const screenScenarios = isSandboxPage
+      ? (SANDBOX_SCENARIOS_META[state.step] || SANDBOX_SCENARIOS_META.home)
+      : (SCENARIOS_META[state.step] || SCENARIOS_META.home);
     screenScenarios.forEach((sc, idx) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -1360,6 +1417,7 @@ window.NKAP_ASSISTANT = (() => {
   /** Appelé automatiquement quand l'utilisateur passe d'une étape à une autre (1→2→3→4→5). */
   function onScreenChanged(newStep) {
     closePanel();
+    stopVoice();
     cancelPendingSteps();
     O().clear();
     cursorByScreen[newStep] = 0;

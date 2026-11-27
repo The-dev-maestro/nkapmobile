@@ -93,6 +93,10 @@ class NkapSession(
     private var pendingGoal: PendingGoalState? = null
     private var pendingGoalRunnable: Runnable? = null
 
+    private var activeVisualPkg: String = ""
+    private var activeVisualAppScreen: Pair<String, String>? = null
+    private var activeVisualTexts: Set<String> = emptySet()
+
     private fun normText(s: String): String {
         val decomposed = Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD)
         return decomposed.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").replace(Regex("\\s+"), " ").trim()
@@ -100,6 +104,59 @@ class NkapSession(
 
     private fun screenCorpus(ctx: ScreenContext): String =
         normText(ctx.nodes.take(80).joinToString(" ") { it.text })
+
+    /** Identifie l'application active (Wave, Max it, SAFINUM, générique) et son sous-écran exact (aligné sur M5 KB). */
+    fun inferAppAndScreen(ctx: ScreenContext): Pair<String, String> {
+        val pkg = ctx.appPackage.lowercase()
+        val corpus = screenCorpus(ctx)
+        val isWave = pkg.contains("wave") ||
+            listOf("hide balance", "enter a new number", "scan to send", "gimac transfer").any { corpus.contains(it) }
+        if (isWave) {
+            val hasHomeCue = listOf("hide balance", "show balance", "masquer le solde", "afficher le solde").any { corpus.contains(it) }
+            val screen = when {
+                !hasHomeCue && (corpus.contains("scan to send") || corpus.contains("scanner pour envoyer") ||
+                    (corpus.contains("enter a new number") && corpus.contains("contacts"))) -> "send_money"
+                !hasHomeCue && listOf("send amount", "receive amount", "montant envoye", "montant recu", "wave fee").any { corpus.contains(it) } -> "send_amount"
+                !hasHomeCue && listOf("full name", "nom complet", "enter a phone number").any { corpus.contains(it) } -> "send_new_number"
+                !hasHomeCue && (ctx.title.lowercase().contains("cardfullscreen") || corpus.contains("scan to pay")) -> "card_qr"
+                !hasHomeCue && listOf("lock vault", "transfer to vault", "withdraw from vault", "my vault", "mon coffre").any { corpus.contains(it) } -> "vault"
+                !hasHomeCue && listOf("reset secret code", "call support", "find nearby agents", "verify your limit").any { corpus.contains(it) } -> "settings"
+                !hasHomeCue && listOf("search by name", "rechercher par nom", "electricity", "eneo", "camwater", "canal+").any { corpus.contains(it) } -> "bills"
+                !hasHomeCue && listOf("airtime", "rewards", "transport").any { corpus.contains(it) } -> "more"
+                else -> "home"
+            }
+            return "wave" to screen
+        }
+
+        val isMaxIt = pkg.contains("orange") || pkg.contains("maxit") ||
+            listOf("main account", "om loyalty", "my credits", "buy a bundle").any { corpus.contains(it) }
+        if (isMaxIt) {
+            val hasHome = listOf("main account", "my credits", "om loyalty").any { corpus.contains(it) }
+            val screen = if (!hasHome && listOf("enter amount", "montant a envoyer", "recipient").any { corpus.contains(it) }) "transfer" else "home"
+            return "maxit" to screen
+        }
+
+        val isSafinum = pkg.contains("nkapmobile") ||
+            listOf("banque demo", "lomo moni", "loma moni", "mbembe kiri", "mbole", "misongi", "bakuse moni").any { corpus.contains(it) }
+        if (isSafinum) {
+            val screen = when {
+                listOf("operation reussie", "mvet o boban mben", "ebolo e tilabe na bwam", "nouveau solde", "itan mfefe", "epetele").any { corpus.contains(it) } -> "receipt"
+                listOf("verifiez avant de confirmer", "fombo ossussua", "ombwa oboso ba bamse", "timba la mbusa si titi").any { corpus.contains(it) } -> "review"
+                listOf("mes beneficiaires", "bot bam ba non moni", "bakusa bam", "bakuse moni", "jusqu'a 500 000", "akui 500 000").any { corpus.contains(it) } -> "transfer"
+                !corpus.contains("solde disponible") && !corpus.contains("itan ineu") &&
+                    ((corpus.contains("entrants") && corpus.contains("sortants")) ||
+                        (corpus.contains("bi bi") && corpus.contains("bi lom")) ||
+                        (corpus.contains("moni mu mingeye") && corpus.contains("moni mu mabuse")) ||
+                        corpus.contains("itang mvet")) -> "history"
+                !corpus.contains("solde disponible") && listOf("numero a recharger", "nombo ya lomo kredi", "operateur detecte", "miiyo :").any { corpus.contains(it) } -> "pay_airtime"
+                !corpus.contains("solde disponible") && listOf("choisir le service", "tob isae", "pona ebolo").any { corpus.contains(it) } -> "pay_bill"
+                else -> "home"
+            }
+            return "safinum" to screen
+        }
+
+        return "generic" to ctx.screenHint
+    }
 
     fun hasPendingGoal(): Boolean {
         val g = pendingGoal ?: return false
@@ -110,14 +167,46 @@ class NkapSession(
         return true
     }
 
+    fun shouldWatchScreenChanges(): Boolean =
+        hasPendingGoal() || overlayView.hasActiveMarks() || voiceController.isSpeaking
+
     fun clearPendingGoal() {
         pendingGoal = null
         pendingGoalRunnable?.let { mainHandler.removeCallbacks(it) }
         pendingGoalRunnable = null
     }
 
-    /** Appelé dès que l'écran change (ex. retour vers l'accueil Wave) : relance automatiquement l'objectif en attente. */
+    /** Appelé dès que l'écran ou l'application change : efface les visuels obsolètes + coupe la voix, puis reprend un éventuel objectif multi-écrans. */
     fun onScreenSnapshotUpdated(ctx: ScreenContext) {
+        if (ctx.nodes.isEmpty()) return
+        if (ctx.appPackage == context.packageName && drawerView.visibility == View.VISIBLE) return
+
+        // 1. Si des marques ou une voix de l'écran précédent sont encore actives et que l'écran/app a changé -> nettoyage immédiat !
+        if (overlayView.hasActiveMarks() || voiceController.isSpeaking) {
+            val curAppScreen = inferAppAndScreen(ctx)
+            val pkgChanged = activeVisualPkg.isNotEmpty() && ctx.appPackage != activeVisualPkg
+            val screenChanged = activeVisualAppScreen != null && curAppScreen != activeVisualAppScreen
+            val curTexts = ctx.nodes.take(60).map { normText(it.text) }.filter { it.length >= 2 }.toSet()
+            val overlapRatio = if (activeVisualTexts.size >= 3) {
+                activeVisualTexts.count { it in curTexts }.toFloat() / activeVisualTexts.size.toFloat()
+            } else 1f
+            if (pkgChanged || screenChanged || overlapRatio < 0.35f) {
+                android.util.Log.i(
+                    "NkapSDK",
+                    "Screen changed (pkg=$pkgChanged, screen=$screenChanged, overlap=${"%.2f".format(overlapRatio)}) -> clearing visuals & voice"
+                )
+                activeVisualPkg = ""
+                activeVisualAppScreen = null
+                activeVisualTexts = emptySet()
+                cancelScheduled()
+                voiceController.stopAll()
+                overlayView.clearAll()
+                rules.onCleared()
+                if (!isListening) orbView.state = JarvisOrbView.OrbState.IDLE
+            }
+        }
+
+        // 2. Suivi d'objectif multi-écrans (reprise automatique dès l'arrivée sur l'écran cible)
         val state = pendingGoal ?: return
         if (System.currentTimeMillis() > state.expiresAtMs) {
             clearPendingGoal()
@@ -262,7 +351,8 @@ class NkapSession(
         } else {
             val ctx = runCatching { contextProvider() }.getOrNull()
             lastContext = ctx
-            drawerView.refreshSuggestions(ctx?.screenHint ?: "home", brainClient.brainUrl.isNotBlank())
+            val (appId, screenKey) = if (ctx != null) inferAppAndScreen(ctx) else ("generic" to "home")
+            drawerView.refreshSuggestions(appId, screenKey, brainClient.brainUrl.isNotBlank())
             positionDrawerNearOrb()
             drawerView.visibility = View.VISIBLE
             drawerView.alpha = 0f
@@ -334,6 +424,9 @@ class NkapSession(
         cancelScheduled()
         overlayView.clearAll()
         rules.onCleared()
+        activeVisualPkg = ctx.appPackage
+        activeVisualAppScreen = inferAppAndScreen(ctx)
+        activeVisualTexts = ctx.nodes.take(60).map { normText(it.text) }.filter { it.length >= 2 }.toSet()
 
         var nextDrawAt = 0L
         var hasClear = false
@@ -528,6 +621,9 @@ class NkapSession(
     }
 
     fun clearAll() {
+        activeVisualPkg = ""
+        activeVisualAppScreen = null
+        activeVisualTexts = emptySet()
         cancelScheduled()
         voiceController.stopAll()
         overlayView.clearAll()

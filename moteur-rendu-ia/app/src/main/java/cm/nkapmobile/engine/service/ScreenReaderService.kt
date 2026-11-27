@@ -260,7 +260,7 @@ class ScreenReaderService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val type = event?.eventType ?: return
         val shouldCheck = type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && session?.hasPendingGoal() == true)
+            (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && session?.shouldWatchScreenChanges() == true)
         if (!shouldCheck) return
         snapshotCheckRunnable?.let { handler.removeCallbacks(it) }
         val r = Runnable {
@@ -268,7 +268,7 @@ class ScreenReaderService : AccessibilityService() {
             session?.onScreenSnapshotUpdated(ctx)
         }
         snapshotCheckRunnable = r
-        handler.postDelayed(r, 260)
+        handler.postDelayed(r, 240)
     }
 
     override fun onInterrupt() {}

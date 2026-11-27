@@ -209,38 +209,130 @@ class NkapChatDrawer(
     }
 
     fun refreshSuggestions(screenHint: String, connected: Boolean) {
-        titleView.text = when (screenHint) {
-            "fees" -> "Frais de transfert"
-            "beneficiary" -> "Bénéficiaire"
-            "recap" -> "Récapitulatif"
-            "receipt" -> "Confirmation"
-            else -> "Solde & Compte"
+        refreshSuggestions("generic", screenHint, connected)
+    }
+
+    fun refreshSuggestions(appId: String, screenKey: String, connected: Boolean) {
+        val (headerTitle, questions) = when (appId) {
+            "wave" -> when (screenKey) {
+                "send_money" -> "Wave · Envoyer" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Envoyer à un nouveau numéro",
+                    "Comment scanner un QR code ?",
+                    "C'est quoi mon solde ?",
+                )
+                "send_new_number" -> "Wave · Nouveau numéro" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment revenir en arrière ?",
+                )
+                "send_amount" -> "Wave · Montant" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "C'est quoi les frais ?",
+                    "Comment revenir en arrière ?",
+                )
+                "bills" -> "Wave · Factures" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment payer ENEO ou CAMWATER ?",
+                    "C'est quoi mon solde ?",
+                )
+                "vault" -> "Wave · Coffre" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment épargner ou retirer du coffre ?",
+                    "C'est quoi mon solde ?",
+                )
+                "more" -> "Wave · Plus" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "C'est quoi mon solde ?",
+                )
+                "settings" -> "Wave · Paramètres" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment changer mon code secret ?",
+                    "C'est quoi mon solde ?",
+                )
+                "card_qr" -> "Wave · Mon QR code" to listOf(
+                    "À quoi sert ce QR code ?",
+                    "Comment revenir à l'accueil ?",
+                )
+                else -> "Wave · Accueil" to listOf(
+                    "C'est quoi mon solde ?",
+                    "Comment envoyer de l'argent ?",
+                    "C'est quoi Vault ?",
+                    "À quoi sert le QR code ?",
+                )
+            }
+            "maxit" -> when (screenKey) {
+                "transfer" -> "Max it · Transfert" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "C'est quoi mon solde ?",
+                )
+                else -> "Max it · Accueil" to listOf(
+                    "C'est quoi mon solde ?",
+                    "Comment envoyer de l'argent ?",
+                    "Comment annuler une transaction ?",
+                    "Comment acheter un forfait ?",
+                )
+            }
+            "safinum" -> when (screenKey) {
+                "transfer", "beneficiary" -> "Banque Démo · Envoyer" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "C'est quoi la liste Mes bénéficiaires ?",
+                    "Je dois envoyer 500 000 FCFA ?",
+                    "Quel est mon solde ?",
+                )
+                "pay_bill" -> "Banque Démo · Factures" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment payer une facture ENEO ?",
+                    "Je veux plutôt acheter du crédit",
+                )
+                "pay_airtime" -> "Banque Démo · Crédit" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Je veux plutôt payer une facture",
+                    "Quel est mon solde ?",
+                )
+                "review", "recap" -> "Banque Démo · Récapitulatif" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Combien il me restera après ?",
+                    "Comment modifier si je me suis trompé ?",
+                    "Comment confirmer ?",
+                )
+                "receipt" -> "Banque Démo · Reçu" to listOf(
+                    "L'argent est bien parti ?",
+                    "Quel est mon nouveau solde ?",
+                )
+                "history" -> "Banque Démo · Historique" to listOf(
+                    "Quelles sont mes dernières opérations ?",
+                    "Comment filtrer entrants et sortants ?",
+                    "Quel est mon solde ?",
+                )
+                else -> "Banque Démo · Accueil" to listOf(
+                    "Quel est mon solde ?",
+                    "Comment envoyer de l'argent ?",
+                    "Comment payer une facture ?",
+                    "Je dois faire quoi ici ?",
+                )
+            }
+            else -> when (screenKey) {
+                "recap", "review" -> "Récapitulatif" to listOf(
+                    "Résume-moi les montants et les frais",
+                    "À qui va partir l'argent ?",
+                    "Comment confirmer ?",
+                )
+                "receipt" -> "Confirmation" to listOf(
+                    "L'argent est bien parti ?",
+                    "Quel est mon nouveau solde ?",
+                )
+                else -> "Assistant Nkap" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "C'est quoi mon solde ?",
+                    "Comment envoyer de l'argent ?",
+                    "Explique-moi cet écran",
+                )
+            }
         }
+
+        titleView.text = headerTitle
         subView.text = if (connected) "Copilote vivant · connecté" else "Copilote visuel · hors-ligne"
         chipsContainer.removeAllViews()
-
-        val questions = when (screenHint) {
-            "fees" -> listOf(
-                "Combien coûtent les frais ?",
-                "Combien il me restera après l'envoi ?",
-                "Comment passer à l'étape suivante ?",
-            )
-            "beneficiary" -> listOf(
-                "Où vérifier le nom et le numéro ?",
-                "Pourquoi cet avertissement ?",
-                "Que faire avant de continuer ?",
-            )
-            "recap" -> listOf(
-                "Résume-moi les montants et les frais",
-                "À qui va partir l'argent ?",
-                "Comment confirmer définitivement ?",
-            )
-            else -> listOf(
-                "Combien il me reste sur mon compte ?",
-                "Combien coûtent les frais ?",
-                "Comment envoyer de l'argent ?",
-            )
-        }
 
         for (q in questions) {
             val row = TextView(context).apply {

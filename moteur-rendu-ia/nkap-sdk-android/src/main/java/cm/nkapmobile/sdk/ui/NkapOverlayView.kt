@@ -337,6 +337,8 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         postInvalidateOnAnimation()
     }
 
+    fun hasActiveMarks(): Boolean = synchronized(marks) { marks.isNotEmpty() || captionChunks.isNotEmpty() }
+
     fun clearAll() {
         synchronized(marks) { marks.clear() }
         captionChunks = emptyList()
