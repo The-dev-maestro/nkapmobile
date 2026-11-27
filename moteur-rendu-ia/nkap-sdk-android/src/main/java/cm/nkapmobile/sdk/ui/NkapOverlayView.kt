@@ -425,11 +425,31 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         drawBadgeTag(canvas, m.cx, m.cy, sub, m.color, 1f)
     }
 
+    private fun wrapText(text: String, paint: Paint, maxW: Float): List<String> {
+        val clean = text.trim()
+        if (clean.isEmpty()) return emptyList()
+        if (paint.measureText(clean) <= maxW) return listOf(clean)
+        val out = ArrayList<String>()
+        val cur = StringBuilder()
+        for (word in clean.split(Regex("\\s+"))) {
+            val test = if (cur.isEmpty()) word else "$cur $word"
+            if (paint.measureText(test) > maxW && cur.isNotEmpty()) {
+                out.add(cur.toString())
+                cur.clear().append(word)
+            } else {
+                cur.clear().append(test)
+            }
+        }
+        if (cur.isNotEmpty()) out.add(cur.toString())
+        return out
+    }
+
     private fun drawNotebook(canvas: Canvas, m: Mark.NotebookMark, alpha: Float) {
         val nb = m.nb
-        val cardW = (width - 28f * density).coerceAtMost(350f * density)
+        val cardW = (width - 28f * density).coerceAtMost(356f * density)
         val left = (width - cardW) / 2f
         val pad = 14f * density
+        val innerW = cardW - pad * 2f
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = fontBold
@@ -438,7 +458,7 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
         }
         val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = fontReg
-            textSize = 13f * density
+            textSize = 12.8f * density
             color = Color.parseColor("#FEF9EE")
         }
         val valPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -448,18 +468,63 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
             textAlign = Paint.Align.RIGHT
         }
 
-        // Calcul de la hauteur selon le mode
-        val rowCount = when (nb.mode) {
-            "flow" -> 2
-            "table" -> (if (nb.headers.isNotEmpty()) 1 else 0) + nb.rows.size
-            "bars" -> nb.lines.size.coerceAtLeast(1)
-            "choices" -> nb.choices.size.coerceAtLeast(1)
-            else -> nb.lines.size.coerceAtLeast(1)
+        val lineStep = 19.5f * density
+        val itemGap = 6f * density
+        val barBlockH = 36f * density
+
+        // Pré-calcul exact des lignes wrappées pour ne JAMAIS tronquer une phrase
+        val wrappedLines = ArrayList<Triple<NotebookLine, List<String>, Paint>>()
+        var contentH = 0f
+        when (nb.mode) {
+            "flow" -> {
+                val flowText = nb.steps.joinToString("  →  ").ifBlank { nb.lines.joinToString(" → ") { it.text } }
+                val fl = wrapText(flowText, bodyPaint, innerW)
+                wrappedLines.add(Triple(NotebookLine(text = flowText), fl, bodyPaint))
+                contentH = (fl.size.coerceAtLeast(1) * lineStep) + itemGap
+            }
+            "bars" -> {
+                contentH = nb.lines.size.coerceAtLeast(1) * barBlockH
+            }
+            "table" -> {
+                val rowsTotal = (if (nb.headers.isNotEmpty()) 1 else 0) + nb.rows.size
+                contentH = rowsTotal.coerceAtLeast(1) * 24f * density
+            }
+            "choices" -> {
+                nb.choices.forEachIndexed { idx, c ->
+                    val w = wrapText("${idx + 1}. $c", bodyPaint, innerW)
+                    wrappedLines.add(Triple(NotebookLine(text = c), w, bodyPaint))
+                    contentH += w.size * lineStep + itemGap
+                }
+            }
+            else -> {
+                for (ln in nb.lines) {
+                    if (ln.divider) {
+                        wrappedLines.add(Triple(ln, emptyList(), bodyPaint))
+                        contentH += 12f * density
+                        continue
+                    }
+                    val p = Paint(bodyPaint).apply {
+                        if (ln.bold) typeface = fontBold
+                        color = when (ln.color) {
+                            Ink.YELLOW -> Color.parseColor("#FDE68A")
+                            Ink.RED -> Color.parseColor("#FDA4AF")
+                            Ink.GREEN -> Color.parseColor("#6EE7B7")
+                            Ink.CYAN -> Color.parseColor("#7DD3FC")
+                            else -> Color.parseColor("#FEF9EE")
+                        }
+                    }
+                    val valReserve = if (ln.value.isNotBlank()) valPaint.measureText(ln.value) + 12f * density else 0f
+                    val availW = (innerW - valReserve).coerceAtLeast(100f * density)
+                    val w = wrapText(ln.text, p, availW)
+                    wrappedLines.add(Triple(ln, w, p))
+                    contentH += w.size.coerceAtLeast(1) * lineStep + itemGap
+                }
+            }
         }
-        val lineH = if (nb.mode == "bars") 34f * density else 24f * density
-        val cardH = 44f * density + rowCount * lineH + pad
-        val preferredTop = (m.anchorY ?: (height * 0.48f)) + 16f * density
-        val maxTop = (height - cardH - 94f * density).coerceAtLeast(56f * density)
+
+        val cardH = 44f * density + contentH + pad
+        val preferredTop = (m.anchorY ?: (height * 0.44f)) + 18f * density
+        val maxTop = (height - cardH - 125f * density).coerceAtLeast(56f * density)
         val top = preferredTop.coerceIn(56f * density, maxTop)
 
         val rect = RectF(left, top, left + cardW, top + cardH)
@@ -480,66 +545,67 @@ class NkapOverlayView(ctx: Context) : View(ctx) {
 
         when (nb.mode) {
             "flow" -> {
-                val flowText = nb.steps.joinToString("  →  ").ifBlank { nb.lines.joinToString(" → ") { it.text } }
-                canvas.drawText(flowText.take(46), left + pad, y + 6f * density, bodyPaint)
+                for ((_, linesList, p) in wrappedLines) {
+                    for (sub in linesList) {
+                        canvas.drawText(sub, left + pad, y, p)
+                        y += lineStep
+                    }
+                }
             }
             "bars" -> {
                 val maxVal = nb.lines.mapNotNull { it.pct }.maxOrNull()?.takeIf { it > 0f } ?: 100f
                 for (ln in nb.lines) {
                     val accent = inks[ln.color] ?: Color.parseColor("#F5B700")
-                    canvas.drawText(ln.text.take(28), left + pad, y, bodyPaint)
+                    canvas.drawText(ln.text, left + pad, y, bodyPaint)
                     if (ln.value.isNotBlank()) canvas.drawText(ln.value, left + cardW - pad, y, valPaint)
                     val barY = y + 6f * density
-                    val barW = cardW - pad * 2
                     val raw = ln.pct ?: (maxVal * 0.65f)
                     val ratio = (if (maxVal > 100f) raw / maxVal else raw / 100f).coerceIn(0.08f, 1f)
-                    canvas.drawRoundRect(left + pad, barY, left + pad + barW, barY + 7f * density, 4f * density, 4f * density,
+                    canvas.drawRoundRect(left + pad, barY, left + pad + innerW, barY + 7f * density, 4f * density, 4f * density,
                         Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(40, 255, 255, 255) })
-                    canvas.drawRoundRect(left + pad, barY, left + pad + barW * ratio * alpha, barY + 7f * density, 4f * density, 4f * density,
+                    canvas.drawRoundRect(left + pad, barY, left + pad + innerW * ratio * alpha, barY + 7f * density, 4f * density, 4f * density,
                         Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
-                    y += lineH
+                    y += barBlockH
                 }
             }
             "table" -> {
                 val cols = (nb.headers.size).coerceAtLeast(nb.rows.firstOrNull()?.size ?: 2).coerceAtLeast(1)
-                val colW = (cardW - pad * 2) / cols
+                val colW = innerW / cols
                 if (nb.headers.isNotEmpty()) {
                     val hp = Paint(titlePaint).apply { textSize = 11.5f * density }
-                    nb.headers.forEachIndexed { idx, h -> canvas.drawText(h.take(16), left + pad + idx * colW, y, hp) }
-                    y += lineH
+                    nb.headers.forEachIndexed { idx, h -> canvas.drawText(h.take(18), left + pad + idx * colW, y, hp) }
+                    y += 24f * density
                 }
                 for (r in nb.rows) {
-                    r.forEachIndexed { idx, cell -> canvas.drawText(cell.take(16), left + pad + idx * colW, y, bodyPaint) }
-                    y += lineH
+                    r.forEachIndexed { idx, cell -> canvas.drawText(cell.take(18), left + pad + idx * colW, y, bodyPaint) }
+                    y += 24f * density
                 }
             }
             "choices" -> {
-                nb.choices.forEachIndexed { idx, c ->
-                    canvas.drawText("${idx + 1}. $c".take(42), left + pad, y, bodyPaint)
-                    y += lineH
+                for ((_, linesList, p) in wrappedLines) {
+                    for (sub in linesList) {
+                        canvas.drawText(sub, left + pad, y, p)
+                        y += lineStep
+                    }
+                    y += itemGap
                 }
             }
             else -> {
-                for (ln in nb.lines) {
+                for ((ln, linesList, p) in wrappedLines) {
                     if (ln.divider) {
                         canvas.drawLine(left + pad, y - 6f * density, left + cardW - pad, y - 6f * density,
                             Paint().apply { color = Color.argb(55, 255, 255, 255); strokeWidth = density })
                         y += 12f * density
                         continue
                     }
-                    val p = Paint(bodyPaint).apply {
-                        if (ln.bold) typeface = fontBold
-                        color = when (ln.color) {
-                            Ink.YELLOW -> Color.parseColor("#FDE68A")
-                            Ink.RED -> Color.parseColor("#FDA4AF")
-                            Ink.GREEN -> Color.parseColor("#6EE7B7")
-                            Ink.CYAN -> Color.parseColor("#7DD3FC")
-                            else -> Color.parseColor("#FEF9EE")
-                        }
+                    if (ln.value.isNotBlank()) {
+                        canvas.drawText(ln.value, left + cardW - pad, y, valPaint)
                     }
-                    canvas.drawText(ln.text.take(40), left + pad, y, p)
-                    if (ln.value.isNotBlank()) canvas.drawText(ln.value, left + cardW - pad, y, valPaint)
-                    y += lineH
+                    for (sub in linesList) {
+                        canvas.drawText(sub, left + pad, y, p)
+                        y += lineStep
+                    }
+                    y += itemGap
                 }
             }
         }

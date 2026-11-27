@@ -48,6 +48,13 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "moni ma pene": "Solde disponible",
     "nden wog i bol": "Solde disponible",
     "itan ineu": "Solde disponible",
+    "main account": "Solde disponible",
+    "available balance": "Solde disponible",
+    "account balance": "Solde disponible",
+    "my balance": "Solde disponible",
+    "balance": "Solde disponible",
+    "money transfer": "Envoyer de l'argent",
+    "transfer fees": "Frais",
     "moni ma dia": "Solde",
     "nden": "Solde",
     "mabala": "Frais",
@@ -1301,8 +1308,8 @@ class M2Service:
                     and len(first_txt) <= 36
                     and first_n.node_id not in subtitles
                 ):
-                    # Cas particulier : <input value="25000"> | FCFA
-                    if first_n.tag == "input" and last_txt.upper() in {"FCFA", "XAF", "€", "$"}:
+                    # Ignore une devise nue sans chiffres (ex: "FCFA" seule à côté d'un champ ou d'un montant séparé)
+                    if last_txt.strip().upper() in {"FCFA", "XAF", "CFA", "F", "U", "€", "$"}:
                         pass
                     else:
                         badge = texts[1] if len(row_nodes) >= 3 else ""
@@ -1324,7 +1331,10 @@ class M2Service:
                             "kind": "transaction" if is_tx_triple else "row",
                         })
 
-        # 2. Paires verticales (ex: <label>Nom du bénéficiaire</label> au-dessus de <input>Jean-Paul Mbarga</input>)
+        # 2. Paires verticales (ex: <label>Nom du bénéficiaire</label> ou "Main Account" au-dessus de "24 828,58 FCFA")
+        is_android_px = screen_context.app is not None
+        max_vert_dy = 135 if is_android_px else 44
+        max_vert_dx = 150 if is_android_px else 65
         for idx, lbl_n in enumerate(usable_nodes):
             lbl_meta = node_meta.get(lbl_n.node_id, {})
             if lbl_n.tag in {"input", "select", "textarea", "h1", "h2", "h3"} or lbl_n.node_id in value_to_label:
@@ -1354,9 +1364,11 @@ class M2Service:
                     continue
                 dy = cand_n.bounds[1] - lbl_n.bounds[3]
                 dx = abs(cand_n.bounds[0] - lbl_n.bounds[0])
-                if -4 <= dy <= 44 and dx <= 65:
+                if -8 <= dy <= max_vert_dy and dx <= max_vert_dx:
                     cand_txt = cand_meta.get("gloss_only") or ""
                     if not cand_txt or cand_n.node_id in subtitles or _is_date_text(cls._norm(cand_txt)):
+                        continue
+                    if cand_txt.strip().upper() in {"FCFA", "XAF", "CFA", "F", "U", "€", "$"}:
                         continue
                     is_micro_lbl = (lbl_n.bounds[3] - lbl_n.bounds[1]) <= 18 or lbl_txt.isupper()
                     is_val_candidate = (
@@ -1400,8 +1412,12 @@ class M2Service:
                     continue
                 h_px = n.bounds[3] - n.bounds[1]
                 prev_txt = cls._norm(usable_nodes[idx - 1].text or "") if idx > 0 else ""
-                under_acct_header = any(k in prev_txt for k in ("compte", "banking", "safinum", "guichet", "solde", "ewondo", "duala"))
-                if h_px >= 24 or (under_acct_header and n.bounds[1] <= 320):
+                under_acct_header = any(
+                    k in prev_txt
+                    for k in ("compte", "banking", "safinum", "guichet", "solde", "ewondo", "duala", "account", "balance", "wallet", "main")
+                )
+                max_top_y = 780 if is_android_px else 320
+                if h_px >= 24 or (under_acct_header and n.bounds[1] <= max_top_y):
                     value_to_label[n.node_id] = "Solde disponible"
                     field_pairs.insert(0, {
                         "label": "Solde disponible",
