@@ -3,7 +3,7 @@
   "name": "Banque Démo SAFINUM (Web & Mobile)",
   "match_packages": ["cm.nkapmobile.engine"],
   "match_urls": ["safinum.cm/sandbox", "banque-demo.sandbox"],
-  "match_text_cues": ["banque demo", "banque-demo.sandbox", "lomo moni", "loma moni", "mbembe kiri", "mbole", "misongi", "bakuse moni"],
+  "match_text_cues": ["banque demo", "banque-demo.sandbox", "lomo moni", "loma moni", "mbembe kiri", "idiba bwam", "mbole", "miango", "misongi", "bakuse moni"],
   "ui_translations": {
     "nda": "Accueil",
     "mboa": "Accueil",
@@ -15,41 +15,52 @@
     "sawa": "Payer",
     "itang": "Historique",
     "bebolo": "Historique",
+    "miango": "Historique",
     "misongi": "Historique",
     "lomo moni": "Envoyer de l'argent",
     "loma moni": "Envoyer de l'argent",
+    "tombise mbolo": "Effectuer un transfert",
     "yaan mfie ai kalara": "Payer une facture",
     "sawedi kalati": "Payer une facture",
     "sawa la moni": "Payer une facture",
     "kus kredi telefon": "Acheter du crédit",
     "ande kredi telefone": "Acheter du crédit",
     "djanda la mudi": "Acheter du crédit",
+    "londe la beboledi": "Acheter du crédit",
     "itang mvet yam": "Mes opérations",
     "bebolo bam": "Mes opérations",
     "mod a non moni": "Bénéficiaire",
     "mod a non": "Bénéficiaire",
     "mukusa": "Bénéficiaire",
     "mukusedi": "Bénéficiaire",
+    "mutombwedi": "Bénéficiaire",
     "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
     "nimero a telefone nga dina": "Numéro de téléphone ou nom",
     "number musinga to dina longo": "Numéro de téléphone ou nom",
+    "number ebelane": "Numéro de téléphone",
     "bot bam ba non moni": "Mes bénéficiaires",
     "bakusa bam": "Mes bénéficiaires",
     "bakuse moni": "Mes bénéficiaires",
     "itan": "Montant",
     "moni": "Montant",
+    "musongi": "Montant",
     "mbug": "Frais",
     "mabala": "Frais",
     "musen": "Frais",
+    "mususedi": "Frais",
     "ntolan wog": "Total à débiter",
     "botali ba busa": "Total à débiter",
+    "musongi mu londi": "Total à débiter",
     "itan e li'i": "Solde après opération",
     "moni ombusa": "Solde après opération",
     "itan mfefe": "Nouveau solde",
     "moni ma pene ma dia": "Nouveau solde",
     "epetele": "Nouveau solde",
+    "edia": "Solde",
     "nombo ndem": "Référence",
     "edun": "Référence",
+    "epasi": "Référence",
+    "kotele": "Récapitulatif",
     "tob isae": "Choisir le service",
     "pona ebolo": "Choisir le service",
     "poso": "Choisir le service",
@@ -67,8 +78,10 @@
     "buka": "Annuler",
     "esele": "Annuler",
     "essele": "Annuler",
+    "sumua": "Annuler",
     "kele obusu": "Continuer",
     "ala oboso": "Continuer",
+    "wa la ne": "Continuer",
     "yemban": "Confirmer",
     "bamse": "Confirmer",
     "tyende": "Modifier",
@@ -82,6 +95,7 @@
     "kui": "Déconnexion",
     "busa": "Déconnexion",
     "misongi mese": "Tout",
+    "miango mese": "Tout voir",
     "moni mu mingeye": "Entrants",
     "moni mu mabuse": "Sortants",
     "to lambo": "Aucune opération pour le moment."
@@ -89,10 +103,10 @@
   "action_buttons": [
     "envoyer de l'argent", "payer une facture", "acheter du credit", "mes operations",
     "continuer", "annuler", "confirmer", "modifier", "retour", "ecouter", "termine", "terminer",
-    "lomo moni", "loma moni", "yaan mfie ai kalara", "sawedi kalati", "sawa la moni",
-    "kus kredi telefon", "ande kredi telefone", "djanda la mudi", "itang mvet yam", "bebolo bam",
-    "misongi", "botea", "sawa", "kele obusu", "ala oboso", "yemban", "bamse",
-    "tyende", "tukwa", "vaa", "buka", "esele", "bulan", "timba", "kwese", "wog", "senga",
+    "lomo moni", "loma moni", "tombise mbolo", "yaan mfie ai kalara", "sawedi kalati", "sawa la moni",
+    "kus kredi telefon", "ande kredi telefone", "djanda la mudi", "londe la beboledi", "itang mvet yam", "bebolo bam",
+    "miango", "misongi", "botea", "sawa", "kele obusu", "ala oboso", "wa la ne", "yemban", "bamse",
+    "tyende", "tukwa", "vaa", "buka", "esele", "sumua", "bulan", "timba", "kwese", "wog", "senga",
     "facture", "factures", "credit", "kalara", "kalati", "musawedi", "kredi", "ebale",
     "accueil", "transfert", "payer", "historique", "nda", "lomo", "yaan", "itang"
   ],
@@ -103,7 +117,7 @@
       "text_any": [
         "operation reussie", "mvet o boban mben", "ebolo e tilabe na bwam", "transaction successful",
         "nouveau solde", "itan mfefe", "moni ma pene ma dia", "epetele",
-        "mvet o vaban. te ke", "ebolo e bukabe. to moni", "essele. moni mu si lomabe", "operation annulee. aucun montant"
+        "mvet o vaban. te ke", "ebolo e bukabe. to moni", "essele. moni mu si lomabe", "sumua. moni mu si lomabe", "operation annulee. aucun montant"
       ]
     },
     {
@@ -111,6 +125,7 @@
       "url_any": ["/review", "/recap"],
       "text_any": [
         "verifiez avant de confirmer", "fombo ossussua eneu wa yemban", "ombwa oboso ba bamse",
+        "sele jombwa miango mese", "jombwa miango mese", "musongi mu londi",
         "check before you confirm", "l'argent part des que vous confirmez",
         "moni a ke di a te wa yemban", "moni ma ma-ala dibokimene", "timba la mbusa si titi"
       ]
@@ -138,6 +153,8 @@
         ["bi bi", "bi lom"],
         ["ma-poy", "ma-ala"],
         ["misongi", "misongi mese"],
+        ["miango", "misongi mese"],
+        ["miango", "miango mese"],
         ["all", "incoming", "outgoing"],
         ["incoming", "outgoing"],
         ["date", "operation", "statut"],
@@ -201,9 +218,9 @@
       "llm_summary": "Écran Transfert SAFINUM (déjà ouvert) : champ Bénéficiaire (ou liste Mes bénéficiaires à droite), champ Montant (l'indice en dessous est juste le plafond), boutons Annuler et Continuer.",
       "spoken": "Ici tu prépares un transfert : commence par choisir un bénéficiaire dans la liste ou tape son numéro, saisis ensuite le montant à envoyer, puis appuie sur Continuer.",
       "highlights": [
-        {"match": ["beneficiaire", "mod a non moni", "mukusa", "mukusedi", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
-        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["beneficiaire", "mod a non moni", "mukusa", "mukusedi", "mutombwedi", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
+        {"match": ["montant", "itan", "moni", "musongi", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     "pay_bill": {
@@ -211,8 +228,8 @@
       "spoken": "Tu es sur l'écran Paiement de facture : choisis d'abord le fournisseur (ENEO, CAMWATER, CANAL ou CAMTEL), entre ensuite le montant à payer, puis appuie sur Continuer.",
       "highlights": [
         {"match": ["choisir le service", "tob isae", "pona ebolo", "poso", "choose the service"], "style": "num", "step": 1, "label": "Fournisseur", "color": "yellow"},
-        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["montant", "itan", "moni", "musongi", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     "pay_airtime": {
@@ -220,15 +237,15 @@
       "spoken": "Tu es sur l'écran Crédit téléphonique : tape d'abord le numéro à recharger, vérifie l'opérateur et entre le montant, puis appuie sur Continuer.",
       "highlights": [
         {"match": ["numero a recharger", "nombo ya lomo kredi", "nimero ya kredi", "number", "number to top up"], "style": "num", "step": 1, "label": "Numéro", "color": "yellow"},
-        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["montant", "itan", "moni", "musongi", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     "pay": {
       "llm_summary": "Écran Payer SAFINUM : onglets Factures (ENEO/CAMWATER/CANAL/CAMTEL) et Crédit téléphonique, puis Continuer.",
       "spoken": "Ici tu paies une facture ou achètes du crédit : choisis l'onglet Factures ou Crédit, sélectionne le fournisseur ou le numéro, entre le montant puis appuie sur Continuer.",
       "highlights": [
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     "review": {
@@ -308,9 +325,9 @@
       "triggers": ["envoyer de l'argent", "je veux envoyer", "comment envoyer", "faire un transfert", "faire un envoi", "lomo moni", "loma moni"],
       "spoken": "Tu es déjà sur l'écran de transfert ! Choisis un bénéficiaire dans la liste ou tape son numéro, saisis le montant, puis appuie sur Continuer.",
       "highlights": [
-        {"match": ["beneficiaire", "mod a non moni", "mukusa", "mukusedi", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
-        {"match": ["montant", "itan", "moni", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["beneficiaire", "mod a non moni", "mukusa", "mukusedi", "mutombwedi", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
+        {"match": ["montant", "itan", "moni", "musongi", "amount"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     {
@@ -338,7 +355,7 @@
       "spoken": "Tu es déjà sur l'écran de paiement ! Sélectionne ton fournisseur (ENEO, CAMWATER, CANAL ou CAMTEL), entre le montant puis appuie sur Continuer.",
       "highlights": [
         {"match": ["choisir le service", "tob isae", "pona ebolo", "poso", "choose the service"], "style": "num", "step": 1, "label": "Fournisseur", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     {
@@ -358,7 +375,7 @@
       "spoken": "Tu es déjà sur l'écran Crédit ! Tape le numéro à recharger (l'opérateur est détecté automatiquement), entre le montant puis appuie sur Continuer.",
       "highlights": [
         {"match": ["numero a recharger", "nombo ya lomo kredi", "nimero ya kredi", "number", "number to top up"], "style": "num", "step": 1, "label": "Numéro", "color": "yellow"},
-        {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
+        {"match": ["continuer", "kele obusu", "ala oboso", "wa la ne", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
       ]
     },
     {
@@ -396,7 +413,7 @@
       "screens": ["review", "recap"],
       "triggers": ["facture", "payer une facture", "acheter du credit", "recharger", "eneo", "camwater", "canal", "camtel"],
       "spoken": "Tu es sur le récapitulatif d'une opération en cours : confirme-la ou appuie sur Annuler avant d'aller payer une facture ou acheter du crédit.",
-      "target_match": ["annuler", "vaa", "buka", "esele", "cancel"],
+      "target_match": ["annuler", "vaa", "buka", "esele", "sumua", "cancel"],
       "style": "frame",
       "label": "Annuler",
       "color": "red"
@@ -416,7 +433,7 @@
       "screens": ["transfer", "beneficiary", "review", "recap", "pay", "pay_bill", "pay_airtime"],
       "triggers": ["annuler", "revenir", "quitter", "abandonner", "vaa", "buka", "esele"],
       "spoken": "Appuie ici sur Annuler pour abandonner sans rien débiter de ton compte.",
-      "target_match": ["annuler", "vaa", "buka", "esele", "cancel"],
+      "target_match": ["annuler", "vaa", "buka", "esele", "sumua", "cancel"],
       "style": "frame",
       "label": "Annuler",
       "color": "red"
@@ -426,7 +443,7 @@
       "screens": ["receipt"],
       "triggers": ["preuve", "reference", "est parti", "reussi", "recu", "nombo ndem", "edun"],
       "spoken": "Oui, l'opération est enregistrée ! Note ou garde le numéro de référence affiché ici comme preuve, et vérifie ton nouveau solde.",
-      "target_match": ["reference", "nombo ndem", "edun"],
+      "target_match": ["reference", "nombo ndem", "edun", "epasi"],
       "style": "highlight",
       "color": "green"
     },
@@ -467,7 +484,7 @@
         "mes transactions", "derniere operation", "derniere transaction", "voir mes operations"
       ],
       "spoken": "Tes dernières opérations sont dans Historique : appuie sur l'onglet Historique (ou Accueil), je te les montrerai dès qu'on y arrive.",
-      "target_match": ["historique", "itang", "bebolo", "misongi", "history"],
+      "target_match": ["historique", "itang", "bebolo", "miango", "misongi", "history"],
       "style": "frame",
       "label": "Historique",
       "color": "yellow",

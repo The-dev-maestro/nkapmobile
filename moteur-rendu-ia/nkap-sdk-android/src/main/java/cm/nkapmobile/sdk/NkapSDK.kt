@@ -150,11 +150,11 @@ class NkapSession(
         }
 
         val isSafinum = pkg.contains("nkapmobile") ||
-            listOf("banque demo", "lomo moni", "loma moni", "mbembe kiri", "mbole", "misongi", "bakuse moni").any { corpus.contains(it) }
+            listOf("banque demo", "lomo moni", "loma moni", "mbembe kiri", "idiba bwam", "mbole", "miango", "misongi", "bakuse moni").any { corpus.contains(it) }
         if (isSafinum) {
             val screen = when {
                 listOf("operation reussie", "mvet o boban mben", "ebolo e tilabe na bwam", "nouveau solde", "itan mfefe", "epetele").any { corpus.contains(it) } -> "receipt"
-                listOf("verifiez avant de confirmer", "fombo ossussua", "ombwa oboso ba bamse", "timba la mbusa si titi").any { corpus.contains(it) } -> "review"
+                listOf("verifiez avant de confirmer", "fombo ossussua", "ombwa oboso ba bamse", "sele jombwa miango", "musongi mu londi", "timba la mbusa si titi").any { corpus.contains(it) } -> "review"
                 listOf("mes beneficiaires", "bot bam ba non moni", "bakusa bam", "bakuse moni", "jusqu'a 500 000", "akui 500 000").any { corpus.contains(it) } -> "transfer"
                 !corpus.contains("solde disponible") && !corpus.contains("itan ineu") &&
                     ((corpus.contains("entrants") && corpus.contains("sortants")) ||

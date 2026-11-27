@@ -558,9 +558,16 @@ def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
     assert detect_language_switch("en duala") == "dua"
     assert detect_language_switch("en ewondo") == "ewo"
     assert detect_term_question("mbug e ne dze ?") == "fee"
+    assert detect_term_question("mususedi e ne dze ?") == "fee"
     assert detect_term_question("nkuk e ne dze ?") == "limit"
     dua = json.loads((TRANSLATIONS_DIR / "dua.json").read_text(encoding="utf-8"))
-    assert dua["shell.greeting"] == "Mbole {name}"
+    assert dua["shell.greeting"] == "Idiba bwam {name}"
+    assert dua["review.fee"] == "Mususedi"
+    assert dua["history.title"] == "Miango"
+    assert dua["common.cancel"] == "Sumua"
+    assert dua["common.continue"] == "Wa la ne"
+    assert dua["receipt.reference"] == "Epasi"
+    assert dua["review.total"] == "Musongi mu londi"
 
     # 2. Correction via /update en place (garde la même référence TRX sans annulation parasite)
     SESSIONS.clear()

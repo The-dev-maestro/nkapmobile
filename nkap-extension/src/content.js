@@ -153,27 +153,32 @@
     "sawa": "Payer",
     "itang": "Historique",
     "bebolo": "Historique",
+    "miango": "Historique",
     "misongi": "Historique",
     "itan ineu": "Solde disponible",
     "moni ma pene": "Solde disponible",
     "ekotedi": "Solde disponible",
+    "edia": "Solde",
     "za dzam wa yi bo?": "Que voulez-vous faire ?",
     "nje o tondi bola?": "Que voulez-vous faire ?",
     "wa pula bola nje ?": "Que voulez-vous faire ?",
     "lomo moni": "Envoyer de l'argent",
     "loma moni": "Envoyer de l'argent",
+    "tombise mbolo": "Effectuer un transfert",
     "yaan mfie ai kalara": "Payer une facture",
     "sawedi kalati": "Payer une facture",
     "sawa la moni": "Payer une facture",
     "kus kredi telefon": "Acheter du crédit",
     "ande kredi telefone": "Acheter du crédit",
     "djanda la mudi": "Acheter du crédit",
+    "londe la beboledi": "Acheter du crédit",
     "itang mvet yam": "Mes opérations",
     "bebolo bam": "Mes opérations",
     "itang o nga kene nong": "Dernières opérations",
     "bebolo ba sukan": "Dernières opérations",
     "fombo mese": "Tout voir",
     "ombwa mese": "Tout voir",
+    "miango mese": "Tout voir",
     "misongi mese": "Tout voir",
     "ewolo connexion": "Connexion sécurisée",
     "diwuta la musango": "Connexion sécurisée",
@@ -201,13 +206,17 @@
     "mod a non moni": "Bénéficiaire",
     "mukusa": "Bénéficiaire",
     "mukusedi": "Bénéficiaire",
+    "mutombwedi": "Bénéficiaire",
     "itan": "Montant",
     "moni": "Montant",
+    "musongi": "Montant",
     "mbug": "Frais",
     "mabala": "Frais",
     "musen": "Frais",
+    "mususedi": "Frais",
     "ntolan wog": "Total à débiter",
     "botali ba busa": "Total à débiter",
+    "musongi mu londi": "Total à débiter",
     "itan e li'i": "Solde après opération",
     "moni ombusa": "Solde après opération",
     "itan mfefe": "Nouveau solde",
@@ -216,6 +225,8 @@
     "kwese": "Terminer",
     "fombo ossussua eneu wa yemban": "Vérifiez avant de confirmer",
     "ombwa oboso ba bamse": "Vérifiez avant de confirmer",
+    "sele jombwa miango mese to denga wa bamse": "Vérifiez avant de confirmer",
+    "kotele": "Récapitulatif",
     "yemban": "Confirmer",
     "bamse": "Confirmer",
     "tyende": "Modifier",
@@ -224,20 +235,24 @@
     "buka": "Annuler",
     "esele": "Annuler",
     "essele": "Annuler",
+    "sumua": "Annuler",
     "bulan": "Retour",
     "timba": "Retour",
     "kele obusu": "Continuer",
     "ala oboso": "Continuer",
+    "wa la ne": "Continuer",
     "itang mvet": "Historique des opérations",
     "mvet o boban mben": "Opération réussie",
     "ebolo e tilabe na bwam": "Opération réussie",
     "nombo ndem": "Référence",
     "edun": "Référence",
+    "epasi": "Référence",
     "bot bam ba non moni": "Mes bénéficiaires",
     "bakusa bam": "Mes bénéficiaires",
     "bakuse moni": "Mes bénéficiaires",
     "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
     "number musinga to dina longo": "Numéro de téléphone ou nom",
+    "number ebelane": "Numéro de téléphone",
     "nombo ya lomo kredi": "Numéro à recharger",
     "tob isae": "Choisir le service",
     "poso": "Choisir le service",
@@ -248,8 +263,10 @@
     "to lambo": "Aucune opération pour le moment.",
     "ayaane mfie": "Électricité (ENEO)",
     "kalati a weya": "Électricité (ENEO)",
+    "dipapa la beturkan": "Électricité (ENEO)",
     "mendim": "Eau (CAMWATER)",
     "madiba": "Eau (CAMWATER)",
+    "dipapa la madiba": "Eau (CAMWATER)",
     "elimb'a dikalo": "Télévision (Canal+)",
     "kredi": "Crédit téléphone",
     "ebale": "Crédit",
@@ -273,13 +290,13 @@
     if (SANDBOX_LOCAL_TO_FR[n]) return SANDBOX_LOCAL_TO_FR[n];
     let m;
     if ((m = clean.match(/^Mbembe kiri\s+(.+)$/i))) return `Bonjour ${m[1]}`;
-    if ((m = clean.match(/^Mbole\s+(.+)$/i))) return `Bonjour ${m[1]}`;
+    if ((m = clean.match(/^(?:Idiba bwam|Mbole)\s+(.+)$/i))) return `Bonjour ${m[1]}`;
     if ((m = clean.match(/^(?:Nkwap|Konto|Bekotedi)\s+(\d[\d\s]+)$/i))) return `Compte ${m[1]}`;
-    if ((m = clean.match(/^(?:Bi lom a|Loma na|Lomea)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
-    if ((m = clean.match(/^(?:Bi bi a|Kusa na|Moni mwa)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
-    if ((m = clean.match(/^(?:Kredi|Ekotedi mwa musinga)\s+(.+)$/i))) return `Crédit ${m[1]}`;
+    if ((m = clean.match(/^(?:Bi lom a|Loma na|Lomea|Loma la betombedi)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
+    if ((m = clean.match(/^(?:Bi bi a|Kusa na|Moni mwa|Kusa la betombedi)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
+    if ((m = clean.match(/^(?:Kredi|Ekotedi mwa musinga|Londe la beboledi)\s+(.+)$/i))) return `Crédit ${m[1]}`;
     if ((m = clean.match(/^(?:Kalara|Kalati|Sawa la)\s+(.+)$/i))) return `Facture ${m[1]}`;
-    if ((m = clean.match(/^(?:Mbug|Mabala|Musen)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
+    if ((m = clean.match(/^(?:Mbug|Mabala|Musen|Mususedi)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
     if ((m = clean.match(/^Miiyo\s*:\s*(.+)$/i))) return `Opérateur détecté : ${m[1]}`;
     if ((m = clean.match(/^Moni mud[èe]n[èe]\s*:\s*(.+)$/i))) return `Jusqu'à ${m[1]} par opération`;
     if ((m = clean.match(/^Akui\s+(.+?)\s+a\s+mvet\s+wuo$/i))) return `Jusqu'à ${m[1]} par opération`;
@@ -485,13 +502,13 @@
 
     // Étape 5 : Reçu / Confirmation (FR + EN + EWO + DUA)
     if (
-      /transfert confirme|transfert effectue|operation reussie|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|itan mfefe|epetele|essele\. moni mu si lomabe/.test(fullText)
+      /transfert confirme|transfert effectue|operation reussie|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|itan mfefe|epetele|(?:essele|sumua)\. moni mu si lomabe/.test(fullText)
     ) {
       step = "receipt";
     }
     // Étape 4 : Récapitulatif avant confirmation (FR + EN + EWO + DUA)
     else if (
-      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|check before you confirm|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse|timba la mbusa si titi/.test(fullText) ||
+      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|check before you confirm|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse|sele jombwa miango mese|musongi mu londi|timba la mbusa si titi/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Confirmer le transfert") || window.NKAP_QUERY("Bamse loma")) && !window.NKAP_QUERY("Nom du bénéficiaire"))
     ) {
       step = isSafinumSandbox() ? "review" : "recap";
