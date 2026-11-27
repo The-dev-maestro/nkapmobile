@@ -1,5 +1,6 @@
 const DEFAULT_BRAIN = "https://13.51.168.107.sslip.io";
 const ewondo = document.getElementById("ewondoOn");
+const wakeWord = document.getElementById("wakeWordOn");
 const brain = document.getElementById("brainUrl");
 const save = document.getElementById("save");
 const pingBtn = document.getElementById("ping");
@@ -95,12 +96,14 @@ async function checkBrainHealth(urlRaw) {
 }
 
 if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
-  chrome.storage.sync.get({ ewondoOn: false, brainUrl: DEFAULT_BRAIN }, (cfg) => {
+  chrome.storage.sync.get({ ewondoOn: false, wakeWordOn: true, brainUrl: DEFAULT_BRAIN }, (cfg) => {
     ewondo.checked = !!cfg.ewondoOn;
+    if (wakeWord) wakeWord.checked = cfg.wakeWordOn !== undefined ? !!cfg.wakeWordOn : true;
     brain.value = cfg.brainUrl || DEFAULT_BRAIN;
     checkBrainHealth(brain.value);
   });
 } else {
+  if (wakeWord) wakeWord.checked = true;
   brain.value = DEFAULT_BRAIN;
   checkBrainHealth(brain.value);
 }
@@ -116,17 +119,23 @@ pingBtn.addEventListener("click", () => checkBrainHealth(brain.value));
 
 save.addEventListener("click", () => {
   const nextUrl = brain.value.trim();
+  const wakeVal = wakeWord ? !!wakeWord.checked : true;
   const doneFeedback = () => {
     save.textContent = "Synchronisé ✓";
     checkBrainHealth(nextUrl);
     setTimeout(() => (save.textContent = "Enregistrer & synchroniser"), 1400);
   };
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.set({ ewondoOn: ewondo.checked, brainUrl: nextUrl }, () => {
+    chrome.storage.sync.set({ ewondoOn: ewondo.checked, wakeWordOn: wakeVal, brainUrl: nextUrl }, () => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
           chrome.tabs
-            .sendMessage(tabs[0].id, { type: "settings", ewondoOn: ewondo.checked, brainUrl: nextUrl })
+            .sendMessage(tabs[0].id, {
+              type: "settings",
+              ewondoOn: ewondo.checked,
+              wakeWordOn: wakeVal,
+              brainUrl: nextUrl,
+            })
             .catch(() => {});
         }
       });

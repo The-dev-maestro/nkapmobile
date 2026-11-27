@@ -23,6 +23,11 @@ window.NKAP_ASSISTANT = (() => {
   let audioEnabled = true;
   let recognition = null;
   let isListening = false;
+  let wakeWordEnabled = true;
+  let wakeRec = null;
+  let wakeActive = false;
+  let wakeRestartTimer = null;
+  let wakeArmedOnce = false;
   let activePanelEl = null;
 
   // File d'attente vocale séquentielle pour le scénario actif
@@ -219,6 +224,9 @@ window.NKAP_ASSISTANT = (() => {
     if (!audioEnabled || isSpeaking || speechQueue.length === 0) {
       if (!isSpeaking && speechQueue.length === 0) {
         if (O() && O().setStatusPill) O().setStatusPill(null);
+        if (wakeWordEnabled && !isListening) {
+          setTimeout(startWakeWordListener, 500);
+        }
         while (onSpeechDoneCallbacks.length) {
           const cb = onSpeechDoneCallbacks.shift();
           try {
@@ -235,6 +243,7 @@ window.NKAP_ASSISTANT = (() => {
       return;
     }
 
+    stopWakeWordListener();
     isSpeaking = true;
     if (O() && O().setStatusPill) {
       O().setStatusPill("speaking", "nkap parle…");
@@ -828,6 +837,149 @@ window.NKAP_ASSISTANT = (() => {
     }
   }
 
+  /** Petit carillon chaleureux façon Jarvis à l'activation « Hey Nkap » (Web Audio API, zéro fichier externe). */
+  function playWakeChime() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const now = ctx.currentTime;
+      [523.25, 659.25].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + i * 0.085);
+        gain.gain.setValueAtTime(0.001, now + i * 0.085);
+        gain.gain.exponentialRampToValueAtTime(0.07, now + i * 0.085 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.085 + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.085);
+        osc.stop(now + i * 0.085 + 0.24);
+      });
+      setTimeout(() => ctx.close().catch(() => {}), 500);
+    } catch (_) {}
+  }
+
+  /** Détecte le mot-clé « Hey Nkap » (tolérant aux transcriptions STT françaises : hey nkap, hey ncap, ok nkap, encap...). */
+  function parseWakeCommand(rawText) {
+    const clean = String(rawText || "").trim();
+    if (!clean) return null;
+    const n = norm(clean);
+    const re = /\b(?:hey|eh|et|ok|okay|salut|bonjour|dis|allo)\s+(?:n[\s-]?kap|n[\s-]?cap|encap|en\s+cap|en\s+cape|incap|nkab|cap|cape)\b|\b(?:n[\s-]?kap|encap)\b/i;
+    const m = n.match(re);
+    if (!m) return null;
+    const after = clean.slice(m.index + m[0].length).replace(/^[\s,.:;!?-]+/, "").trim();
+    return { matched: true, command: after };
+  }
+
+  function stopWakeWordListener() {
+    if (wakeRestartTimer) {
+      clearTimeout(wakeRestartTimer);
+      wakeRestartTimer = null;
+    }
+    if (wakeRec) {
+      try { wakeRec.onend = null; wakeRec.stop(); } catch (_) {}
+      wakeRec = null;
+    }
+    wakeActive = false;
+  }
+
+  function startWakeWordListener() {
+    if (!wakeWordEnabled || wakeActive || isListening || isSpeaking) return;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) return;
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang = "fr-FR";
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      wakeRec = rec;
+
+      rec.onstart = () => {
+        wakeActive = true;
+      };
+
+      rec.onresult = (ev) => {
+        if (!wakeWordEnabled || isListening || isSpeaking) return;
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const res = ev.results[i];
+          const txt = res && res[0] ? res[0].transcript : "";
+          const hit = parseWakeCommand(txt);
+          if (!hit) continue;
+
+          // Si la phrase est finale et contient déjà la question ("Hey Nkap quel est mon solde ?"), on exécute directement !
+          if (res.isFinal && hit.command.length >= 4) {
+            stopWakeWordListener();
+            playWakeChime();
+            if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
+            askQuestion(hit.command);
+            return;
+          }
+          // Sinon, réveil immédiat dès "Hey Nkap" détecté -> ouvre l'écoute vocale active !
+          if (res.isFinal || hit.command.length === 0) {
+            stopWakeWordListener();
+            playWakeChime();
+            if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
+            if (O().returnOrbHome) O().returnOrbHome();
+            const pEl = O().getPanelEl ? O().getPanelEl() : activePanelEl;
+            if (pEl && pEl.style.display !== "flex") {
+              togglePanel(pEl);
+            }
+            setTimeout(() => toggleVoiceRecognition(null), 160);
+            return;
+          }
+        }
+      };
+
+      rec.onerror = (ev) => {
+        wakeActive = false;
+        const err = ev && ev.error ? ev.error : "";
+        if (err === "not-allowed" || err === "service-not-allowed") {
+          // L'utilisateur a refusé le micro : on ne boucle pas en erreur
+          stopWakeWordListener();
+          return;
+        }
+      };
+
+      rec.onend = () => {
+        wakeActive = false;
+        wakeRec = null;
+        if (wakeWordEnabled && !isListening && !isSpeaking) {
+          wakeRestartTimer = setTimeout(startWakeWordListener, 650);
+        }
+      };
+
+      rec.start();
+    } catch (_) {
+      wakeActive = false;
+    }
+  }
+
+  function setWakeWordEnabled(enabled) {
+    wakeWordEnabled = !!enabled;
+    if (!wakeWordEnabled) {
+      stopWakeWordListener();
+      return;
+    }
+    // Tente le démarrage direct (marche si permission micro déjà accordée), sinon arme sur la 1re interaction
+    startWakeWordListener();
+    if (!wakeArmedOnce) {
+      wakeArmedOnce = true;
+      const arm = () => {
+        if (wakeWordEnabled && !wakeActive && !isListening) startWakeWordListener();
+      };
+      document.addEventListener("pointerdown", arm, { once: true, passive: true });
+      document.addEventListener("keydown", arm, { once: true, passive: true });
+    }
+  }
+
+  const MIC_SVG =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
+
   /** Démarre / arrête l'écoute vocale Push-to-Talk via Web Speech API. */
   function toggleVoiceRecognition(micBtnEl) {
     const SpeechRec =
@@ -843,9 +995,11 @@ window.NKAP_ASSISTANT = (() => {
       } catch (_) {}
       isListening = false;
       if (O().setStatusPill) O().setStatusPill(null);
+      if (wakeWordEnabled) setTimeout(startWakeWordListener, 400);
       return;
     }
 
+    stopWakeWordListener();
     stopVoice();
     recognition = new SpeechRec();
     recognition.lang = "fr-FR";
@@ -854,13 +1008,14 @@ window.NKAP_ASSISTANT = (() => {
 
     recognition.onstart = () => {
       isListening = true;
+      if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
       if (micBtnEl) {
-        micBtnEl.textContent = "🛑 Écoute…";
         micBtnEl.style.background = "#FF3B5C";
         micBtnEl.style.color = "#FFFFFF";
+        micBtnEl.style.borderColor = "#FF3B5C";
       }
       if (O().setStatusPill) {
-        O().setStatusPill("listening", "Écoute ta question…");
+        O().setStatusPill("listening", "Hey Nkap · Je t'écoute…");
       }
     };
 
@@ -878,17 +1033,22 @@ window.NKAP_ASSISTANT = (() => {
     recognition.onerror = () => {
       isListening = false;
       if (O().setStatusPill) O().setStatusPill(null);
+      if (wakeWordEnabled) setTimeout(startWakeWordListener, 700);
     };
 
     recognition.onend = () => {
       isListening = false;
       if (micBtnEl) {
-        micBtnEl.textContent = "🎤 Parler";
-        micBtnEl.style.background = "rgba(245,183,0,0.16)";
-        micBtnEl.style.color = "#F5B700";
+        micBtnEl.innerHTML = MIC_SVG;
+        micBtnEl.style.background = "rgba(245,183,0,0.12)";
+        micBtnEl.style.color = "#FDE68A";
+        micBtnEl.style.borderColor = "rgba(245,183,0,0.3)";
       }
       if (O().setStatusPill && !speechTimer) {
         O().setStatusPill(null);
+      }
+      if (wakeWordEnabled && !isSpeaking) {
+        setTimeout(startWakeWordListener, 700);
       }
     };
 
@@ -901,9 +1061,12 @@ window.NKAP_ASSISTANT = (() => {
     if (activePanelEl) {
       activePanelEl.style.display = "none";
     }
+    if (O().setOrbLabelVisible && !isListening) {
+      O().setOrbLabelVisible(false);
+    }
   }
 
-  /** Construit et affiche / masque le dock de questions HeyClicky au-dessus de la bulle `nkap`. */
+  /** Construit et affiche / masque le dock Jarvis glissant vers le bas sous la constellation neuronale. */
   function togglePanel(panelEl) {
     if (!panelEl) {
       next();
@@ -911,9 +1074,11 @@ window.NKAP_ASSISTANT = (() => {
     }
     activePanelEl = panelEl;
     if (panelEl.style.display === "flex") {
-      panelEl.style.display = "none";
+      closePanel();
       return;
     }
+    if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
+    if (O().positionPanelUnderOrb) O().positionPanelUnderOrb();
 
     const state = window.NKAP_DETECT_SCREEN
       ? window.NKAP_DETECT_SCREEN()
@@ -942,7 +1107,7 @@ window.NKAP_ASSISTANT = (() => {
     title.style.cssText =
       "font-size:13.5px;font-weight:700;color:#FDE68A;letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
     const subTitle = document.createElement("div");
-    subTitle.textContent = brainUrl ? "Copilote vivant · connecté" : "Copilote visuel · mode local";
+    subTitle.textContent = wakeWordEnabled ? "Dis « Hey Nkap » ou écris" : (brainUrl ? "Copilote vivant · connecté" : "Copilote visuel · mode local");
     subTitle.style.cssText = "font-size:10.5px;color:#A8A29E;";
     titleCol.appendChild(title);
     titleCol.appendChild(subTitle);
@@ -1368,6 +1533,8 @@ window.NKAP_ASSISTANT = (() => {
     onScreenChanged,
     onUnseenContent,
     onErrorDetected,
+    setWakeWordEnabled,
+    parseWakeCommand,
     SCENARIOS_BY_SCREEN,
     setBrainUrl(u) {
       brainUrl = String(u || "").trim().replace(/\/+$/, "");

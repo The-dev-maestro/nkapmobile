@@ -21,10 +21,13 @@
     let cursorPathEl = null;
     let statusPillEl = null;
     let bubbleEl = null;
+    let orbTagEl = null;
     let panelEl = null;
     let orbState = "idle"; // idle | thinking | speaking | listening
     let orbRaf = null;
-    let orbRippleEl = null;
+    let orbFloatingTarget = null;
+    let orbSizePx = 74;
+    let orbSyncTimer = null;
     let wordTimer = null;
     let raf = null;
     let activeCursorMarkId = null;
@@ -210,11 +213,157 @@
       if (cursorEl) cursorEl.style.opacity = "0";
     }
 
+    function getFrameBounds() {
+      let root = null;
+      if (typeof global.NKAP_GET_SANDBOX_ROOT === "function") {
+        try {
+          root = global.NKAP_GET_SANDBOX_ROOT();
+        } catch (_) {}
+      }
+      if (!root) {
+        const sim = document.querySelector("[data-nkap-channel]");
+        if (sim && sim.getBoundingClientRect().width >= 260) root = sim;
+      }
+      if (root && root.getBoundingClientRect) {
+        const r = root.getBoundingClientRect();
+        if (r.width >= 240 && r.height >= 240) {
+          const isMobileFrame = r.width < 450;
+          return {
+            inFrame: true,
+            isMobile: isMobileFrame,
+            left: Math.max(4, r.left),
+            top: Math.max(4, r.top),
+            right: Math.min(window.innerWidth - 4, r.right),
+            bottom: Math.min(window.innerHeight - 4, r.bottom),
+            width: r.width,
+            height: r.height,
+          };
+        }
+      }
+      return {
+        inFrame: false,
+        isMobile: window.innerWidth < 520,
+        left: 8,
+        top: 64,
+        right: window.innerWidth - 8,
+        bottom: window.innerHeight - 8,
+        width: window.innerWidth - 16,
+        height: window.innerHeight - 72,
+      };
+    }
+
+    function getOrbHomePosition() {
+      const fb = getFrameBounds();
+      orbSizePx = fb.isMobile ? 58 : (fb.inFrame ? 64 : 74);
+      const padR = fb.isMobile ? 8 : (fb.inFrame ? 16 : 14);
+      // Dans la frame web : sous la barre d'adresse et le bouton Wog ; dans mobile : sous la barre 09:41
+      const padT = fb.inFrame ? (fb.isMobile ? 28 : 104) : 6;
+      const x = Math.max(fb.left + 6, Math.min(fb.right - orbSizePx - padR, fb.right - orbSizePx - padR));
+      const y = Math.max(fb.top + 4, Math.min(fb.bottom - orbSizePx - 12, fb.top + padT));
+      return { x, y, size: orbSizePx, fb };
+    }
+
+    function positionPanelUnderOrb() {
+      if (!panelEl || !bubbleEl) return;
+      const fb = getFrameBounds();
+      const bRect = bubbleEl.getBoundingClientRect();
+      const panelW = fb.inFrame
+        ? Math.min(346, Math.max(260, fb.width - 18))
+        : Math.min(352, window.innerWidth - 32);
+      panelEl.style.width = `${panelW}px`;
+
+      let left = bRect.right - panelW;
+      left = Math.max(fb.left + 8, Math.min(fb.right - panelW - 8, left));
+      const top = Math.min(fb.bottom - 180, bRect.bottom + 10);
+      const maxH = Math.max(200, fb.bottom - top - 12);
+      panelEl.style.left = `${Math.round(left)}px`;
+      panelEl.style.right = "auto";
+      panelEl.style.top = `${Math.round(top)}px`;
+      panelEl.style.maxHeight = `${Math.round(maxH)}px`;
+    }
+
+    function applyOrbCoords(x, y, size) {
+      if (!bubbleEl) return;
+      bubbleEl.style.width = `${size}px`;
+      bubbleEl.style.height = `${size}px`;
+      bubbleEl.style.left = `${Math.round(x)}px`;
+      bubbleEl.style.top = `${Math.round(y)}px`;
+      bubbleEl.style.right = "auto";
+      const cvs = bubbleEl.querySelector("canvas");
+      if (cvs) {
+        cvs.style.width = `${size}px`;
+        cvs.style.height = `${size}px`;
+      }
+      if (panelEl && panelEl.style.display === "flex") {
+        positionPanelUnderOrb();
+      }
+    }
+
+    function returnOrbHome() {
+      orbFloatingTarget = null;
+      if (!bubbleEl) return;
+      const home = getOrbHomePosition();
+      applyOrbCoords(home.x, home.y, home.size);
+    }
+
+    function floatOrbNear(targetEl) {
+      if (!bubbleEl || !targetEl || !targetEl.getBoundingClientRect) return;
+      // Ne déplace pas l'orbe si le panneau chat est actuellement ouvert
+      if (panelEl && panelEl.style.display === "flex") return;
+      const fb = getFrameBounds();
+      const tr = targetEl.getBoundingClientRect();
+      if (tr.width < 2 || tr.height < 2) return;
+      orbFloatingTarget = targetEl;
+      const sz = fb.isMobile ? 58 : 74;
+      const occupied = getOccupiedBoxes();
+
+      // Candidats autour de l'élément expliqué (à droite, haut-droite, à gauche, bas-droite) — strictement dans la frame !
+      const cands = [
+        { x: tr.right + 14, y: tr.top + tr.height / 2 - sz / 2 },
+        { x: tr.right - sz * 0.4, y: tr.top - sz - 10 },
+        { x: tr.left - sz - 14, y: tr.top + tr.height / 2 - sz / 2 },
+        { x: tr.right + 10, y: tr.bottom + 8 },
+        { x: fb.right - sz - 10, y: tr.top + tr.height / 2 - sz / 2 },
+      ];
+
+      const overlapArea = (ax, ay, aw, ah, bx, by, bw, bh) => {
+        const ox = Math.max(0, Math.min(ax + aw, bx + bw) - Math.max(ax, bx));
+        const oy = Math.max(0, Math.min(ay + ah, by + bh) - Math.max(ay, by));
+        return ox * oy;
+      };
+
+      let best = null;
+      let bestPenalty = Infinity;
+      for (const c of cands) {
+        const cx = Math.max(fb.left + 8, Math.min(fb.right - sz - 8, c.x));
+        const cy = Math.max(fb.top + 8, Math.min(fb.bottom - sz - 14, c.y));
+        let penalty = overlapArea(cx, cy, sz, sz, tr.left - 6, tr.top - 6, tr.width + 12, tr.height + 12) * 5;
+        for (const b of occupied) {
+          penalty += overlapArea(cx, cy, sz, sz, b.x - 4, b.y - 4, b.w + 8, b.h + 8) * 3;
+        }
+        // Préfère un déplacement visible mais doux
+        penalty += Math.hypot(cx - c.x, cy - c.y) * 0.5;
+        if (penalty < bestPenalty) {
+          bestPenalty = penalty;
+          best = { x: cx, y: cy };
+        }
+      }
+      if (best) applyOrbCoords(best.x, best.y, sz);
+    }
+
+    function setOrbLabelVisible(visible) {
+      if (!orbTagEl) return;
+      orbTagEl.style.opacity = visible ? "1" : "0";
+      orbTagEl.style.transform = visible ? "translate(-50%, 0) scale(1)" : "translate(-50%, -4px) scale(0.85)";
+    }
+
     function setOrbState(mode) {
       orbState = mode || "idle";
       if (bubbleEl) {
         bubbleEl.setAttribute("data-state", orbState);
       }
+      // Affiche aussi brièvement le nom si réveillé par la voix en mode écoute
+      if (orbState === "listening") setOrbLabelVisible(true);
     }
 
     function setStatusPill(mode, labelText) {
@@ -440,6 +589,11 @@
 
     function anchored(el, fn) {
       if (!el || !el.isConnected) return;
+      const runWithOrb = () => {
+        fn();
+        // L'orbe neuronal glisse en douceur à côté de l'élément expliqué (toujours dans la frame)
+        floatOrbNear(el);
+      };
       const r = el.getBoundingClientRect();
       if (r.top < 40 || r.bottom > window.innerHeight - 60) {
         try {
@@ -448,11 +602,11 @@
         const gen = clearGen;
         const tid = setTimeout(() => {
           pendingTimers.delete(tid);
-          if (gen === clearGen && el.isConnected) fn();
+          if (gen === clearGen && el.isConnected) runWithOrb();
         }, 260);
         pendingTimers.add(tid);
       } else {
-        fn();
+        runWithOrb();
       }
     }
 
@@ -1009,6 +1163,10 @@
         activeCursorMarkId = null;
         hideCursor();
         setStatusPill(null);
+        returnOrbHome();
+        if (!panelEl || panelEl.style.display !== "flex") {
+          setOrbLabelVisible(false);
+        }
         if (rules()) rules().onCleared();
         api.caption("");
         document.querySelectorAll("[data-nkap]").forEach((n) => n.remove());
@@ -1020,33 +1178,34 @@
           if (onTap) bubbleEl.__nkapTap = onTap;
           return bubbleEl;
         }
-        // Panneau Jarvis chaleureux qui glisse VERS LE BAS depuis l'orbe neuronal (ancré en haut à droite)
+        // Panneau Jarvis chaleureux qui glisse VERS LE BAS depuis l'orbe neuronal (confiné dans la frame web/mobile)
         panelEl = document.createElement("div");
         panelEl.id = "nkap-question-panel";
         panelEl.style.cssText =
-          "position:fixed;right:20px;top:150px;width:352px;max-width:calc(100vw - 32px);" +
-          "max-height:calc(100vh - 176px);overflow-y:auto;" +
+          "position:fixed;left:20px;top:140px;width:346px;max-width:calc(100vw - 24px);" +
+          "max-height:calc(100vh - 160px);overflow-y:auto;" +
           "background:linear-gradient(160deg,rgba(26,20,15,0.95) 0%,rgba(12,17,30,0.96) 100%);" +
           "backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);" +
           "border:1px solid rgba(245,183,0,0.34);border-radius:20px;" +
-          "padding:15px 15px 14px;color:#FEF9EE;font-family:'Andika',system-ui,sans-serif;" +
+          "padding:14px 14px 13px;color:#FEF9EE;font-family:'Andika',system-ui,sans-serif;" +
           "box-shadow:0 24px 60px rgba(0,0,0,0.62),0 0 32px rgba(245,183,0,0.12),inset 0 1px 0 rgba(255,220,130,0.24);" +
-          "z-index:2147483647;display:none;flex-direction:column;gap:11px;pointer-events:auto;" +
+          "z-index:2147483647;display:none;flex-direction:column;gap:10px;pointer-events:auto;" +
           "transform-origin:top right;animation:nkapSlideDown 0.24s cubic-bezier(0.22,1,0.36,1) both;";
         document.documentElement.appendChild(panelEl);
 
-        // Constellation neuronale holographique sans contour circulaire (flotte librement façon Jarvis)
+        // Constellation neuronale holographique sans contour circulaire (ancrée dans la frame + mobile pendant explications)
+        const home = getOrbHomePosition();
         bubbleEl = document.createElement("div");
         bubbleEl.id = "nkap-bubble";
         bubbleEl.setAttribute("data-state", orbState);
-        bubbleEl.title = "Nkap — clique pour ouvrir ton assistant";
+        bubbleEl.title = "Clique ou dis « Hey Nkap »";
         bubbleEl.style.cssText =
-          "position:fixed;right:18px;top:64px;width:78px;height:78px;" +
+          `position:fixed;left:${Math.round(home.x)}px;top:${Math.round(home.y)}px;width:${home.size}px;height:${home.size}px;` +
           "background:transparent;border:none;box-shadow:none;" +
           "display:flex;align-items:center;justify-content:center;" +
           "filter:drop-shadow(0 0 11px rgba(245,183,0,0.48)) drop-shadow(0 2px 6px rgba(15,23,42,0.32));" +
           "z-index:2147483647;pointer-events:auto;cursor:pointer;user-select:none;" +
-          "transition:transform 0.18s cubic-bezier(0.22,1,0.36,1),filter 0.25s ease;overflow:visible;";
+          "transition:left 0.65s cubic-bezier(0.22,1,0.36,1),top 0.65s cubic-bezier(0.22,1,0.36,1),transform 0.18s cubic-bezier(0.22,1,0.36,1),filter 0.25s ease;overflow:visible;";
 
         // Canvas 60fps : réseau de neurones flottant librement + impulsions lumineuses organiques
         const canvas = document.createElement("canvas");
@@ -1054,18 +1213,21 @@
         const size = 78;
         canvas.width = size * dpr;
         canvas.height = size * dpr;
-        canvas.style.cssText = `width:${size}px;height:${size}px;display:block;pointer-events:none;`;
+        canvas.style.cssText = `width:${home.size}px;height:${home.size}px;display:block;pointer-events:none;`;
         bubbleEl.appendChild(canvas);
 
-        // Micro-pastille discrète "nkap" sous la constellation
+        // Micro-pastille "nkap" : MASQUÉE par défaut, apparaît UNIQUEMENT au clic ou à l'activation « Hey Nkap » !
         const tag = document.createElement("span");
+        tag.id = "nkap-orb-tag";
         tag.textContent = "nkap";
         tag.style.cssText =
-          "position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);" +
+          "position:absolute;bottom:-5px;left:50%;transform:translate(-50%,-4px) scale(0.85);opacity:0;" +
           "background:linear-gradient(135deg,#F5B700,#FF8C42);color:#140E07;" +
           "font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:10px;letter-spacing:0.06em;" +
-          "padding:1px 7px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,0.35);pointer-events:none;";
+          "padding:1px 7px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,0.35);pointer-events:none;" +
+          "transition:opacity 0.2s ease,transform 0.22s cubic-bezier(0.22,1,0.36,1);";
         bubbleEl.appendChild(tag);
+        orbTagEl = tag;
 
         const ctx = canvas.getContext("2d");
         if (ctx) {
@@ -1186,25 +1348,63 @@
         bubbleEl.addEventListener("click", () => {
           bubbleEl.style.transform = "scale(0.9)";
           setTimeout(() => (bubbleEl.style.transform = ""), 150);
+          returnOrbHome();
+          positionPanelUnderOrb();
           if (global.NKAP_ASSISTANT && global.NKAP_ASSISTANT.togglePanel) {
             global.NKAP_ASSISTANT.togglePanel(panelEl);
+            positionPanelUnderOrb();
           } else {
             bubbleEl.__nkapTap();
           }
         });
         document.documentElement.appendChild(bubbleEl);
+
+        // Maintient l'orbe dans la frame web/mobile après chargement asynchrone ou redimensionnement
+        const syncOrb = () => {
+          if (!bubbleEl || !bubbleEl.isConnected) return;
+          if (orbFloatingTarget && orbFloatingTarget.isConnected) {
+            floatOrbNear(orbFloatingTarget);
+          } else {
+            const h = getOrbHomePosition();
+            applyOrbCoords(h.x, h.y, h.size);
+          }
+        };
+        window.addEventListener("resize", syncOrb, { passive: true });
+        window.addEventListener("scroll", syncOrb, { passive: true, capture: true });
+        if (orbSyncTimer) clearInterval(orbSyncTimer);
+        orbSyncTimer = setInterval(() => {
+          if (!bubbleEl || !bubbleEl.isConnected) {
+            clearInterval(orbSyncTimer);
+            orbSyncTimer = null;
+            return;
+          }
+          if (!orbFloatingTarget) {
+            const h = getOrbHomePosition();
+            const curL = parseFloat(bubbleEl.style.left) || 0;
+            const curT = parseFloat(bubbleEl.style.top) || 0;
+            if (Math.abs(curL - h.x) > 4 || Math.abs(curT - h.y) > 4) {
+              applyOrbCoords(h.x, h.y, h.size);
+            }
+          }
+        }, 700);
         return bubbleEl;
       },
 
       setOrbState,
+      setOrbLabelVisible,
+      floatOrbNear,
+      returnOrbHome,
+      positionPanelUnderOrb,
+      getPanelEl() { return panelEl; },
 
       destroy() {
         if (orbRaf) { cancelAnimationFrame(orbRaf); orbRaf = null; }
+        if (orbSyncTimer) { clearInterval(orbSyncTimer); orbSyncTimer = null; }
         api.clear();
         window.removeEventListener("scroll", repositionAll, true);
         window.removeEventListener("resize", repositionAll);
         [hostEl, capLayer, bubbleEl, panelEl].forEach((el) => el && el.remove());
-        hostEl = svg = capLayer = cursorEl = statusPillEl = bubbleEl = panelEl = null;
+        hostEl = svg = capLayer = cursorEl = statusPillEl = bubbleEl = orbTagEl = panelEl = null;
       },
     };
 
