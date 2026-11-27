@@ -6,6 +6,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
+from app.core.app_kb import AppPlaybookStore
 from app.core.contracts import (
     ActionMessage,
     ActionPayload,
@@ -55,6 +56,24 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "balance": "Solde disponible",
     "money transfer": "Envoyer de l'argent",
     "transfer fees": "Frais",
+    "send": "Envoyer de l'argent",
+    "bills": "Payer une facture",
+    "vault": "Coffre d'épargne",
+    "more": "Plus d'options",
+    "hide balance": "Masquer le solde",
+    "show balance": "Afficher le solde",
+    "settings": "Paramètres",
+    "buy a bundle": "Acheter un forfait",
+    "top up": "Recharger du crédit",
+    "cancel transaction": "Annuler une transaction",
+    "mod a non moni": "Bénéficiaire",
+    "bot bam ba non moni": "Mes bénéficiaires",
+    "bakusa bam": "Mes bénéficiaires",
+    "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
+    "kele obusu": "Continuer",
+    "ala oboso": "Continuer",
+    "vaa": "Annuler",
+    "buka": "Annuler",
     "moni ma dia": "Solde",
     "nden": "Solde",
     "mabala": "Frais",
@@ -787,6 +806,7 @@ class M2Service:
 
     def __init__(self, kb_root: str | Path, llm: LLMAdapter | None = None):
         self.kb = KnowledgeBase(kb_root)
+        self.playbooks = AppPlaybookStore(kb_root)
         self.llm = llm or LLMAdapter()
         self.last_screen_context: ScreenContext | None = None
         self._turn_cache: dict[tuple[int, str, str], list[ActionMessage]] = {}
@@ -1168,6 +1188,10 @@ class M2Service:
         """Extrait la structure sémantique (lignes, paires champ/valeur, alertes, boutons, sous-titres)."""
         rows, node_meta = cls._group_visual_rows(screen_context)
         usable_nodes = [n for n in screen_context.nodes[:120] if cls._is_usable_node(n)]
+        # Trie en ordre de lecture visuelle (haut -> bas, gauche -> droite) quand les bornes sont présentes
+        # (crucial sur Wave Android où le header collant avec le solde arrive APRÈS la liste de transactions dans le XML !)
+        if usable_nodes and all(cls._has_valid_bounds(n) for n in usable_nodes):
+            usable_nodes.sort(key=lambda n: (n.bounds[1], n.bounds[0]))
         nodes_by_id = {n.node_id: n for n in usable_nodes}
 
         def _is_alert_text(txt_n: str) -> bool:
@@ -1225,12 +1249,32 @@ class M2Service:
         value_to_label: dict[str, str] = {}
         checkbox_nodes: set[str] = set()
 
+        known_action_labels = {
+            "send", "bills", "vault", "more", "settings", "hide balance", "show balance",
+            "money transfer", "buy a bundle", "top up", "pay your purchases",
+            "cancel transaction", "om loyalty", "see all",
+            "envoyer de l'argent", "payer une facture", "coffre d'epargne", "plus d'options",
+            "masquer le solde", "afficher le solde", "parametres", "continuer", "annuler", "confirmer",
+        }
+
+        def _is_limit_hint(txt_n: str) -> bool:
+            return any(
+                k in txt_n
+                for k in ("jusqu'a", "jusqua", "par operation", "maximum autorise", "akui ", "a mvet wuo", "plafond journalier")
+            )
+
         for n in usable_nodes:
             meta = node_meta.get(n.node_id, {})
+            raw_n = cls._norm(n.text or n.content_desc)
             fr_txt = meta.get("gloss_only") or cls._to_french_text(n.text or "")
             fr_n = cls._norm(fr_txt)
             zone = meta.get("zone") or "main"
-            is_btn = bool(n.clickable or n.tag in {"button", "a"})
+            is_btn = bool(
+                n.clickable
+                or n.tag in {"button", "a"}
+                or raw_n in known_action_labels
+                or fr_n in known_action_labels
+            )
 
             if _is_alert_text(fr_n):
                 is_err = any(k in fr_n for k in ("erreur", "insuffisant", "indisponible", "code secret"))
@@ -1239,6 +1283,10 @@ class M2Service:
             elif _is_security_text(fr_n, zone):
                 meta["role"] = "security"
                 security_nodes.append({"text": fr_txt, "node_id": n.node_id})
+            elif _is_limit_hint(raw_n) or _is_limit_hint(fr_n):
+                # Indice de plafond (ex: "Jusqu'à 500 000 FCFA par opération") -> JAMAIS un montant saisi !
+                subtitles.add(n.node_id)
+                meta["role"] = "hint"
             elif is_btn and "[case a cocher]" not in fr_n and "[coche]" not in fr_n:
                 buttons.append({"text": fr_txt, "node_id": n.node_id, "zone": zone})
                 meta["role"] = "button"
@@ -1249,6 +1297,36 @@ class M2Service:
                 meta["role"] = "input"
             else:
                 meta["role"] = "text"
+
+        # 0. Solde vedette en haut d'écran sans libellé explicite (ex: Wave "1.500F" centré en haut à côté de "Hide balance")
+        if screen_context.app is not None:
+            hide_eye_nodes = [
+                n for n in usable_nodes
+                if any(k in cls._norm(n.text or n.content_desc) for k in ("hide balance", "show balance", "masquer le solde"))
+            ]
+            for n in usable_nodes:
+                if not cls._has_valid_bounds(n):
+                    continue
+                meta = node_meta.get(n.node_id, {})
+                if meta.get("role") in {"button", "alert", "hint"}:
+                    continue
+                txt = (n.text or "").strip()
+                if not extract_amounts(txt) or len(txt) > 20:
+                    continue
+                h_px = n.bounds[3] - n.bounds[1]
+                near_eye = any(abs(n.bounds[1] - e.bounds[1]) <= 60 for e in hide_eye_nodes if cls._has_valid_bounds(e))
+                if (n.bounds[1] <= 340 and h_px >= 46) or near_eye:
+                    value_to_label[n.node_id] = "Solde disponible"
+                    field_pairs.insert(0, {
+                        "label": "Solde disponible",
+                        "value": txt,
+                        "raw_value": txt,
+                        "label_id": n.node_id,
+                        "value_id": n.node_id,
+                        "zone": "main",
+                        "kind": "metric",
+                    })
+                    break
 
         # 1. Paires horizontales (ex: 'Frais | Gratuit | 0 FCFA', '[Case à cocher] | J\'ai vérifié...')
         for zone, row_nodes, _ in rows:
@@ -1341,7 +1419,7 @@ class M2Service:
                 continue
             if lbl_n.node_id in label_to_value or lbl_n.node_id in subtitles or lbl_n.node_id in checkbox_nodes:
                 continue
-            if lbl_meta.get("role") in {"button", "alert", "security"}:
+            if lbl_meta.get("role") in {"button", "alert", "security", "hint"}:
                 continue
             lbl_txt = lbl_meta.get("gloss_only") or ""
             if not lbl_txt or len(lbl_txt) > 42 or extract_amounts(lbl_txt):
@@ -1405,7 +1483,7 @@ class M2Service:
                 if n.node_id in value_to_label or not cls._has_valid_bounds(n):
                     continue
                 meta = node_meta.get(n.node_id, {})
-                if (meta.get("zone") or "main") != "main" or meta.get("role") in {"button", "alert"}:
+                if (meta.get("zone") or "main") != "main" or meta.get("role") in {"button", "alert", "hint"}:
                     continue
                 txt = meta.get("gloss_only") or (n.text or "").strip()
                 if not extract_amounts(txt) or len(txt) > 22:
@@ -2911,14 +2989,99 @@ class M2Service:
         q_key = cls._norm(transcript.text).strip(" ?!.,;:")
         return (node_sig, transcript.lang or "fr", q_key)
 
+    def _build_playbook_guide_actions(
+        self,
+        pb: dict[str, Any],
+        screen_key: str,
+        transcript: Transcript,
+        screen_context: ScreenContext,
+    ) -> list[ActionMessage] | None:
+        guide = (pb.get("screen_guides") or {}).get(screen_key)
+        if not isinstance(guide, dict) or not guide.get("spoken"):
+            return None
+        lang = transcript.lang or "fr"
+        sb = _StreamBuilder(transcript, transcript.ts or 0)
+        spoken = self._safe_text_for_harness(str(guide["spoken"]), screen_context, self.kb.terms, fallback=str(guide["spoken"]))
+        sb.speak("playbook_guide", spoken, lang, 0)
+
+        usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+        cursor_ms = 350
+        marks_added = 0
+        for h in guide.get("highlights", []):
+            if marks_added >= 3:
+                break
+            node = self.playbooks.find_matching_node(
+                usable, h.get("match", []), prefer_button=(h.get("style") == "frame")
+            )
+            if not node:
+                continue
+            sb.draw(
+                str(h.get("style") or "highlight"),
+                f"pb-g-{marks_added + 1}",
+                node.node_id,
+                color=str(h.get("color") or "yellow"),
+                duration_ms=540,
+                run_after_ms=cursor_ms,
+                label=h.get("label"),
+                step=h.get("step"),
+            )
+            marks_added += 1
+            cursor_ms += 780
+
+        sb.clear(max(cursor_ms + 4500, 8200))
+        return sb.actions
+
+    def _build_playbook_shortcut_actions(
+        self,
+        sc: dict[str, Any],
+        transcript: Transcript,
+        screen_context: ScreenContext,
+    ) -> list[ActionMessage]:
+        lang = transcript.lang or "fr"
+        sb = _StreamBuilder(transcript, transcript.ts or 0)
+        spoken = self._safe_text_for_harness(str(sc.get("spoken") or ""), screen_context, self.kb.terms, fallback=str(sc.get("spoken") or ""))
+        sb.speak("playbook_shortcut", spoken, lang, 0)
+
+        style = str(sc.get("style") or "none")
+        target_match = sc.get("target_match") or []
+        if style != "none" and target_match:
+            usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+            node = self.playbooks.find_matching_node(usable, target_match, prefer_button=(style == "frame"))
+            if node:
+                sb.draw(
+                    style,
+                    "pb-sc-1",
+                    node.node_id,
+                    color=str(sc.get("color") or "yellow"),
+                    duration_ms=560,
+                    run_after_ms=260,
+                    label=sc.get("label"),
+                )
+        sb.clear(7600)
+        return sb.actions
+
     def candidate_actions(
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
-        """Orchestre glossaire conceptuel instantané + LLM open-weight sur ScreenContext réel."""
+        """Orchestre glossaire conceptuel + playbooks M5 applicatifs (SAFINUM/Wave/Max it) + LLM open-weight."""
+        q_norm = self._norm(transcript.text)
+
         # 0. Glossaire pédagogique d'inclusion financière instantané (< 5 ms, zéro hallucination)
         matched_concept = self._match_financial_concept(transcript.text)
         if matched_concept is not None:
             return self._build_concept_explanation_actions(matched_concept, transcript, screen_context)
+
+        # 0b. Playbooks applicatifs M5 (SAFINUM Sandbox Web/Mobile, Wave, Orange Max it)
+        pb = self.playbooks.detect_playbook(screen_context)
+        if pb is not None:
+            screen_key = self.playbooks.infer_screen_key(pb, screen_context)
+            if self.playbooks.is_screen_guide_question(q_norm):
+                guide_actions = self._build_playbook_guide_actions(pb, screen_key, transcript, screen_context)
+                if guide_actions:
+                    return guide_actions
+            sc = self.playbooks.match_qa_shortcut(pb, screen_key, q_norm)
+            if sc is not None:
+                return self._build_playbook_shortcut_actions(sc, transcript, screen_context)
 
         if self._is_out_of_scope_question(transcript.text, screen_context):
             return self._build_out_of_scope_actions(transcript, screen_context)

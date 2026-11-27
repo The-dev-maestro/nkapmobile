@@ -1,0 +1,130 @@
+{
+  "app_id": "safinum-sandbox",
+  "name": "Banque Démo SAFINUM (Web & Mobile)",
+  "match_packages": ["cm.nkapmobile.engine"],
+  "match_urls": ["safinum.cm/sandbox", "banque-demo.sandbox", "safinum.cm/hackathon-test"],
+  "match_text_cues": ["banque demo", "banque-demo.sandbox", "lomo moni", "mbembe kiri", "mbole"],
+  "ui_translations": {
+    "nda": "Accueil",
+    "mboa": "Accueil",
+    "lomo": "Transfert",
+    "loma": "Transfert",
+    "yaan": "Payer",
+    "sawedi": "Payer",
+    "itang": "Historique",
+    "bebolo": "Historique",
+    "lomo moni": "Envoyer de l'argent",
+    "loma moni": "Envoyer de l'argent",
+    "yaan mfie ai kalara": "Payer une facture",
+    "sawedi kalati": "Payer une facture",
+    "kus kredi telefon": "Acheter du crédit",
+    "ande kredi telefone": "Acheter du crédit",
+    "itang mvet yam": "Mes opérations",
+    "bebolo bam": "Mes opérations",
+    "mod a non moni": "Bénéficiaire",
+    "mod a non": "Bénéficiaire",
+    "mukusa": "Bénéficiaire",
+    "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
+    "bot bam ba non moni": "Mes bénéficiaires",
+    "bakusa bam": "Mes bénéficiaires",
+    "itan": "Montant",
+    "moni": "Montant",
+    "vaa": "Annuler",
+    "buka": "Annuler",
+    "kele obusu": "Continuer",
+    "ala oboso": "Continuer",
+    "yemban": "Confirmer",
+    "bamse": "Confirmer",
+    "tyende": "Modifier",
+    "tukwa": "Modifier",
+    "bulan": "Retour",
+    "timba": "Retour",
+    "wog": "Écouter",
+    "senga": "Écouter"
+  },
+  "action_buttons": [
+    "envoyer de l'argent", "payer une facture", "acheter du credit", "mes operations",
+    "continuer", "annuler", "confirmer", "modifier", "retour", "ecouter",
+    "lomo moni", "loma moni", "kele obusu", "ala oboso", "yemban", "bamse", "vaa", "buka"
+  ],
+  "screen_guides": {
+    "home": {
+      "spoken": "Tu es sur ton accueil bancaire. En haut tu vois ton solde disponible, au milieu les boutons pour envoyer de l'argent, payer une facture ou acheter du crédit, et en bas tes dernières opérations.",
+      "highlights": [
+        {"match": ["envoyer de l'argent", "lomo moni", "loma moni"], "style": "frame", "label": "Envoyer", "color": "yellow"}
+      ]
+    },
+    "transfer": {
+      "spoken": "Ici tu prépares un transfert : 1. Choisis un bénéficiaire dans la liste ou tape son numéro ; 2. Saisis le montant à envoyer ; 3. Appuie sur Continuer.",
+      "highlights": [
+        {"match": ["beneficiaire", "mod a non moni", "mukusa"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
+        {"match": ["montant", "itan"], "style": "num", "step": 2, "label": "Montant", "color": "yellow"},
+        {"match": ["continuer", "kele obusu", "ala oboso"], "style": "frame", "label": "3. Continuer", "color": "red"}
+      ]
+    },
+    "pay": {
+      "spoken": "Ici tu paies une facture ou achètes du crédit : choisis l'onglet Facture ou Crédit, sélectionne le fournisseur ou le numéro, entre le montant puis appuie sur Continuer.",
+      "highlights": [
+        {"match": ["continuer", "kele obusu", "ala oboso"], "style": "frame", "label": "Continuer", "color": "red"}
+      ]
+    },
+    "review": {
+      "spoken": "Tu es sur le récapitulatif avant validation : vérifie bien le bénéficiaire, le montant, les frais et ton solde après opération, puis appuie sur Confirmer si tout est exact.",
+      "highlights": [
+        {"match": ["confirmer", "yemban", "bamse"], "style": "frame", "label": "Confirmer", "color": "red"}
+      ]
+    },
+    "recap": {
+      "spoken": "Tu es sur le récapitulatif avant validation : vérifie bien le bénéficiaire, le montant, les frais et ton solde après opération, puis appuie sur Confirmer si tout est exact.",
+      "highlights": [
+        {"match": ["confirmer", "yemban", "bamse"], "style": "frame", "label": "Confirmer", "color": "red"}
+      ]
+    },
+    "receipt": {
+      "spoken": "Ton opération est confirmée et enregistrée : tu peux vérifier ton nouveau solde et noter le numéro de référence comme preuve.",
+      "highlights": []
+    },
+    "history": {
+      "spoken": "Ici tu consultes toutes tes opérations passées : utilise les boutons Tout, Reçus ou Envoyés pour filtrer et vérifier si chaque paiement est confirmé ou annulé.",
+      "highlights": []
+    }
+  },
+  "qa_shortcuts": [
+    {
+      "id": "sbx_saved_contacts",
+      "screens": ["transfer", "beneficiary"],
+      "triggers": ["mes beneficiaires", "liste", "contacts", "enregistres", "blaise", "brenda", "carine", "ibrahim", "bot bam"],
+      "spoken": "C'est ta liste de contacts déjà enregistrés : appuie directement sur un nom pour remplir automatiquement le champ Bénéficiaire sans risque de faute de frappe.",
+      "target_match": ["mes beneficiaires", "bot bam ba non moni", "bakusa bam"],
+      "style": "highlight",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_transfer_limit",
+      "screens": ["transfer", "beneficiary"],
+      "triggers": ["500 000", "500000", "jusqu'a", "maximum", "akui", "limite par operation"],
+      "spoken": "Ce message indique seulement le plafond maximum autorisé par transfert : tu n'es pas obligé d'envoyer ce montant, tu peux taper n'importe quelle petite somme dans le champ Montant.",
+      "target_match": ["jusqu'a", "500 000", "akui"],
+      "style": "highlight",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_cancel_transfer",
+      "screens": ["transfer", "review", "recap", "pay"],
+      "triggers": ["annuler", "revenir", "quitter", "me suis trompe", "vaa", "buka"],
+      "spoken": "Appuie ici sur Annuler pour abandonner sans rien débiter de ton compte.",
+      "target_match": ["annuler", "vaa", "buka"],
+      "style": "frame",
+      "label": "Annuler",
+      "color": "red"
+    },
+    {
+      "id": "sbx_listen_btn",
+      "triggers": ["bouton ecouter", "haut parleur", "wog", "senga", "lire l'ecran"],
+      "spoken": "Ce bouton lit à voix haute le contenu traduit de l'écran dans ta langue.",
+      "target_match": ["ecouter", "wog", "senga"],
+      "style": "circle",
+      "color": "yellow"
+    }
+  ]
+}

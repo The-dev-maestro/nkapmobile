@@ -1,0 +1,85 @@
+{
+  "app_id": "wave",
+  "name": "Wave Mobile Money",
+  "match_packages": ["com.wave.personal", "com.wave"],
+  "match_urls": [],
+  "match_text_cues": ["hide balance", "vault", "gimac transfer"],
+  "ui_translations": {
+    "send": "Envoyer de l'argent",
+    "bills": "Payer une facture",
+    "vault": "Coffre d'épargne",
+    "more": "Plus d'options",
+    "hide balance": "Masquer le solde",
+    "show balance": "Afficher le solde",
+    "settings": "Paramètres",
+    "airtime": "Crédit téléphone",
+    "bank": "Banque",
+    "payments": "Paiements",
+    "transfer": "Envoyer de l'argent"
+  },
+  "action_buttons": [
+    "send", "bills", "vault", "more", "settings", "hide balance", "show balance",
+    "airtime", "bank", "payments", "envoyer", "factures", "coffre", "plus", "parametres"
+  ],
+  "screen_guides": {
+    "home": {
+      "spoken": "Tu es sur l'accueil de Wave. En haut s'affiche ton solde, au milieu ton QR code pour recevoir ou payer, puis les boutons Envoyer, Factures, Coffre et Plus.",
+      "highlights": [
+        {"match": ["send", "envoyer"], "style": "num", "step": 1, "label": "Envoyer", "color": "yellow"},
+        {"match": ["bills", "factures"], "style": "num", "step": 2, "label": "Factures", "color": "yellow"}
+      ]
+    }
+  },
+  "qa_shortcuts": [
+    {
+      "id": "wave_send",
+      "triggers": ["envoyer", "transferer", "faire un transfert", "transfert d'argent", "send"],
+      "spoken": "Appuie ici sur Envoyer (Send), puis choisis ton bénéficiaire et le montant à envoyer.",
+      "target_match": ["send", "envoyer"],
+      "style": "frame",
+      "label": "Appuie ici",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_bills",
+      "triggers": ["facture", "eneo", "camwater", "canal", "payer", "bills"],
+      "spoken": "Appuie ici sur Factures (Bills) pour payer l'électricité, l'eau, la TV ou internet.",
+      "target_match": ["bills", "factures"],
+      "style": "frame",
+      "label": "Appuie ici",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_vault",
+      "triggers": ["vault", "coffre", "epargn", "mettre de cote", "economis"],
+      "spoken": "Le Coffre (Vault) te permet de mettre de l'argent de côté à l'abri de tes dépenses du jour, et de le retirer quand tu veux.",
+      "target_match": ["vault", "coffre"],
+      "style": "frame",
+      "label": "Coffre",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_hide_balance",
+      "triggers": ["cacher", "masquer", "discret", "oeil", "afficher mon solde", "hide balance"],
+      "spoken": "Appuie sur l'icône œil juste à côté de ton solde pour le masquer ou le réafficher discrètement.",
+      "target_match": ["hide balance", "show balance", "masquer le solde"],
+      "style": "circle",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_qr",
+      "triggers": ["qr", "code barre", "carre", "scanner", "recevoir de l'argent", "depot", "retrait"],
+      "spoken": "Ce QR code au centre sert à recevoir de l'argent, payer un marchand ou faire un dépôt et un retrait chez un agent Wave : il lui suffit de le scanner.",
+      "target_match": [],
+      "style": "none"
+    },
+    {
+      "id": "wave_settings",
+      "triggers": ["parametre", "reglage", "settings", "langue", "support", "code secret"],
+      "spoken": "Appuie sur la roue crantée en haut à gauche pour ouvrir les paramètres, changer la langue ou contacter le support Wave.",
+      "target_match": ["settings", "parametres"],
+      "style": "circle",
+      "color": "yellow"
+    }
+  ]
+}

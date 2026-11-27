@@ -187,8 +187,12 @@
     "ebolo e tilabe na bwam": "Opération réussie",
     "nombo ndem": "Référence",
     "edun": "Référence",
-    "bot bam ba non moni": "Bénéficiaires enregistrés",
-    "bakusa bam": "Bénéficiaires enregistrés",
+    "bot bam ba non moni": "Mes bénéficiaires",
+    "bakusa bam": "Mes bénéficiaires",
+    "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
+    "nombo ya lomo kredi": "Numéro à recharger",
+    "tob isae": "Choisir le service",
+    "nsaa telefon": "Opérateur téléphone",
     "te ke mvet a tatan.": "Aucune opération pour le moment.",
     "to ebolo tatan.": "Aucune opération pour le moment.",
     "ayaane mfie": "Électricité (ENEO)",
@@ -218,6 +222,8 @@
     if ((m = clean.match(/^(?:Kredi)\s+(.+)$/i))) return `Crédit ${m[1]}`;
     if ((m = clean.match(/^(?:Kalara|Kalati)\s+(.+)$/i))) return `Facture ${m[1]}`;
     if ((m = clean.match(/^(?:Mbug|Mabala)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
+    if ((m = clean.match(/^Akui\s+(.+?)\s+a\s+mvet\s+wuo$/i))) return `Jusqu'à ${m[1]} par opération`;
+    if ((m = clean.match(/^Tena\s+(.+?)\s+o\s+ebolo\s+ewo$/i))) return `Jusqu'à ${m[1]} par opération`;
     return clean;
   }
 
