@@ -325,12 +325,78 @@
       return { x, y, size: orbSizePx, fb };
     }
 
+    function syncFrameAnchoredChrome() {
+      const fb = getFrameBounds();
+      if (statusPillEl) {
+        if (fb.inFrame) {
+          const cx = Math.round(fb.left + fb.width / 2);
+          const topY = Math.round(fb.top + (fb.isMobile ? 34 : 10));
+          const maxW = Math.round(Math.max(140, fb.width - (fb.isMobile ? 28 : 40)));
+          statusPillEl.style.left = `${cx}px`;
+          statusPillEl.style.top = `${topY}px`;
+          statusPillEl.style.maxWidth = `${maxW}px`;
+          statusPillEl.style.fontSize = fb.isMobile ? "11px" : "12px";
+          statusPillEl.style.padding = fb.isMobile ? "4px 11px" : "5px 14px";
+          statusPillEl.style.whiteSpace = "nowrap";
+          statusPillEl.style.overflow = "hidden";
+          statusPillEl.style.textOverflow = "ellipsis";
+        } else {
+          statusPillEl.style.left = "50%";
+          statusPillEl.style.top = "12px";
+          statusPillEl.style.maxWidth = "calc(100vw - 32px)";
+          statusPillEl.style.fontSize = "12.5px";
+          statusPillEl.style.padding = "5px 15px";
+        }
+      }
+      if (capLayer) {
+        if (fb.inFrame) {
+          const cx = Math.round(fb.left + fb.width / 2);
+          const maxW = Math.round(Math.max(196, fb.width - (fb.isMobile ? 18 : 36)));
+          const bottomPx = Math.max(8, Math.round(window.innerHeight - fb.bottom + (fb.isMobile ? 54 : 14)));
+          capLayer.style.left = `${cx}px`;
+          capLayer.style.bottom = `${bottomPx}px`;
+          capLayer.style.maxWidth = `${maxW}px`;
+          capLayer.style.width = fb.isMobile ? `${maxW}px` : "auto";
+          capLayer.style.boxSizing = "border-box";
+          capLayer.style.borderRadius = fb.isMobile ? "14px" : "18px";
+          capLayer.style.fontSize = fb.isMobile ? "12.5px" : "15px";
+          capLayer.style.padding = fb.isMobile ? "7px 12px" : "8px 18px";
+          capLayer.style.lineHeight = "1.32";
+        } else {
+          capLayer.style.left = "50%";
+          capLayer.style.bottom = "14px";
+          capLayer.style.width = "auto";
+          capLayer.style.maxWidth = "min(640px, calc(100vw - 80px))";
+          capLayer.style.boxSizing = "border-box";
+          capLayer.style.borderRadius = "18px";
+          capLayer.style.fontSize = "16.5px";
+          capLayer.style.padding = "8px 20px";
+          capLayer.style.lineHeight = "1.34";
+        }
+      }
+      const nb = document.getElementById("nkap-notebook");
+      if (nb && fb.inFrame) {
+        const margin = fb.isMobile ? 9 : 14;
+        const nbW = Math.min(nb.offsetWidth || 320, Math.max(200, fb.width - margin * 2));
+        const curL = parseFloat(nb.style.left) || fb.left + margin;
+        const curT = parseFloat(nb.style.top) || fb.top + 60;
+        const nbH = nb.offsetHeight || 180;
+        const minL = fb.left + margin;
+        const maxL = Math.max(minL, fb.right - nbW - margin);
+        const minT = fb.top + (fb.isMobile ? 62 : 46);
+        const maxT = Math.max(minT, fb.bottom - nbH - (fb.isMobile ? 108 : 74));
+        nb.style.maxWidth = `${Math.round(fb.width - margin * 2)}px`;
+        nb.style.left = `${Math.round(Math.max(minL, Math.min(maxL, curL)))}px`;
+        nb.style.top = `${Math.round(Math.max(minT, Math.min(maxT, curT)))}px`;
+      }
+    }
+
     function positionPanelUnderOrb() {
       if (!panelEl || !bubbleEl) return;
       const fb = getFrameBounds();
       const bRect = bubbleEl.getBoundingClientRect();
       const panelW = fb.inFrame
-        ? Math.min(346, Math.max(260, fb.width - 18))
+        ? Math.min(346, Math.max(210, fb.width - 16))
         : Math.min(352, window.innerWidth - 32);
       panelEl.style.width = `${panelW}px`;
 
@@ -461,6 +527,7 @@
         return;
       }
       const accent = mode === "listening" ? "#FF5C77" : "#F5B700";
+      syncFrameAnchoredChrome();
       statusPillEl.style.display = "inline-flex";
       statusPillEl.innerHTML = `
         <span style="width:7px;height:7px;border-radius:50%;background:${accent};box-shadow:0 0 10px ${accent};"></span>
@@ -639,6 +706,7 @@
     }
 
     function repositionAll() {
+      syncFrameAnchoredChrome();
       for (const [, m] of marks) {
         if (!m.anchorEl || !m.baseRect || !m.anchorEl.isConnected) continue;
         const cur = m.anchorEl.getBoundingClientRect();
@@ -771,12 +839,15 @@
         if (!label || (rules() && !rules().amountsPreserved(label))) return;
         ensureLayers();
         anchored(el, () => {
+          const fb = getFrameBounds();
           const r = rectOf(el);
           const col = resolveInk(color || "yellow", el);
-          const estW = Math.min(260, Math.max(90, label.length * 8.6 + 26));
+          const maxPillW = fb.inFrame ? Math.min(240, Math.max(120, fb.width - 24)) : 260;
+          const estW = Math.min(maxPillW, Math.max(90, label.length * 8.6 + 26));
           const estH = 34;
           const spot = layout().findBestSpot(r, { w: estW, h: estH }, {
-            gap: 28,
+            bounds: fb,
+            gap: fb.isMobile ? 16 : 28,
             obstacles: getObstaclesCb(),
             occupied: getOccupiedBoxes(),
           });
@@ -784,7 +855,7 @@
           const pill = document.createElement("div");
           pill.setAttribute("data-nkap", id);
           pill.style.cssText =
-            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;max-width:260px;` +
+            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;max-width:${maxPillW}px;` +
             `background:rgba(12,17,28,0.94);color:#F8FAFC;border:2px solid ${col};border-radius:999px;` +
             `padding:5px 14px;font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:13.5px;` +
             `box-shadow:0 10px 24px rgba(0,0,0,0.48);z-index:2147483647;pointer-events:none;` +
@@ -811,11 +882,20 @@
         ensureLayers();
         anchored(el, () => {
           enforceMarkBudget(id);
+          const fb = getFrameBounds();
           const r = rectOf(el);
           const col = resolveInk(color || "yellow", el);
-          const estW = label ? Math.min(180, 42 + label.length * 8) : 32;
-          const bx = Math.max(10, r.x - estW - 10);
-          const by = Math.max(46, r.cy - 14);
+          const estW = label ? Math.min(fb.isMobile ? 140 : 180, 40 + label.length * 7.8) : 32;
+          let bx = r.x - estW - 10;
+          if (bx < fb.left + 6) {
+            bx = r.x + r.w + 8;
+          }
+          if (bx + estW > fb.right - 6) {
+            bx = Math.max(fb.left + 6, Math.min(fb.right - estW - 6, r.x));
+          }
+          const minBy = fb.top + (fb.inFrame && fb.isMobile ? 38 : 10);
+          const maxBy = Math.max(minBy, fb.bottom - 38);
+          const by = Math.max(minBy, Math.min(maxBy, r.cy - 14));
 
           const wrap = document.createElement("div");
           wrap.setAttribute("data-nkap", id);
@@ -912,9 +992,10 @@
           }
 
           if (label) {
+            const fb = getFrameBounds();
             const chip = document.createElement("div");
             chip.textContent = label;
-            const placeTop = baseX < 140;
+            const placeTop = (baseX - fb.left) < 130;
             chip.style.cssText =
               (placeTop
                 ? "position:absolute;left:50%;top:-10px;transform:translate(-50%,-100%);"
@@ -1002,22 +1083,29 @@
         const renderCard = () => {
           enforceMarkBudget(id);
           const timers = [];
-          const width = Math.min(config.width || 400, Math.max(250, window.innerWidth - 28));
+          const fb = getFrameBounds();
+          const nbMargin = fb.inFrame ? (fb.isMobile ? 18 : 28) : 28;
+          const availW = fb.inFrame ? fb.width : window.innerWidth;
+          const width = Math.min(config.width || 380, Math.max(200, availW - nbMargin));
           const targetRect = pageAnchor ? rectOf(pageAnchor) : null;
-          const spot = layout().findCardSpot(targetRect, { w: width, h: 240 }, {
-            channel: getChannelCb(),
+          const spot = layout().findCardSpot(targetRect, { w: width, h: fb.isMobile ? 200 : 240 }, {
+            bounds: fb,
+            channel: fb.isMobile ? "mobile" : getChannelCb(),
             obstacles: getObstaclesCb(),
             occupied: getOccupiedBoxes(),
+            safeTop: fb.inFrame && fb.isMobile ? 64 : 52,
+            safeBottom: fb.inFrame && fb.isMobile ? 112 : 82,
           });
 
           const card = document.createElement("div");
           card.id = "nkap-notebook";
           card.setAttribute("data-nkap", id);
           card.setAttribute("data-nkap-mode", mode);
+          const nbPad = fb.isMobile ? "15px 15px 14px 15px" : "22px 22px 20px 22px";
           card.style.cssText =
-            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;width:${spot.w}px;` +
-            `background:rgba(12,17,28,0.90);backdrop-filter:blur(12px);color:#F8FAFC;border-radius:16px;` +
-            `padding:22px 22px 20px 22px;box-sizing:border-box;font-family:'Andika',system-ui,sans-serif;` +
+            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;width:${spot.w}px;max-width:${Math.round(availW - nbMargin)}px;` +
+            `background:rgba(12,17,28,0.92);backdrop-filter:blur(12px);color:#F8FAFC;border-radius:16px;` +
+            `padding:${nbPad};box-sizing:border-box;font-family:'Andika',system-ui,sans-serif;` +
             `box-shadow:0 22px 50px rgba(0,0,0,0.62);z-index:2147483646;pointer-events:auto;` +
             `animation:nkapPopIn 0.16s ease-out both;`;
 
@@ -1235,9 +1323,11 @@
           return;
         }
 
-        // Sous-titres courts qui défilent phrase par phrase (1 à 2 lignes max, façon HeyClicky !)
+        // Sous-titres courts qui défilent phrase par phrase (1 à 2 lignes max, confinés dans la frame Web/Mobile !)
+        syncFrameAnchoredChrome();
+        const fbCap = getFrameBounds();
         const clean = String(text).replace(/\s+/g, " ").trim();
-        const maxChars = 76;
+        const maxChars = fbCap.isMobile ? 52 : (fbCap.inFrame ? 70 : 76);
         const chunks = [];
         for (const sent of clean.split(/(?<=[.!?;])\s+/)) {
           if (sent.length <= maxChars) {
@@ -1592,6 +1682,7 @@
 
         // Maintient l'orbe dans la frame web/mobile après chargement asynchrone ou redimensionnement
         const syncOrb = () => {
+          syncFrameAnchoredChrome();
           if (!bubbleEl || !bubbleEl.isConnected || isDraggingOrb) return;
           if (orbFloatingTarget && orbFloatingTarget.isConnected) {
             floatOrbNear(orbFloatingTarget);
@@ -1609,6 +1700,7 @@
             orbSyncTimer = null;
             return;
           }
+          syncFrameAnchoredChrome();
           if (!orbFloatingTarget && !isDraggingOrb) {
             const h = getOrbHomePosition();
             const curL = parseFloat(bubbleEl.style.left) || 0;

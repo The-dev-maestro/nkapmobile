@@ -270,12 +270,57 @@
       "color": "yellow"
     },
     {
+      "id": "wave_send_money_contacts",
+      "screens": ["send_money"],
+      "triggers": ["mes contacts", "ou sont mes contacts", "liste des contacts", "voir mes contacts", "contacts"],
+      "spoken": "Tes contacts enregistrés s'affichent juste ici dans la section Contacts : appuie directement sur le nom de la personne à qui tu veux envoyer de l'argent.",
+      "target_match": ["contacts"],
+      "style": "highlight",
+      "color": "yellow"
+    },
+    {
       "id": "wave_send_money_search",
       "screens": ["send_money"],
       "triggers": ["chercher", "rechercher", "trouver un contact", "champ to", "barre to"],
       "spoken": "Appuie sur le champ « To » en haut pour taper les premières lettres d'un nom ou un numéro et filtrer rapidement tes contacts.",
       "target_match": ["to"],
       "style": "highlight",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_sub_to_history",
+      "screens": ["send_money", "send_new_number", "send_amount", "bills", "vault", "more", "settings", "card_qr"],
+      "triggers": ["dernieres operations", "mes operations", "historique", "dernieres transactions", "mes transactions", "derniere transaction"],
+      "spoken": "Tes dernières opérations ne sont pas sur cet écran : elles s'affichent en bas de l'accueil Wave. Appuie sur la flèche retour en haut à gauche pour les consulter.",
+      "target_match": ["back", "retour"],
+      "style": "circle",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_sub_to_balance",
+      "screens": ["send_money", "send_new_number", "send_amount", "bills", "vault", "more", "settings", "card_qr"],
+      "triggers": ["mon solde", "quel est mon solde", "combien j'ai", "combien jai", "solde disponible", "combien il me reste"],
+      "spoken": "Ton solde n'est pas affiché sur cet écran : il apparaît tout en haut de l'accueil Wave. Appuie sur la flèche retour en haut à gauche pour le voir.",
+      "target_match": ["back", "retour"],
+      "style": "circle",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_sub_to_bills",
+      "screens": ["send_money", "send_new_number", "vault", "more", "settings", "card_qr"],
+      "triggers": ["payer une facture", "facture eneo", "camwater", "canal"],
+      "spoken": "Pour payer une facture, reviens d'abord sur l'accueil avec la flèche en haut à gauche, puis appuie sur Factures (Bills).",
+      "target_match": ["back", "retour"],
+      "style": "circle",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_sub_to_vault",
+      "screens": ["send_money", "send_new_number", "bills", "more", "settings", "card_qr"],
+      "triggers": ["ouvrir le coffre", "aller dans vault", "mon coffre", "epargner dans wave"],
+      "spoken": "Ton Coffre d'épargne (Vault) se trouve sur l'accueil Wave : appuie sur la flèche retour en haut à gauche puis sur Vault.",
+      "target_match": ["back", "retour"],
+      "style": "circle",
       "color": "yellow"
     },
     {

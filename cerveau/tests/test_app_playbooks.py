@@ -296,6 +296,64 @@ def test_wave_send_money_subscreen_never_frames_header_and_guides_user():
     r_bk = client.post("/answer", json={"transcript": "Comment revenir en arrière ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
     assert any(a["action"]["t"] == "circle" and a["action"]["target"]["node_id"] == "w_back" for a in r_bk.json()["actions"])
 
+    # "Où sont mes contacts ?" -> parle à la 2e personne ("Tes contacts", JAMAIS "Mes contacts") + surligne Contacts
+    r_ct = client.post("/answer", json={"transcript": "Où sont mes contacts ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    spoken_ct = " ".join(a["action"].get("text", "") for a in r_ct.json()["actions"] if a["action"]["t"] == "speak")
+    assert "tes contacts" in spoken_ct.lower() and "mes contacts" not in spoken_ct.lower()
+    assert any(a["action"]["target"]["node_id"] == "w_contacts" for a in r_ct.json()["actions"] if a["action"].get("target"))
+
+    # Guidage inter-écrans depuis Wave Send Money : "Quelles sont mes dernières opérations ?" & "Quel est mon solde ?" -> JAMAIS Hors contexte !
+    for q_nav in ("Quelles sont mes dernières opérations ?", "C'est quoi mon solde ?"):
+        r_nav = client.post("/answer", json={"transcript": q_nav, "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+        spoken_nav = " ".join(a["action"].get("text", "") for a in r_nav.json()["actions"] if a["action"]["t"] == "speak").lower()
+        assert "incapable" not in spoken_nav and "hors contexte" not in spoken_nav
+        assert "accueil" in spoken_nav
+        assert any(a["action"]["t"] == "circle" and a["action"]["target"]["node_id"] == "w_back" for a in r_nav.json()["actions"])
+
+
+def test_second_person_normalizer_and_safinum_cross_screen_guidance(monkeypatch):
+    # 1. Même si le petit LLM 1.5B répond à la 1re personne ("Mes contacts sont...", "Mon solde est..."), le harnais corrige en "Tes / Ton"
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResp({
+            "spoken": "Mes contacts sont listés ici et mon solde reste disponible dans « Mes opérations ».",
+            "title": "Contacts",
+            "rows": [],
+            "targets": [],
+        }),
+    )
+    r_p2 = client.post(
+        "/answer",
+        json={"transcript": "Parle-moi de Djunette ici", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX},
+    )
+    spoken_p2 = " ".join(a["action"].get("text", "") for a in r_p2.json()["actions"] if a["action"]["t"] == "speak")
+    assert "Tes contacts" in spoken_p2 and "ton solde" in spoken_p2.lower()
+    assert "« Mes opérations »" in spoken_p2  # Libellé d'UI entre guillemets préservé !
+
+    # 2. Régression exacte capture SAFINUM Mobile `/transfer` : "Quelles sont mes dernières opérations ?" -> guide vers Historique (JAMAIS Hors contexte !)
+    transfer_with_nav = dict(SAFINUM_TRANSFER_CTX)
+    transfer_with_nav["nodes"] = list(SAFINUM_TRANSFER_CTX["nodes"]) + [
+        {"node_id": "nav_home", "tag": "button", "text": "Accueil", "clickable": True, "bounds": [420, 740, 490, 780], "tone": "light"},
+        {"node_id": "nav_hist", "tag": "button", "text": "Historique", "clickable": True, "bounds": [640, 740, 720, 780], "tone": "light"},
+        {"node_id": "nav_pay", "tag": "button", "text": "Payer", "clickable": True, "bounds": [560, 740, 630, 780], "tone": "light"},
+    ]
+    r_hist = client.post("/answer", json={"transcript": "Quelles sont mes dernières opérations ?", "lang_hint": "fr", "context": transfer_with_nav})
+    acts_hist = r_hist.json()["actions"]
+    spoken_hist = " ".join(a["action"].get("text", "") for a in acts_hist if a["action"]["t"] == "speak").lower()
+    assert "incapable" not in spoken_hist and "hors contexte" not in spoken_hist
+    assert "historique" in spoken_hist
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "nav_hist" for a in acts_hist)
+
+    r_bal = client.post("/answer", json={"transcript": "Quel est mon solde ?", "lang_hint": "fr", "context": transfer_with_nav})
+    acts_bal = r_bal.json()["actions"]
+    spoken_bal = " ".join(a["action"].get("text", "") for a in acts_bal if a["action"]["t"] == "speak").lower()
+    assert "incapable" not in spoken_bal and "accueil" in spoken_bal
+    assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "nav_home" for a in acts_bal)
+
+    r_safe = client.post("/answer", json={"transcript": "Est-ce débité tout de suite si j'appuie sur Continuer ?", "lang_hint": "fr", "context": transfer_with_nav})
+    spoken_safe = " ".join(a["action"].get("text", "") for a in r_safe.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "récapitulatif" in spoken_safe and "confirmer" in spoken_safe
+
 
 def test_wave_other_subscreens_amount_vault_card_qr():
     # Send Amount

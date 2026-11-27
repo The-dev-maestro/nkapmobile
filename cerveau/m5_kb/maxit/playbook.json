@@ -65,6 +65,14 @@
       "style": "none"
     },
     {
+      "id": "maxit_sub_to_home",
+      "screens": ["transfer"],
+      "triggers": ["mon solde", "quel est mon solde", "dernieres operations", "historique", "mes transactions"],
+      "spoken": "Ton solde Orange Money et tes opérations se consultent depuis l'écran d'accueil Max it : reviens en arrière pour les voir.",
+      "target_match": [],
+      "style": "none"
+    },
+    {
       "id": "maxit_cancel",
       "screens": ["home"],
       "triggers": ["annuler une transaction", "annuler un transfert", "erreur d'envoi", "cancel transaction"],

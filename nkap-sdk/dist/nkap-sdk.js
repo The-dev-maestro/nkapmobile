@@ -248,7 +248,8 @@
  *
  * Teste des positions candidates autour d'une cible (droite, gauche, haut, bas, coins)
  * en pénalisant tout chevauchement avec :
- * - les bords du viewport / zone sûre (sous-titre bas, pilule haute, bulle bas-droite)
+ * - les bords du viewport OU de la frame simulateur Web/Mobile/USSD (`opts.bounds`)
+ * - les zones sûres (pilule haute, sous-titres bas, barre de navigation mobile, orbe)
  * - les boîtes de texte / boutons existants de l'écran (`obstacles`)
  * - les marques et cartes déjà affichées (`occupied`)
  */
@@ -262,12 +263,44 @@
     return ix * iy;
   }
 
-  function clampBox(box, viewport, margin = 12, safeTop = 52, safeBottom = 86) {
-    const maxX = Math.max(margin, viewport.w - box.w - margin);
-    const maxY = Math.max(safeTop, viewport.h - box.h - safeBottom);
+  function resolveArea(opts = {}) {
+    if (opts.bounds && opts.bounds.inFrame) {
+      const b = opts.bounds;
+      return {
+        left: b.left,
+        top: b.top,
+        right: b.right,
+        bottom: b.bottom,
+        w: b.right - b.left,
+        h: b.bottom - b.top,
+        inFrame: true,
+        isMobile: !!b.isMobile,
+      };
+    }
+    const vp = opts.viewport || {
+      w: typeof window !== "undefined" ? window.innerWidth : 1280,
+      h: typeof window !== "undefined" ? window.innerHeight : 720,
+    };
     return {
-      x: Math.min(maxX, Math.max(margin, box.x)),
-      y: Math.min(maxY, Math.max(safeTop, box.y)),
+      left: vp.left ?? 0,
+      top: vp.top ?? 0,
+      right: vp.right ?? vp.w,
+      bottom: vp.bottom ?? vp.h,
+      w: vp.w,
+      h: vp.h,
+      inFrame: false,
+      isMobile: vp.w < 520,
+    };
+  }
+
+  function clampBox(box, area, margin = 12, safeTop = 52, safeBottom = 86) {
+    const minX = (area.left ?? 0) + margin;
+    const maxX = Math.max(minX, (area.right ?? area.w) - box.w - margin);
+    const minY = (area.top ?? 0) + safeTop;
+    const maxY = Math.max(minY, (area.bottom ?? area.h) - box.h - safeBottom);
+    return {
+      x: Math.min(maxX, Math.max(minX, box.x)),
+      y: Math.min(maxY, Math.max(minY, box.y)),
       w: box.w,
       h: box.h,
     };
@@ -275,26 +308,31 @@
 
   /**
    * Trouve le meilleur emplacement `(x, y, side)` pour une étiquette ou carte de taille `(w, h)`
-   * près de `targetRect` sans recouvrir la cible ni les obstacles.
+   * près de `targetRect` sans recouvrir la cible ni sortir du viewport / de la frame simulateur.
    */
   function findBestSpot(targetRect, size, opts = {}) {
-    const viewport = opts.viewport || {
-      w: typeof window !== "undefined" ? window.innerWidth : 1280,
-      h: typeof window !== "undefined" ? window.innerHeight : 720,
-    };
+    const area = resolveArea(opts);
     const gap = opts.gap ?? 14;
     const obstacles = opts.obstacles || [];
     const occupied = opts.occupied || [];
-    const safeTop = opts.safeTop ?? 54;
-    const safeBottom = opts.safeBottom ?? 88;
-    const w = size.w;
+    const margin = area.inFrame ? 8 : 12;
+    const safeTop = opts.safeTop ?? (area.inFrame && area.isMobile ? 60 : 50);
+    const safeBottom = opts.safeBottom ?? (area.inFrame && area.isMobile ? 106 : 84);
+    const w = Math.min(size.w, Math.max(120, area.w - margin * 2));
     const h = size.h;
-    const t = targetRect || { x: viewport.w * 0.5, y: viewport.h * 0.35, w: 40, h: 24, cx: viewport.w * 0.5 + 20, cy: viewport.h * 0.35 + 12 };
+    const t = targetRect || {
+      x: area.left + area.w * 0.5 - 20,
+      y: area.top + area.h * 0.35,
+      w: 40,
+      h: 24,
+      cx: area.left + area.w * 0.5,
+      cy: area.top + area.h * 0.35 + 12,
+    };
     const cx = t.cx ?? t.x + t.w / 2;
     const cy = t.cy ?? t.y + t.h / 2;
 
-    // Bulle flottante bas-droite réservée
-    const bubbleObstacle = { x: viewport.w - 96, y: viewport.h - 96, w: 84, h: 84 };
+    // Zone occupée par l'orbe en haut à droite de la frame
+    const orbObstacle = { x: area.right - 84, y: area.top + 20, w: 78, h: 78 };
 
     const candidates = [
       { side: "right", x: t.x + t.w + gap, y: cy - h / 2 },
@@ -312,48 +350,63 @@
 
     for (let idx = 0; idx < candidates.length; idx++) {
       const c = candidates[idx];
-      const clamped = clampBox({ x: c.x, y: c.y, w, h }, viewport, 12, safeTop, safeBottom);
+      const clamped = clampBox({ x: c.x, y: c.y, w, h }, area, margin, safeTop, safeBottom);
       const shiftPenalty = Math.hypot(clamped.x - c.x, clamped.y - c.y) * 4;
       const targetHit = overlapArea(clamped, t) * 40;
-      const bubbleHit = overlapArea(clamped, bubbleObstacle) * 30;
+      const orbHit = overlapArea(clamped, orbObstacle) * 28;
       let occupiedHit = 0;
       for (const o of occupied) occupiedHit += overlapArea(clamped, o) * 25;
       let obsHit = 0;
       for (const o of obstacles) obsHit += overlapArea(clamped, o) * 3.5;
 
-      const score = shiftPenalty + targetHit + bubbleHit + occupiedHit + obsHit + idx * 6;
+      const score = shiftPenalty + targetHit + orbHit + occupiedHit + obsHit + idx * 6;
       if (score < bestScore) {
         bestScore = score;
         best = { x: clamped.x, y: clamped.y, w, h, side: c.side, score };
       }
     }
 
-    return best || clampBox({ x: viewport.w - w - 20, y: 92, w, h }, viewport, 12, safeTop, safeBottom);
+    return best || clampBox({ x: area.right - w - margin, y: area.top + safeTop + 12, w, h }, area, margin, safeTop, safeBottom);
   }
 
   /**
    * Calcule la meilleure zone libre pour une carte pédagogique (`notebook`)
-   * en s'adaptant automatiquement aux layouts Web large, Mobile étroit, USSD ou GAB.
+   * strictement confinée dans la frame Web/Mobile/USSD si présente.
    */
   function findCardSpot(targetRect, cardSize, opts = {}) {
-    const viewport = opts.viewport || {
-      w: typeof window !== "undefined" ? window.innerWidth : 1280,
-      h: typeof window !== "undefined" ? window.innerHeight : 720,
-    };
-    const w = Math.min(cardSize.w, Math.max(240, viewport.w - 28));
+    const area = resolveArea(opts);
+    const margin = area.inFrame ? (area.isMobile ? 9 : 14) : 14;
+    const safeTop = opts.safeTop ?? (area.inFrame && area.isMobile ? 64 : 52);
+    const safeBottom = opts.safeBottom ?? (area.inFrame && area.isMobile ? 112 : 82);
+    const w = Math.min(cardSize.w, Math.max(200, area.w - margin * 2));
     const h = cardSize.h;
     const channel = opts.channel || "web";
 
-    // Sur viewport mobile étroit ou fenêtre USSD centrée : éviter de couper sur les côtés
-    if (viewport.w < 720 || channel === "mobile") {
-      const topHalf = targetRect && targetRect.y > viewport.h * 0.45;
-      const y = topHalf ? 64 : Math.max(64, viewport.h - h - 96);
-      return clampBox({ x: (viewport.w - w) / 2, y, w, h }, viewport, 14, 58, 90);
+    // Sur simulateur mobile étroit ou viewport étroit : centré dans la frame, jamais débordant sur les côtés !
+    if (area.isMobile || area.w < 540 || channel === "mobile") {
+      const midY = area.top + area.h * 0.48;
+      const topHalf = targetRect && targetRect.y > midY;
+      const y = topHalf
+        ? area.top + safeTop
+        : Math.max(area.top + safeTop, area.bottom - h - safeBottom);
+      return clampBox({ x: area.left + (area.w - w) / 2, y, w, h }, area, margin, safeTop, safeBottom);
     }
 
-    // Sur grand écran : privilégier les marges calmes à droite ou à gauche hors du formulaire
-    const outerRight = clampBox({ x: viewport.w - w - 18, y: targetRect ? targetRect.y - 40 : 88, w, h }, viewport, 12, 62, 94);
-    const outerLeft = clampBox({ x: 18, y: targetRect ? targetRect.y - 40 : 88, w, h }, viewport, 12, 62, 94);
+    // Sur grand écran / frame Web large : marges calmes à droite ou à gauche À L'INTÉRIEUR de la frame
+    const outerRight = clampBox(
+      { x: area.right - w - margin, y: targetRect ? targetRect.y - 36 : area.top + safeTop + 20, w, h },
+      area,
+      margin,
+      safeTop,
+      safeBottom
+    );
+    const outerLeft = clampBox(
+      { x: area.left + margin, y: targetRect ? targetRect.y - 36 : area.top + safeTop + 20, w, h },
+      area,
+      margin,
+      safeTop,
+      safeBottom
+    );
     const obs = opts.obstacles || [];
     const occ = opts.occupied || [];
     const scoreBox = (box) => {
@@ -365,16 +418,19 @@
     const rScore = scoreBox(outerRight);
     const lScore = scoreBox(outerLeft);
     if (rScore < 1200 || lScore < 1200) {
-      return rScore <= lScore ? Object.assign(outerRight, { side: "outer-right" }) : Object.assign(outerLeft, { side: "outer-left" });
+      return rScore <= lScore
+        ? Object.assign(outerRight, { side: "outer-right" })
+        : Object.assign(outerLeft, { side: "outer-left" });
     }
 
     return findBestSpot(targetRect, { w, h }, {
-      viewport,
-      gap: 24,
+      bounds: opts.bounds,
+      viewport: opts.viewport,
+      gap: 20,
       obstacles: obs,
       occupied: occ,
-      safeTop: 62,
-      safeBottom: 94,
+      safeTop,
+      safeBottom,
     });
   }
 
@@ -1308,12 +1364,78 @@
       return { x, y, size: orbSizePx, fb };
     }
 
+    function syncFrameAnchoredChrome() {
+      const fb = getFrameBounds();
+      if (statusPillEl) {
+        if (fb.inFrame) {
+          const cx = Math.round(fb.left + fb.width / 2);
+          const topY = Math.round(fb.top + (fb.isMobile ? 34 : 10));
+          const maxW = Math.round(Math.max(140, fb.width - (fb.isMobile ? 28 : 40)));
+          statusPillEl.style.left = `${cx}px`;
+          statusPillEl.style.top = `${topY}px`;
+          statusPillEl.style.maxWidth = `${maxW}px`;
+          statusPillEl.style.fontSize = fb.isMobile ? "11px" : "12px";
+          statusPillEl.style.padding = fb.isMobile ? "4px 11px" : "5px 14px";
+          statusPillEl.style.whiteSpace = "nowrap";
+          statusPillEl.style.overflow = "hidden";
+          statusPillEl.style.textOverflow = "ellipsis";
+        } else {
+          statusPillEl.style.left = "50%";
+          statusPillEl.style.top = "12px";
+          statusPillEl.style.maxWidth = "calc(100vw - 32px)";
+          statusPillEl.style.fontSize = "12.5px";
+          statusPillEl.style.padding = "5px 15px";
+        }
+      }
+      if (capLayer) {
+        if (fb.inFrame) {
+          const cx = Math.round(fb.left + fb.width / 2);
+          const maxW = Math.round(Math.max(196, fb.width - (fb.isMobile ? 18 : 36)));
+          const bottomPx = Math.max(8, Math.round(window.innerHeight - fb.bottom + (fb.isMobile ? 54 : 14)));
+          capLayer.style.left = `${cx}px`;
+          capLayer.style.bottom = `${bottomPx}px`;
+          capLayer.style.maxWidth = `${maxW}px`;
+          capLayer.style.width = fb.isMobile ? `${maxW}px` : "auto";
+          capLayer.style.boxSizing = "border-box";
+          capLayer.style.borderRadius = fb.isMobile ? "14px" : "18px";
+          capLayer.style.fontSize = fb.isMobile ? "12.5px" : "15px";
+          capLayer.style.padding = fb.isMobile ? "7px 12px" : "8px 18px";
+          capLayer.style.lineHeight = "1.32";
+        } else {
+          capLayer.style.left = "50%";
+          capLayer.style.bottom = "14px";
+          capLayer.style.width = "auto";
+          capLayer.style.maxWidth = "min(640px, calc(100vw - 80px))";
+          capLayer.style.boxSizing = "border-box";
+          capLayer.style.borderRadius = "18px";
+          capLayer.style.fontSize = "16.5px";
+          capLayer.style.padding = "8px 20px";
+          capLayer.style.lineHeight = "1.34";
+        }
+      }
+      const nb = document.getElementById("nkap-notebook");
+      if (nb && fb.inFrame) {
+        const margin = fb.isMobile ? 9 : 14;
+        const nbW = Math.min(nb.offsetWidth || 320, Math.max(200, fb.width - margin * 2));
+        const curL = parseFloat(nb.style.left) || fb.left + margin;
+        const curT = parseFloat(nb.style.top) || fb.top + 60;
+        const nbH = nb.offsetHeight || 180;
+        const minL = fb.left + margin;
+        const maxL = Math.max(minL, fb.right - nbW - margin);
+        const minT = fb.top + (fb.isMobile ? 62 : 46);
+        const maxT = Math.max(minT, fb.bottom - nbH - (fb.isMobile ? 108 : 74));
+        nb.style.maxWidth = `${Math.round(fb.width - margin * 2)}px`;
+        nb.style.left = `${Math.round(Math.max(minL, Math.min(maxL, curL)))}px`;
+        nb.style.top = `${Math.round(Math.max(minT, Math.min(maxT, curT)))}px`;
+      }
+    }
+
     function positionPanelUnderOrb() {
       if (!panelEl || !bubbleEl) return;
       const fb = getFrameBounds();
       const bRect = bubbleEl.getBoundingClientRect();
       const panelW = fb.inFrame
-        ? Math.min(346, Math.max(260, fb.width - 18))
+        ? Math.min(346, Math.max(210, fb.width - 16))
         : Math.min(352, window.innerWidth - 32);
       panelEl.style.width = `${panelW}px`;
 
@@ -1444,6 +1566,7 @@
         return;
       }
       const accent = mode === "listening" ? "#FF5C77" : "#F5B700";
+      syncFrameAnchoredChrome();
       statusPillEl.style.display = "inline-flex";
       statusPillEl.innerHTML = `
         <span style="width:7px;height:7px;border-radius:50%;background:${accent};box-shadow:0 0 10px ${accent};"></span>
@@ -1622,6 +1745,7 @@
     }
 
     function repositionAll() {
+      syncFrameAnchoredChrome();
       for (const [, m] of marks) {
         if (!m.anchorEl || !m.baseRect || !m.anchorEl.isConnected) continue;
         const cur = m.anchorEl.getBoundingClientRect();
@@ -1754,12 +1878,15 @@
         if (!label || (rules() && !rules().amountsPreserved(label))) return;
         ensureLayers();
         anchored(el, () => {
+          const fb = getFrameBounds();
           const r = rectOf(el);
           const col = resolveInk(color || "yellow", el);
-          const estW = Math.min(260, Math.max(90, label.length * 8.6 + 26));
+          const maxPillW = fb.inFrame ? Math.min(240, Math.max(120, fb.width - 24)) : 260;
+          const estW = Math.min(maxPillW, Math.max(90, label.length * 8.6 + 26));
           const estH = 34;
           const spot = layout().findBestSpot(r, { w: estW, h: estH }, {
-            gap: 28,
+            bounds: fb,
+            gap: fb.isMobile ? 16 : 28,
             obstacles: getObstaclesCb(),
             occupied: getOccupiedBoxes(),
           });
@@ -1767,7 +1894,7 @@
           const pill = document.createElement("div");
           pill.setAttribute("data-nkap", id);
           pill.style.cssText =
-            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;max-width:260px;` +
+            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;max-width:${maxPillW}px;` +
             `background:rgba(12,17,28,0.94);color:#F8FAFC;border:2px solid ${col};border-radius:999px;` +
             `padding:5px 14px;font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:13.5px;` +
             `box-shadow:0 10px 24px rgba(0,0,0,0.48);z-index:2147483647;pointer-events:none;` +
@@ -1794,11 +1921,20 @@
         ensureLayers();
         anchored(el, () => {
           enforceMarkBudget(id);
+          const fb = getFrameBounds();
           const r = rectOf(el);
           const col = resolveInk(color || "yellow", el);
-          const estW = label ? Math.min(180, 42 + label.length * 8) : 32;
-          const bx = Math.max(10, r.x - estW - 10);
-          const by = Math.max(46, r.cy - 14);
+          const estW = label ? Math.min(fb.isMobile ? 140 : 180, 40 + label.length * 7.8) : 32;
+          let bx = r.x - estW - 10;
+          if (bx < fb.left + 6) {
+            bx = r.x + r.w + 8;
+          }
+          if (bx + estW > fb.right - 6) {
+            bx = Math.max(fb.left + 6, Math.min(fb.right - estW - 6, r.x));
+          }
+          const minBy = fb.top + (fb.inFrame && fb.isMobile ? 38 : 10);
+          const maxBy = Math.max(minBy, fb.bottom - 38);
+          const by = Math.max(minBy, Math.min(maxBy, r.cy - 14));
 
           const wrap = document.createElement("div");
           wrap.setAttribute("data-nkap", id);
@@ -1895,9 +2031,10 @@
           }
 
           if (label) {
+            const fb = getFrameBounds();
             const chip = document.createElement("div");
             chip.textContent = label;
-            const placeTop = baseX < 140;
+            const placeTop = (baseX - fb.left) < 130;
             chip.style.cssText =
               (placeTop
                 ? "position:absolute;left:50%;top:-10px;transform:translate(-50%,-100%);"
@@ -1985,22 +2122,29 @@
         const renderCard = () => {
           enforceMarkBudget(id);
           const timers = [];
-          const width = Math.min(config.width || 400, Math.max(250, window.innerWidth - 28));
+          const fb = getFrameBounds();
+          const nbMargin = fb.inFrame ? (fb.isMobile ? 18 : 28) : 28;
+          const availW = fb.inFrame ? fb.width : window.innerWidth;
+          const width = Math.min(config.width || 380, Math.max(200, availW - nbMargin));
           const targetRect = pageAnchor ? rectOf(pageAnchor) : null;
-          const spot = layout().findCardSpot(targetRect, { w: width, h: 240 }, {
-            channel: getChannelCb(),
+          const spot = layout().findCardSpot(targetRect, { w: width, h: fb.isMobile ? 200 : 240 }, {
+            bounds: fb,
+            channel: fb.isMobile ? "mobile" : getChannelCb(),
             obstacles: getObstaclesCb(),
             occupied: getOccupiedBoxes(),
+            safeTop: fb.inFrame && fb.isMobile ? 64 : 52,
+            safeBottom: fb.inFrame && fb.isMobile ? 112 : 82,
           });
 
           const card = document.createElement("div");
           card.id = "nkap-notebook";
           card.setAttribute("data-nkap", id);
           card.setAttribute("data-nkap-mode", mode);
+          const nbPad = fb.isMobile ? "15px 15px 14px 15px" : "22px 22px 20px 22px";
           card.style.cssText =
-            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;width:${spot.w}px;` +
-            `background:rgba(12,17,28,0.90);backdrop-filter:blur(12px);color:#F8FAFC;border-radius:16px;` +
-            `padding:22px 22px 20px 22px;box-sizing:border-box;font-family:'Andika',system-ui,sans-serif;` +
+            `position:fixed;left:${spot.x.toFixed(1)}px;top:${spot.y.toFixed(1)}px;width:${spot.w}px;max-width:${Math.round(availW - nbMargin)}px;` +
+            `background:rgba(12,17,28,0.92);backdrop-filter:blur(12px);color:#F8FAFC;border-radius:16px;` +
+            `padding:${nbPad};box-sizing:border-box;font-family:'Andika',system-ui,sans-serif;` +
             `box-shadow:0 22px 50px rgba(0,0,0,0.62);z-index:2147483646;pointer-events:auto;` +
             `animation:nkapPopIn 0.16s ease-out both;`;
 
@@ -2218,9 +2362,11 @@
           return;
         }
 
-        // Sous-titres courts qui défilent phrase par phrase (1 à 2 lignes max, façon HeyClicky !)
+        // Sous-titres courts qui défilent phrase par phrase (1 à 2 lignes max, confinés dans la frame Web/Mobile !)
+        syncFrameAnchoredChrome();
+        const fbCap = getFrameBounds();
         const clean = String(text).replace(/\s+/g, " ").trim();
-        const maxChars = 76;
+        const maxChars = fbCap.isMobile ? 52 : (fbCap.inFrame ? 70 : 76);
         const chunks = [];
         for (const sent of clean.split(/(?<=[.!?;])\s+/)) {
           if (sent.length <= maxChars) {
@@ -2575,6 +2721,7 @@
 
         // Maintient l'orbe dans la frame web/mobile après chargement asynchrone ou redimensionnement
         const syncOrb = () => {
+          syncFrameAnchoredChrome();
           if (!bubbleEl || !bubbleEl.isConnected || isDraggingOrb) return;
           if (orbFloatingTarget && orbFloatingTarget.isConnected) {
             floatOrbNear(orbFloatingTarget);
@@ -2592,6 +2739,7 @@
             orbSyncTimer = null;
             return;
           }
+          syncFrameAnchoredChrome();
           if (!orbFloatingTarget && !isDraggingOrb) {
             const h = getOrbHomePosition();
             const curL = parseFloat(bubbleEl.style.left) || 0;

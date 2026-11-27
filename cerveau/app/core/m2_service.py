@@ -969,14 +969,29 @@ class M2Service:
         # "ton" devant nom féminin courant -> "ta"
         out = re.sub(r"\bTon (information|application|opération|carte|case|référence|sécurité|attention|banque)\b", r"Ta \1", out)
         out = re.sub(r"\bton (information|application|opération|carte|case|référence|sécurité|attention|banque)\b", r"ta \1", out)
-        # Empêche le LLM de parler à la 1re personne pour les données bancaires de l'utilisateur ("Mes dernières transactions", "Mon solde")
-        user_assets = r"(dernières?\s+transactions?|transactions?|opérations?|paiements?|transferts?|soldes?|comptes?|frais|bénéficiaires?|numéros?)"
+        # Empêche le LLM de parler à la 1re personne pour les données bancaires de l'utilisateur ("Mes contacts", "Mon solde")
+        # tout en préservant les libellés d'interface cités entre guillemets (« Mes opérations », « Mes bénéficiaires »)
+        quoted_ui: list[str] = []
+
+        def _stash_ui(m: re.Match[str]) -> str:
+            quoted_ui.append(m.group(0))
+            return f"__NKAP_UI{len(quoted_ui) - 1}__"
+
+        out = re.sub(r"«[^»]+»|\"[^\"]+\"", _stash_ui, out)
+        user_assets = (
+            r"(dernières?\s+transactions?|dernières?\s+opérations?|transactions?|opérations?|paiements?|"
+            r"transferts?|soldes?|comptes?|frais|bénéficiaires?|beneficiaires?|numéros?|numeros?|"
+            r"contacts?|historiques?|factures?|coffres?|crédits?|credits?|plafonds?|reçus?|recus?|"
+            r"retraits?|dépôts?|depots?|montants?|données?|donnees?|informations?|raccourcis?|argent|code|qr)"
+        )
         out = re.sub(rf"\bMes\s+{user_assets}\b", r"Tes \1", out)
         out = re.sub(rf"\bmes\s+{user_assets}\b", r"tes \1", out)
         out = re.sub(rf"\bMon\s+{user_assets}\b", r"Ton \1", out)
         out = re.sub(rf"\bmon\s+{user_assets}\b", r"ton \1", out)
-        out = re.sub(rf"\bMa\s+(dernière\s+transaction|transaction|dernière\s+opération|liste)\b", r"Ta \1", out)
-        out = re.sub(rf"\bma\s+(dernière\s+transaction|transaction|dernière\s+opération|liste)\b", r"ta \1", out)
+        out = re.sub(r"\bMa\s+(dernière\s+transaction|transaction|dernière\s+opération|facture|banque|liste|carte|limite|référence)\b", r"Ta \1", out)
+        out = re.sub(r"\bma\s+(dernière\s+transaction|transaction|dernière\s+opération|facture|banque|liste|carte|limite|référence)\b", r"ta \1", out)
+        for idx, orig in enumerate(quoted_ui):
+            out = out.replace(f"__NKAP_UI{idx}__", orig)
         # Corrections fréquentes de genre du modèle 1.5B
         out = re.sub(r"\bunes?\s+retransfert\b", "un transfert", out, flags=re.IGNORECASE)
         out = re.sub(r"\bun\s+retransfert\b", "un transfert", out, flags=re.IGNORECASE)
@@ -1578,7 +1593,7 @@ class M2Service:
             + pb_line
             + "Écran:\n"
             + ("\n".join(prompt_lines) if prompt_lines else "(vide)")
-            + "\nRègles: tutoiement (« tu/ton/ta »), phrases courtes et COMPLÈTES, valeurs EXACTES de l'écran uniquement (jamais d'invention). "
+            + "\nRègles: parle à l'utilisateur en le tutoyant (« tu / ton / ta / tes » ; ne dis JAMAIS « mon solde », « mes contacts » ou « mon compte », dis toujours « ton solde », « tes contacts », « ton compte »), phrases courtes et COMPLÈTES, valeurs EXACTES de l'écran uniquement (jamais d'invention). "
             "« Mon solde » = Solde disponible (avant opération), PAS « Solde après opération ». "
             "Si info absente/hors-sujet -> {\"out_of_scope\":true,\"spoken\":\"Je suis incapable de répondre à cette demande : je n'ai pas assez d'informations sur cet écran. Veuillez contacter le support.\",\"targets\":[]}. "
             "Sinon réponds en JSON compact sur 1 ligne avec les clés spoken, title, rows, targets "
@@ -2112,10 +2127,37 @@ class M2Service:
                 return False
         return True
 
+    @staticmethod
+    def _enforce_second_person_fr(text: str) -> str:
+        """Corrige les échos de 1re personne du petit LLM (« Mes contacts » → « Tes contacts », « Mon solde » → « Ton solde »)."""
+        if not text:
+            return text
+        # Protège les libellés d'UI cités entre guillemets (« Mes bénéficiaires », « Mes opérations »)
+        protected: list[str] = []
+
+        def _stash(m: re.Match[str]) -> str:
+            protected.append(m.group(0))
+            return f"__NKAP_Q{len(protected) - 1}__"
+
+        out = re.sub(r"«[^»]+»|\"[^\"]+\"", _stash, text)
+        replacements = [
+            (r"\b(M|m)es\s+(contacts|bénéficiaires|beneficiaires|opérations|operations|transactions|transferts|factures|frais|plafonds|données|donnees|informations|raccourcis)\b", r"\1es_TMP \2"),
+            (r"\b(M|m)on\s+(solde|compte|historique|numéro|numero|argent|transfert|crédit|credit|coffre|plafond|code|qr|bénéficiaire|beneficiaire|reçu|recu|paiement|retrait|dépôt|depot|montant)\b", r"\1on_TMP \2"),
+            (r"\b(M|m)a\s+(dernière|derniere|transaction|facture|banque|liste|carte|limite|référence|reference)\b", r"\1a_TMP \2"),
+        ]
+        for pat, rep in replacements:
+            out = re.sub(pat, rep, out)
+        out = out.replace("Mes_TMP", "Tes").replace("mes_TMP", "tes")
+        out = out.replace("Mon_TMP", "Ton").replace("mon_TMP", "ton")
+        out = out.replace("Ma_TMP", "Ta").replace("ma_TMP", "ta")
+        for idx, orig in enumerate(protected):
+            out = out.replace(f"__NKAP_Q{idx}__", orig)
+        return out
+
     def _build_out_of_scope_actions(
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
-        """Réponse sûre et concise lorsque la demande sort du contexte de l'écran."""
+        """Réponse sûre et concise (voix + sous-titre, sans tableau encombrant) lorsque la demande sort du périmètre."""
         lang = transcript.lang or "fr"
         sb = _StreamBuilder(transcript, transcript.ts or 0)
         refusal_spoken = (
@@ -2123,23 +2165,6 @@ class M2Service:
             "Veuillez contacter le support."
         )
         sb.speak("out_of_scope", refusal_spoken, lang, 0)
-        sb.notebook(
-            "nb-guide",
-            "Hors contexte",
-            [
-                NotebookLine(id="nb-l1", text="• Information absente de cet écran", color="yellow"),
-                NotebookLine(divider=True),
-                NotebookLine(
-                    id="nb-l-act",
-                    text="→ Veuillez contacter le support",
-                    color="yellow",
-                    bold=True,
-                    underline=True,
-                ),
-            ],
-            anchor_id=None,
-            run_after_ms=0,
-        )
         sb.clear(6200)
         return sb.actions
 
@@ -2187,7 +2212,7 @@ class M2Service:
         q_norm = self._norm(transcript.text)
 
         spoken = self._safe_text_for_harness(
-            raw_spoken,
+            self._enforce_second_person_fr(raw_spoken),
             screen_context,
             kb_terms,
             fallback="Voici ce qui est affiché sur ton écran actuel.",

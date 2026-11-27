@@ -2,7 +2,7 @@
   "app_id": "safinum-sandbox",
   "name": "Banque Démo SAFINUM (Web & Mobile)",
   "match_packages": ["cm.nkapmobile.engine"],
-  "match_urls": ["safinum.cm/sandbox", "banque-demo.sandbox", "safinum.cm/hackathon-test"],
+  "match_urls": ["safinum.cm/sandbox", "banque-demo.sandbox"],
   "match_text_cues": ["banque demo", "banque-demo.sandbox", "lomo moni", "loma moni", "mbembe kiri", "mbole"],
   "ui_translations": {
     "nda": "Accueil",
@@ -374,6 +374,68 @@
         {"match": ["recus", "bi bi", "ma-poy", "incoming"], "style": "num", "step": 1, "label": "Reçus", "color": "yellow"},
         {"match": ["envoyes", "bi lom", "ma-ala", "outgoing"], "style": "num", "step": 2, "label": "Envoyés", "color": "yellow"}
       ]
+    },
+    {
+      "id": "sbx_nav_to_history",
+      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review", "receipt"],
+      "triggers": [
+        "dernieres operations", "mes operations", "historique", "dernieres transactions",
+        "mes transactions", "derniere operation", "derniere transaction", "voir mes operations"
+      ],
+      "spoken": "Tes dernières opérations ne sont pas affichées sur cet écran : appuie sur l'onglet Historique (ou reviens à l'Accueil) pour consulter toutes tes transactions.",
+      "target_match": ["historique", "itang", "bebolo", "history"],
+      "style": "frame",
+      "label": "Historique",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_nav_to_balance",
+      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "history"],
+      "triggers": [
+        "mon solde", "quel est mon solde", "c'est quoi mon solde", "cest quoi mon solde",
+        "combien j'ai", "combien jai", "solde disponible", "combien il me reste"
+      ],
+      "spoken": "Ton solde disponible s'affiche sur l'écran d'Accueil : appuie sur Accueil (ou sur la flèche retour en haut) pour le consulter.",
+      "target_match": ["accueil", "nda", "mboa", "home"],
+      "style": "frame",
+      "label": "Accueil",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_nav_to_pay",
+      "screens": ["transfer", "beneficiary", "history"],
+      "triggers": ["payer une facture", "acheter du credit", "facture eneo", "camwater", "canal", "camtel", "recharger mon numero"],
+      "spoken": "Pour payer une facture ou acheter du crédit téléphonique, appuie sur l'onglet Payer dans la barre de navigation.",
+      "target_match": ["payer", "yaan", "sawedi", "pay"],
+      "style": "frame",
+      "label": "Payer",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_nav_to_transfer",
+      "screens": ["pay", "pay_bill", "pay_airtime", "history"],
+      "triggers": ["envoyer de l'argent", "faire un transfert", "je veux envoyer", "comment envoyer"],
+      "spoken": "Pour envoyer de l'argent à un bénéficiaire, appuie sur l'onglet Envoyer / Transfert dans la barre de navigation.",
+      "target_match": ["envoyer", "transfert", "lomo", "loma", "send"],
+      "style": "frame",
+      "label": "Transfert",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_fee_schedule_general",
+      "screens": ["home", "transfer", "beneficiary", "pay", "pay_bill", "pay_airtime"],
+      "triggers": ["grille de frais", "grille tarifaire", "combien coutent les frais", "tarifs de transfert", "est-ce gratuit", "est ce gratuit"],
+      "spoken": "Sur cette banque démo, la recharge de crédit téléphone est sans frais, le paiement de facture a un tarif fixe, et les transferts suivent des paliers selon le montant. Le montant exact des frais s'affiche toujours sur l'écran de récapitulatif avant que tu confirmes.",
+      "target_match": [],
+      "style": "none"
+    },
+    {
+      "id": "sbx_pending_safety",
+      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review"],
+      "triggers": ["debite tout de suite", "est-ce deja parti", "est ce deja parti", "si j'appuie sur continuer", "si jappuie sur continuer"],
+      "spoken": "Rassure-toi : appuyer sur Continuer ouvre seulement un récapitulatif et ne débite rien. Ton argent ne part que lorsque tu appuies sur Confirmer sur l'écran suivant.",
+      "target_match": [],
+      "style": "none"
     },
     {
       "id": "sbx_listen_btn",

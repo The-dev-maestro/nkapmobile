@@ -13,13 +13,20 @@ Chaque application prise en charge dispose d'une fiche déclarative `cerveau/m5_
 - **`screen_detectors`** : détection déterministe de l'écran exact (`home`, `send_money`, `send_new_number`, `send_amount`, `bills`, `vault`, `more`, `settings`, `card_qr` sur Wave ; `home`, `transfer`, `pay_bill`, `pay_airtime`, `review`, `receipt`, `history` sur SAFINUM) via l'`activity` Android, l'URL et les indices textuels avec clauses d'exclusion (`not_text_any`).
 - **Protection anti-en-tête (`_is_non_clickable_header`)** : en mode bouton (`style="frame"`), le harnais refuse d'encadrer les balises `<h1>`/`<h2>` et les titres d'en-tête Android non cliquables situés dans la barre supérieure à droite de `←`, et interdit qu'un mot court (`"send"`) matche un titre composé (`"send money"`).
 - **`screen_guides`** : réponse guidée immédiate quand l'utilisateur demande *« Je dois faire quoi ici ? »*, *« Explique-moi cet écran »*, *« Où appuyer ? »*, *« Je suis perdu »* + résumé `llm_summary` injecté dans le prompt LLM pour les questions ouvertes.
-- **`qa_shortcuts`** : raccourcis **scopés par écran (`screens: [...]`)** avec support multi-repères (`highlights: [...]` jusqu'à 3 marques simultanées) — un raccourci d'accueil ne se déclenche jamais sur un sous-écran.
+- **`qa_shortcuts`** : raccourcis **scopés par écran (`screens: [...]`)** avec support multi-repères (`highlights: [...]` jusqu'à 3 marques simultanées) + **guidage inter-écrans** (si l'utilisateur demande son solde ou ses dernières opérations depuis `/transfer` ou `Send Money`, Nkap ne répond jamais *« Hors contexte »* mais lui indique l'onglet ou la flèche retour où consulter l'information).
+- **Normalisation 2e personne (`_enforce_second_person_fr`)** : corrige automatiquement tout écho du petit LLM à la 1re personne (*« Mes contacts »* → *« Tes contacts »*, *« Mon solde »* → *« Ton solde »*) tout en préservant les libellés d'interface cités entre guillemets (`« Mes bénéficiaires »`).
 
 ---
 
-## 2. Environnement de test SAFINUM (`banque-demo.sandbox` — Web & Mobile)
+## 2. Environnement de test SAFINUM (`banque-demo.sandbox` — Web, Mobile & USSD)
 
-Fiche : `cerveau/m5_kb/safinum-sandbox/playbook.json` (calibrée sur les 90 clés officielles FR / EN / Ewondo / Duálá de `cerveau/app/sandbox/translations/{ewo,dua,en}.json`).
+Fiche : `cerveau/m5_kb/safinum-sandbox/playbook.json` (calibrée sur la documentation officielle `https://safinum.cm/sandbox/docs` et les 90 clés FR / EN / Ewondo / Duálá de `cerveau/app/sandbox/translations/{ewo,dua,en}.json`).
+
+Règles métier officielles du bac à sable SAFINUM :
+- **Grille de frais** : Transfert & Retrait (`1–5 000` → `50 FCFA`, `5 001–25 000` → `150 FCFA`, `25 001–100 000` → `400 FCFA`, `> 100 000` → `1 %`) · Crédit téléphone (`0 FCFA`) · Factures (`100 FCFA` fixe) · Plafond : `500 000 FCFA` / opération.
+- **Sécurité transactionnelle** : `POST /transactions` crée une opération `pending` sans rien débiter ; seul `Confirmer` sur `/review` exécute le débit.
+- **Facturiers & opérateurs** : `ENEO`, `CAMWATER`, `CANAL`, `CAMTEL` · opérateurs `MTN`, `ORANGE`, `CAMTEL` (détection automatique au préfixe).
+- **Guidage inter-écrans** : demander son solde depuis `/transfer`, `/pay` ou `/history` renvoie vers l'onglet `Accueil` ; demander ses dernières opérations depuis `/transfer`, `/pay`, `/review` ou `/receipt` renvoie vers l'onglet `Historique` (jamais *« Hors contexte »*).
 
 | Écran | Contenu réel (FR · Ewondo · Duálá) | Questions débutant typiques | Comportement Nkap |
 |---|---|---|---|
