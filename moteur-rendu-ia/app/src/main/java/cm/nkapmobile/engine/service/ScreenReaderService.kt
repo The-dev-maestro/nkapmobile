@@ -2,75 +2,63 @@ package cm.nkapmobile.engine.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import cm.nkapmobile.engine.Engine
-import cm.nkapmobile.engine.core.ScreenContext
-import cm.nkapmobile.engine.core.ScreenNode
-import cm.nkapmobile.engine.overlay.AssistantBubble
-import cm.nkapmobile.engine.overlay.CaptionLayer
-import cm.nkapmobile.engine.overlay.OverlaySurface
-import cm.nkapmobile.engine.demo.DemoDirector
-import cm.nkapmobile.engine.session.WsSession
+import cm.nkapmobile.sdk.NkapConfig
+import cm.nkapmobile.sdk.NkapSDK
+import cm.nkapmobile.sdk.NkapSession
+import cm.nkapmobile.sdk.context.ViewTreeScanner
+import cm.nkapmobile.sdk.core.ScreenContext
+import cm.nkapmobile.sdk.core.ScreenNode
 
 /**
- * M4 + M1 : lit l'arbre d'écran (sans les champs de saisie), produit le
- * ScreenContext (I5) et héberge les deux couches d'overlay du moteur (I4).
- *
- * Sécurité (contrat §2) : aucun champ password/EditText n'est jamais dumpé.
+ * Mode Universel (AccessibilityService) propulsé par le même module `:nkap-sdk-android` :
+ * fonctionne par-dessus N'IMPORTE QUELLE application Android (Wave, Orange Money, MTN MoMo, Chrome)
+ * sans modifier le code de l'app cible, avec filtre strict anti-PIN/EditText (règle d'or #3).
  */
 class ScreenReaderService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private var surface: OverlaySurface? = null
-    private var caption: CaptionLayer? = null
-    private var bubble: AssistantBubble? = null
     private var wm: WindowManager? = null
-    private val demoDirector = DemoDirector(this) { snapshot() }
-    private var wsSession: WsSession? = null
+    private var session: NkapSession? = null
+    private var orbLp: WindowManager.LayoutParams? = null
+    private var drawerLp: WindowManager.LayoutParams? = null
+    private var lastContext: ScreenContext? = null
 
-    private val dumpRunnable = object : Runnable {
-        override fun run() {
-            snapshot()
-            handler.postDelayed(this, 2500)
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    fun snapshot(): ScreenContext {
+        val root = rootInActiveWindow
+        if (root == null) {
+            return lastContext ?: ScreenContext(packageName, "Écran", "home", "mobile", emptyList())
         }
-    }
-
-    // ---- M4 : extraction du ScreenContext ---------------------------------
-
-    fun snapshot(): ScreenContext? {
-        val root = rootInActiveWindow ?: return Engine.context
         val pkg = root.packageName?.toString() ?: "?"
-        // NB : notre propre écran démo EST une cible légitime (mode offline).
-        // Les overlays du moteur ne font pas partie de rootInActiveWindow.
-
-        val nodes = ArrayList<ScreenNode>(24)
-        walk(root, "root", 0, nodes, pkg)
+        val nodes = ArrayList<ScreenNode>(40)
+        walk(root, "root", 0, nodes)
         root.recycle()
 
-        val ctx = ScreenContext(appPackage = pkg, screenHint = guessScreenHint(nodes), nodes = nodes)
-        Engine.updateContext(ctx)
-        wsSession?.sendContext(ctx)
+        val ctx = ScreenContext(
+            appPackage = pkg,
+            title = pkg.substringAfterLast('.'),
+            screenHint = ViewTreeScanner.guessScreenHint(nodes),
+            channel = "mobile",
+            nodes = nodes,
+        )
+        lastContext = ctx
         return ctx
     }
 
-    private fun guessScreenHint(nodes: List<ScreenNode>): String = when {
-        nodes.any { it.text.contains("solde", true) } -> "home"
-        nodes.any { it.text.contains("frais", true) } -> "fees"
-        nodes.any { it.text.contains("transfert", true) || it.text.contains("envoyer", true) } -> "transfer"
-        else -> "unknown"
-    }
-
-    private fun walk(node: AccessibilityNodeInfo, path: String, depth: Int, out: ArrayList<ScreenNode>, pkg: String) {
-        if (depth > 30 || out.size >= 40) return
-
+    private fun walk(node: AccessibilityNodeInfo, path: String, depth: Int, out: ArrayList<ScreenNode>) {
+        if (depth > 30 || out.size >= 60) return
         val sensitive = node.isPassword || node.className?.toString()?.contains("EditText") == true
         val text = node.text?.toString()?.trim().orEmpty()
         val desc = node.contentDescription?.toString()?.trim().orEmpty()
@@ -79,90 +67,27 @@ class ScreenReaderService : AccessibilityService() {
         if (label.isNotEmpty() && !sensitive) {
             val r = Rect()
             node.getBoundsInScreen(r)
-            if (r.width() > 20 && r.height() > 12 && !r.isEmpty) {
+            if (r.width() > 16 && r.height() > 10 && !r.isEmpty) {
                 out.add(
                     ScreenNode(
                         nodeId = "n_%02d".format(out.size + 1),
-                        path = path,
-                        cls = node.className?.toString()?.substringAfterLast('.') ?: "?",
-                        text = label.take(90),
-                        bounds = listOf(r.left, r.top, r.right, r.bottom),
+                        tag = if (node.isClickable) "button" else "span",
+                        text = label.replace(Regex("\\s+"), " ").take(120),
+                        bounds = intArrayOf(r.left, r.top, r.right, r.bottom),
                         clickable = node.isClickable,
-                        sensitive = false,
+                        tone = "unknown",
+                        path = path,
                     )
                 )
             }
         }
-
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             val seg = node.className?.toString()?.substringAfterLast('.') ?: "n"
-            walk(child, "$path/$seg[$i]", depth + 1, out, pkg)
+            walk(child, "$path/$seg[$i]", depth + 1, out)
             child.recycle()
         }
     }
-
-    // ---- M1 : couches overlay ----------------------------------------------
-
-    private fun addOverlayLayer(flags: Int, view: android.view.View) {
-        val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            flags,
-            PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.TOP or Gravity.START }
-        wm?.addView(view, lp)
-    }
-
-    private fun ensureOverlays() {
-        if (surface != null) return
-        wm = getSystemService(WINDOW_SERVICE) as WindowManager
-
-        val marks = OverlaySurface(this)
-        addOverlayLayer(
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            marks
-        )
-        surface = marks
-        Engine.renderer = marks
-        Engine.initTts(this)
-
-        val cap = CaptionLayer(this)
-        addOverlayLayer(
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            cap
-        )
-        caption = cap
-        surface?.captionLayer = cap
-
-        val bubble = AssistantBubble(this) { onBubblePress() }
-        // La bulle est la SEULE couche tactile : petite, en bas à droite,
-        // au-dessus de la barre de navigation — le reste de l'écran reste manipulable.
-        val blp = WindowManager.LayoutParams(
-            140, 140,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.BOTTOM or Gravity.END; x = 36; y = 180 }
-        wm?.addView(bubble, blp)
-        this.bubble = bubble
-    }
-
-    /** Comportement de la bulle : démo offline = tour suivant ; serveur = push-to-talk. */
-    private fun onBubblePress() {
-        when (Engine.mode) {
-            Engine.Mode.OFFLINE_DEMO -> demoDirector.next()
-            Engine.Mode.SERVER -> wsSession?.toggleRecording()
-        }
-    }
-
-    // ---- cycle de vie --------------------------------------------------------
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -170,30 +95,104 @@ class ScreenReaderService : AccessibilityService() {
             flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
-        ensureOverlays()
-        handler.postDelayed(dumpRunnable, 600)
-        if (Engine.mode == Engine.Mode.SERVER) wsSession = WsSession(this).also { it.connect() }
-        android.util.Log.i("nkapengine", "service connecté (mode=${Engine.mode})")
+
+        val brainUrl = getSharedPreferences("nkap_sdk", Context.MODE_PRIVATE)
+            .getString("brain_url", NkapSDK.DEFAULT_BRAIN_URL) ?: NkapSDK.DEFAULT_BRAIN_URL
+
+        val s = NkapSession(
+            context = this,
+            config = NkapConfig(brainUrl = brainUrl),
+            contextProvider = { snapshot() },
+        )
+        session = s
+
+        // 1. Couche dessin (non-tactile)
+        val overlayLp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.TOP or Gravity.START }
+        wm?.addView(s.overlayView, overlayLp)
+
+        // 2. Orbe neuronal Jarvis (tactile + glisser-déposer manuel)
+        val dm = resources.displayMetrics
+        val orbSz = dp(74)
+        val oLp = WindowManager.LayoutParams(
+            orbSz,
+            orbSz + dp(10),
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = (dm.widthPixels - orbSz - dp(12)).coerceAtLeast(dp(8))
+            y = dp(90)
+        }
+        orbLp = oLp
+        wm?.addView(s.orbView, oLp)
+
+        // 3. Tiroir de chat Jarvis (ajouté masqué, devient focusable à l'ouverture pour le clavier)
+        val drawerW = (dm.widthPixels - dp(24)).coerceAtMost(dp(344))
+        val dLp = WindowManager.LayoutParams(
+            drawerW,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = (dm.widthPixels - drawerW) / 2
+            y = oLp.y + orbSz + dp(8)
+        }
+        drawerLp = dLp
+        s.drawerView.visibility = View.GONE
+        wm?.addView(s.drawerView, dLp)
+
+        s.onOrbDraggedExternal = { dx, dy ->
+            val maxX = (dm.widthPixels - orbSz - dp(6)).coerceAtLeast(dp(6))
+            val maxY = (dm.heightPixels - orbSz - dp(24)).coerceAtLeast(dp(40))
+            oLp.x = (oLp.x + dx.toInt()).coerceIn(dp(6), maxX)
+            oLp.y = (oLp.y + dy.toInt()).coerceIn(dp(40), maxY)
+            runCatching { wm?.updateViewLayout(s.orbView, oLp) }
+        }
+        s.onDrawerToggledExternal = { visible ->
+            dLp.flags = if (visible) {
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            } else {
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            }
+            dLp.x = (oLp.x + orbSz - drawerW).coerceIn(dp(10), (dm.widthPixels - drawerW - dp(10)).coerceAtLeast(dp(10)))
+            dLp.y = if (oLp.y + orbSz + dp(280) > dm.heightPixels) {
+                (oLp.y - dp(310)).coerceAtLeast(dp(40))
+            } else {
+                oLp.y + orbSz + dp(8)
+            }
+            runCatching { wm?.updateViewLayout(s.drawerView, dLp) }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            handler.postDelayed({ snapshot() }, 150)
+            handler.postDelayed({ snapshot() }, 180)
         }
     }
 
     override fun onInterrupt() {}
 
     override fun onUnbind(intent: Intent?): Boolean {
-        handler.removeCallbacks(dumpRunnable)
-        surface?.let { runCatching { wm?.removeView(it) } }
-        caption?.let { runCatching { wm?.removeView(it) } }
-        bubble?.let { runCatching { wm?.removeView(it) } }
-        surface = null; caption = null; bubble = null
-        Engine.renderer = null
-        Engine.shutdownTts()
-        wsSession?.close()
-        wsSession = null
+        session?.let { s ->
+            runCatching { wm?.removeView(s.overlayView) }
+            runCatching { wm?.removeView(s.orbView) }
+            runCatching { wm?.removeView(s.drawerView) }
+            s.destroy()
+        }
+        session = null
         return super.onUnbind(intent)
     }
 }

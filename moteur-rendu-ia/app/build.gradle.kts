@@ -11,8 +11,8 @@ android {
         applicationId = "cm.nkapmobile.engine"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.2.0"
     }
 
     compileOptions {
@@ -24,7 +24,7 @@ android {
 }
 
 dependencies {
-    // WebSocket du contrat (§1 docs/02) — déclarée au jury (règlement §9)
+    implementation(project(":nkap-sdk-android"))
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation("junit:junit:4.13.2")
 }
