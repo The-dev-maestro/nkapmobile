@@ -912,6 +912,16 @@ window.NKAP_ASSISTANT = (() => {
   function requestBrainAnswer(payload) {
     const base = String(brainUrl || "").trim().replace(/\/+$/, "");
     if (!base) return Promise.reject(new Error("no_brain_url"));
+    const directFetch = () =>
+      fetch(base + "/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      });
+
     if (hasChrome && chrome.runtime && chrome.runtime.sendMessage) {
       return new Promise((resolve, reject) => {
         try {
@@ -919,6 +929,10 @@ window.NKAP_ASSISTANT = (() => {
             { type: "nkap_brain_answer", url: base, payload },
             (resp) => {
               if (chrome.runtime.lastError) {
+                if (base.startsWith("https://")) {
+                  directFetch().then(resolve, reject);
+                  return;
+                }
                 reject(new Error(chrome.runtime.lastError.message));
                 return;
               }
@@ -930,18 +944,15 @@ window.NKAP_ASSISTANT = (() => {
             }
           );
         } catch (err) {
+          if (base.startsWith("https://")) {
+            directFetch().then(resolve, reject);
+            return;
+          }
           reject(err);
         }
       });
     }
-    return fetch(base + "/answer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    });
+    return directFetch();
   }
 
   /**
@@ -1017,6 +1028,13 @@ window.NKAP_ASSISTANT = (() => {
         .catch((err) => {
           console.warn("[nkap] Repli local (serveur M2 indisponible) :", err);
           if (O().setStatusPill) O().setStatusPill(null);
+          const inSandbox =
+            typeof window.NKAP_IS_SAFINUM_SANDBOX === "function" &&
+            window.NKAP_IS_SAFINUM_SANDBOX();
+          if (inSandbox) {
+            O().caption("Le serveur Nkap n'a pas pu répondre. Vérifie ta connexion et réessaie.", null);
+            return;
+          }
           const fallbackId = fallbackScenarioId || matchQuestionToScenario(q, state);
           if (fallbackId) playParcours(fallbackId);
         });

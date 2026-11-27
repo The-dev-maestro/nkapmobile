@@ -915,7 +915,7 @@
     let textNodeCount = 0;
     let interactiveCount = 0;
     for (const el of (scanRoot || document.body).querySelectorAll("*")) {
-      if (nodes.length >= 240) break;
+      if (nodes.length >= 200) break;
       if (!isMainTarget(el)) continue;
       const tag = el.tagName.toLowerCase();
       if (tag === "textarea" || el.isContentEditable) continue;
@@ -926,10 +926,10 @@
         tag === "button" || tag === "a" || el.getAttribute("role") === "button";
       const atom = isTextAtom(el);
       if (!isInputOrSelect && !atom && !clickable) continue;
-      // Garantit que les boutons / onglets de navigation en bas de page ne sont jamais coupés par une longue liste d'historique
+      // Contrat I5-web : <= 200 nœuds stricts (140 textes + 60 boutons/champs garantis, donc la barre de nav basse n'est jamais coupée)
       if (!clickable && !isInputOrSelect) {
-        if (textNodeCount >= 160) continue;
-      } else if (interactiveCount >= 80) {
+        if (textNodeCount >= 140) continue;
+      } else if (interactiveCount >= 60) {
         continue;
       }
       // Dans le simulateur, évite de dupliquer le <button> et son <span> enfant identique
