@@ -2257,7 +2257,7 @@
         bubbleEl = document.createElement("div");
         bubbleEl.id = "nkap-bubble";
         bubbleEl.setAttribute("data-state", orbState);
-        bubbleEl.title = "Clique, glisse ou dis « Hey Nkap »";
+        bubbleEl.title = "Clique pour discuter · Glisse pour déplacer";
         const ORB_TRANSITION_SMOOTH =
           "left 0.65s cubic-bezier(0.22,1,0.36,1),top 0.65s cubic-bezier(0.22,1,0.36,1),transform 0.18s cubic-bezier(0.22,1,0.36,1),filter 0.25s ease";
         const ORB_TRANSITION_DRAG = "transform 0.12s ease,filter 0.25s ease";

@@ -918,7 +918,6 @@
           else translateVisible();
         }
         if (msg.brainUrl !== undefined) window.NKAP_ASSISTANT?.setBrainUrl(msg.brainUrl);
-        if (msg.wakeWordOn !== undefined) window.NKAP_ASSISTANT?.setWakeWordEnabled?.(!!msg.wakeWordOn);
       }
     });
   }
@@ -937,8 +936,6 @@
     const effectiveBrainUrl = (cfg.brainUrl || "").trim() || (isSafinumSandbox() ? DEFAULT_SANDBOX_BRAIN_URL : "");
     if (effectiveBrainUrl) window.NKAP_ASSISTANT?.setBrainUrl(effectiveBrainUrl);
     window.NKAP_OVERLAY?.bubble?.(() => window.NKAP_ASSISTANT?.next());
-    const wakeEnabled = cfg.wakeWordOn !== undefined ? !!cfg.wakeWordOn : true;
-    window.NKAP_ASSISTANT?.setWakeWordEnabled?.(wakeEnabled);
     console.log(
       "[nkap] prêt sur",
       location.href,
@@ -950,9 +947,9 @@
 
   function start() {
     if (hasChrome && chrome.storage && chrome.storage.sync) {
-      chrome.storage.sync.get({ ewondoOn: false, brainUrl: "", wakeWordOn: true }, boot);
+      chrome.storage.sync.get({ ewondoOn: false, brainUrl: "" }, boot);
     } else {
-      boot({ ewondoOn: false, brainUrl: "", wakeWordOn: true });
+      boot({ ewondoOn: false, brainUrl: "" });
     }
   }
 
