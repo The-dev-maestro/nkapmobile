@@ -108,7 +108,28 @@
     "home": {
       "llm_summary": "Accueil Orange Max it : solde Orange Money (Main Account) et QR code en haut, crédit d'appel (My Credits) au milieu, raccourcis (Buy a bundle, Top Up, Money transfer, Pay your purchases, Cancel transaction).",
       "spoken": "Tu es sur l'accueil d'Orange Max it. En haut tu vois ton solde Orange Money (Main Account) et ton QR code, puis ton crédit d'appel, et en dessous les raccourcis pour envoyer de l'argent, acheter un forfait, recharger ou annuler un transfert.",
+      "sequential": true,
       "highlights": [
+        {
+          "match": [
+            "main account",
+            "solde disponible"
+          ],
+          "style": "frame",
+          "label": "Solde",
+          "color": "green",
+          "prefer_button": false
+        },
+        {
+          "match": [
+            "my credits",
+            "mon credit d'appel"
+          ],
+          "style": "frame",
+          "label": "Crédit",
+          "color": "yellow",
+          "prefer_button": false
+        },
         {
           "match": [
             "money transfer",
@@ -117,6 +138,33 @@
           "style": "frame",
           "label": "Envoyer",
           "color": "yellow"
+        },
+        {
+          "match": [
+            "buy a bundle",
+            "acheter un forfait"
+          ],
+          "style": "frame",
+          "label": "Forfaits",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "top up",
+            "recharger"
+          ],
+          "style": "frame",
+          "label": "Recharger",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "cancel transaction",
+            "annuler une transaction"
+          ],
+          "style": "frame",
+          "label": "Annuler",
+          "color": "red"
         }
       ]
     },

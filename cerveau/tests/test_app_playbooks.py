@@ -783,3 +783,46 @@ def test_full_nxm_coverage_matrix_wave_safinum_maxit(monkeypatch):
             spoken = " ".join(a["action"].get("text", "") for a in r.json()["actions"] if a["action"]["t"] == "speak").lower()
             assert "incapable" not in spoken and "hors contexte" not in spoken, f"Max it {scr_name} / {q} -> {spoken}"
 
+
+def test_home_screen_guide_animates_all_actions_sequentially_with_hide():
+    # SAFINUM Home : "Je dois faire quoi ici ?" doit parcourir Solde, Envoyer, Factures, Crédit, Opérations
+    # en masquant chaque marque (hide) avant de dessiner la suivante (<= 1 marque simultanée).
+    r = client.post(
+        "/answer",
+        json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": SAFINUM_HOME_CTX},
+    )
+    assert r.status_code == 200
+    acts = r.json()["actions"]
+    draws = [a for a in acts if a["action"]["t"] == "frame"]
+    hides = [a for a in acts if a["action"]["t"] == "hide"]
+    draw_targets = [a["action"]["target"]["node_id"] for a in draws]
+    assert draw_targets == ["h_bal_lbl", "h_tr", "h_bill", "h_air", "h_hist"]
+    assert len(hides) == 4
+    # Chaque hide précède le draw suivant et masque exactement la marque précédente
+    for i in range(4):
+        assert hides[i]["action"]["id"] == draws[i]["action"]["id"]
+        assert draws[i]["run_after_ms"] < hides[i]["run_after_ms"] < draws[i + 1]["run_after_ms"]
+
+    # Wave Home : parcourt les 4 boutons (Send, Bills, Vault, More) séquentiellement avec hide
+    r_wave = client.post(
+        "/answer",
+        json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": WAVE_REAL_CTX},
+    )
+    assert r_wave.status_code == 200
+    wave_acts = r_wave.json()["actions"]
+    wave_targets = [a["action"]["target"]["node_id"] for a in wave_acts if a["action"]["t"] == "frame"]
+    assert wave_targets == ["n_01", "n_02", "n_03", "n_04"]
+    assert len([a for a in wave_acts if a["action"]["t"] == "hide"]) == 3
+
+    # Max it Home : parcourt Solde, Crédit, Envoyer, Forfaits, Recharger, Annuler séquentiellement
+    r_max = client.post(
+        "/answer",
+        json={"transcript": "Je dois faire quoi ici ?", "lang_hint": "fr", "context": MAXIT_HOME_CTX},
+    )
+    assert r_max.status_code == 200
+    max_acts = r_max.json()["actions"]
+    max_draws = [a for a in max_acts if a["action"]["t"] == "frame"]
+    assert len(max_draws) >= 4
+    assert len([a for a in max_acts if a["action"]["t"] == "hide"]) == len(max_draws) - 1
+
+

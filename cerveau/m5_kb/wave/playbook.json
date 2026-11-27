@@ -325,14 +325,14 @@
     "home": {
       "llm_summary": "Accueil Wave : solde tout en haut, QR code au milieu, 4 boutons (Send, Bills/Payments, Vault, More) et historique des dernières transactions en bas.",
       "spoken": "Tu es sur l'accueil de Wave. En haut s'affiche ton solde, au milieu ton QR code pour recevoir ou payer, puis les boutons Envoyer, Factures, Coffre et Plus.",
+      "sequential": true,
       "highlights": [
         {
           "match": [
             "send",
             "envoyer"
           ],
-          "style": "num",
-          "step": 1,
+          "style": "frame",
           "label": "Envoyer",
           "color": "yellow"
         },
@@ -343,9 +343,26 @@
             "payments",
             "paiements"
           ],
-          "style": "num",
-          "step": 2,
+          "style": "frame",
           "label": "Factures",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "vault",
+            "coffre"
+          ],
+          "style": "frame",
+          "label": "Coffre",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "more",
+            "plus"
+          ],
+          "style": "frame",
+          "label": "Plus",
           "color": "yellow"
         }
       ]
@@ -441,35 +458,45 @@
     "bills": {
       "llm_summary": "Écran Payments / Factures (Bills) Wave : section Utilities avec ENEO Prepaid (compteur prépayé), ENEO Postpaid (facture mensuelle), CAM-WATER (eau) et Canal+ (télévision).",
       "spoken": "Tu es sur l'écran Paiements (Payments) de Wave. Appuie sur le service à régler : ENEO Prepaid pour recharger un compteur électrique prépayé, ENEO Postpaid pour une facture mensuelle, CAM-WATER pour l'eau ou Canal+ pour la télé.",
+      "sequential": true,
       "highlights": [
         {
           "match": [
             "eneo prepaid",
             "eneo"
           ],
-          "style": "num",
-          "step": 1,
-          "label": "ENEO",
-          "color": "yellow"
+          "style": "frame",
+          "label": "ENEO Prépayé",
+          "color": "yellow",
+          "prefer_button": false
+        },
+        {
+          "match": [
+            "eneo postpaid"
+          ],
+          "style": "frame",
+          "label": "ENEO Facture",
+          "color": "yellow",
+          "prefer_button": false
         },
         {
           "match": [
             "cam-water",
             "camwater"
           ],
-          "style": "num",
-          "step": 2,
+          "style": "frame",
           "label": "Eau",
-          "color": "yellow"
+          "color": "yellow",
+          "prefer_button": false
         },
         {
           "match": [
             "canal+"
           ],
-          "style": "num",
-          "step": 3,
+          "style": "frame",
           "label": "Canal+",
-          "color": "yellow"
+          "color": "yellow",
+          "prefer_button": false
         }
       ]
     },

@@ -845,6 +845,9 @@ class _StreamBuilder:
             ),
         )
 
+    def hide(self, mark_id: str, run_after_ms: int = 0) -> None:
+        self.add(run_after_ms, ActionPayload(t="hide", id=mark_id))
+
     def clear(self, run_after_ms: int = 8000) -> None:
         self.add(run_after_ms, ActionPayload(t="clear"))
 
@@ -3074,6 +3077,92 @@ class M2Service:
         q_key = cls._norm(transcript.text).strip(" ?!.,;:")
         return (node_sig, transcript.lang or "fr", q_key)
 
+    def _emit_playbook_highlights(
+        self,
+        sb: _StreamBuilder,
+        highlights: list[dict[str, Any]],
+        usable: list[ScreenNode],
+        *,
+        prefix: str,
+        spoken: str,
+        sequential: bool = False,
+        start_ms: int = 350,
+        step_ms: int = 780,
+        min_clear_ms: int = 8200,
+    ) -> None:
+        resolved: list[tuple[dict[str, Any], ScreenNode]] = []
+        seen_node_ids: set[str] = set()
+        for h in highlights:
+            if not isinstance(h, dict):
+                continue
+            h_style = str(h.get("style") or "highlight")
+            prefer_btn = (
+                bool(h["prefer_button"])
+                if "prefer_button" in h
+                else (h_style == "frame")
+            )
+            node = self.playbooks.find_matching_node(
+                usable, h.get("match", []), prefer_button=prefer_btn
+            )
+            if not node or node.node_id in seen_node_ids:
+                continue
+            seen_node_ids.add(node.node_id)
+            resolved.append((h, node))
+
+        if not resolved:
+            sb.clear(min_clear_ms)
+            return
+
+        use_sequential = sequential or len(resolved) > 3
+        if use_sequential and len(resolved) > 1:
+            est_speech_ms = max(4800, min(14500, int(len(spoken) * 62)))
+            slot_ms = max(1300, min(2400, int((est_speech_ms - start_ms) / len(resolved))))
+            prev_mark_id: str | None = None
+            prev_draw_ms = start_ms
+            last_draw_ms = start_ms
+            for idx, (h, node) in enumerate(resolved):
+                explicit_at = h.get("at_ms")
+                draw_ms = (
+                    int(explicit_at)
+                    if isinstance(explicit_at, (int, float))
+                    else (start_ms + idx * slot_ms)
+                )
+                if prev_mark_id is not None:
+                    draw_ms = max(draw_ms, prev_draw_ms + 450)
+                    hide_ms = max(prev_draw_ms + 320, draw_ms - 120)
+                    sb.hide(prev_mark_id, run_after_ms=hide_ms)
+                mark_id = f"{prefix}-{idx + 1}"
+                sb.draw(
+                    str(h.get("style") or "highlight"),
+                    mark_id,
+                    node.node_id,
+                    color=str(h.get("color") or "yellow"),
+                    duration_ms=540,
+                    run_after_ms=draw_ms,
+                    label=h.get("label"),
+                    step=h.get("step"),
+                )
+                prev_mark_id = mark_id
+                prev_draw_ms = draw_ms
+                last_draw_ms = draw_ms
+            sb.clear(max(last_draw_ms + max(slot_ms, 2200), min_clear_ms))
+            return
+
+        cursor_ms = start_ms
+        for idx, (h, node) in enumerate(resolved[:3]):
+            sb.draw(
+                str(h.get("style") or "highlight"),
+                f"{prefix}-{idx + 1}",
+                node.node_id,
+                color=str(h.get("color") or "yellow"),
+                duration_ms=540,
+                run_after_ms=cursor_ms,
+                label=h.get("label"),
+                step=h.get("step"),
+            )
+            cursor_ms += step_ms
+        sb.clear(max(cursor_ms + 4500, min_clear_ms))
+
     def _build_playbook_guide_actions(
         self,
         pb: dict[str, Any],
@@ -3090,30 +3179,17 @@ class M2Service:
         sb.speak("playbook_guide", spoken, lang, 0)
 
         usable = [n for n in screen_context.nodes[:260] if self._is_usable_node(n)]
-        cursor_ms = 350
-        marks_added = 0
-        for h in guide.get("highlights", []):
-            if marks_added >= 3:
-                break
-            node = self.playbooks.find_matching_node(
-                usable, h.get("match", []), prefer_button=(h.get("style") == "frame")
-            )
-            if not node:
-                continue
-            sb.draw(
-                str(h.get("style") or "highlight"),
-                f"pb-g-{marks_added + 1}",
-                node.node_id,
-                color=str(h.get("color") or "yellow"),
-                duration_ms=540,
-                run_after_ms=cursor_ms,
-                label=h.get("label"),
-                step=h.get("step"),
-            )
-            marks_added += 1
-            cursor_ms += 780
-
-        sb.clear(max(cursor_ms + 4500, 8200))
+        self._emit_playbook_highlights(
+            sb,
+            guide.get("highlights") or [],
+            usable,
+            prefix="pb-g",
+            spoken=spoken,
+            sequential=bool(guide.get("sequential")),
+            start_ms=350,
+            step_ms=780,
+            min_clear_ms=8200,
+        )
         return sb.actions
 
     def _build_playbook_shortcut_actions(
@@ -3129,31 +3205,18 @@ class M2Service:
 
         usable = [n for n in screen_context.nodes[:260] if self._is_usable_node(n)]
         highlights = sc.get("highlights")
-        cursor_ms = 260
         if isinstance(highlights, list) and highlights:
-            marks_added = 0
-            for h in highlights:
-                if marks_added >= 3:
-                    break
-                h_style = str(h.get("style") or "highlight")
-                node = self.playbooks.find_matching_node(
-                    usable, h.get("match", []), prefer_button=(h_style == "frame")
-                )
-                if not node:
-                    continue
-                sb.draw(
-                    h_style,
-                    f"pb-sc-{marks_added + 1}",
-                    node.node_id,
-                    color=str(h.get("color") or "yellow"),
-                    duration_ms=540,
-                    run_after_ms=cursor_ms,
-                    label=h.get("label"),
-                    step=h.get("step"),
-                )
-                marks_added += 1
-                cursor_ms += 720
-            sb.clear(max(cursor_ms + 4500, 8000))
+            self._emit_playbook_highlights(
+                sb,
+                highlights,
+                usable,
+                prefix="pb-sc",
+                spoken=spoken,
+                sequential=bool(sc.get("sequential")),
+                start_ms=260,
+                step_ms=720,
+                min_clear_ms=8000,
+            )
             return sb.actions
 
         style = str(sc.get("style") or "none")
