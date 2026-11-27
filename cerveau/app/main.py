@@ -108,12 +108,14 @@ async def answer(req: AnswerRequest):
         actions=actions,
         channel=req.channel,
     )
+    follow_up = service.pop_turn_follow_up(turn_id)
     return AnswerResponse(
         turn_id=turn_id,
         actions=actions,
         meta=meta,
         text_fallback=text_fallback,
         choices=choices,
+        follow_up=follow_up,
     )
 
 

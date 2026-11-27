@@ -1,9 +1,17 @@
 {
   "app_id": "maxit",
   "name": "Orange Max it",
-  "match_packages": ["com.orange", "maxit"],
+  "match_packages": [
+    "com.orange",
+    "maxit"
+  ],
   "match_urls": [],
-  "match_text_cues": ["main account", "om loyalty", "my credits", "buy a bundle"],
+  "match_text_cues": [
+    "main account",
+    "om loyalty",
+    "my credits",
+    "buy a bundle"
+  ],
   "ui_translations": {
     "main account": "Solde disponible",
     "hide balance": "Masquer le solde",
@@ -17,18 +25,39 @@
     "om loyalty": "Points fidélité"
   },
   "action_buttons": [
-    "money transfer", "buy a bundle", "top up", "pay your purchases",
-    "cancel transaction", "om loyalty", "hide balance", "show balance", "see all"
+    "money transfer",
+    "buy a bundle",
+    "top up",
+    "pay your purchases",
+    "cancel transaction",
+    "om loyalty",
+    "hide balance",
+    "show balance",
+    "see all"
   ],
   "screen_detectors": [
     {
       "screen": "transfer",
-      "text_any": ["enter amount", "montant a envoyer", "recipient number", "numero du beneficiaire"],
-      "not_text_any": ["main account", "my credits", "om loyalty"]
+      "text_any": [
+        "enter amount",
+        "montant a envoyer",
+        "recipient number",
+        "numero du beneficiaire"
+      ],
+      "not_text_any": [
+        "main account",
+        "my credits",
+        "om loyalty"
+      ]
     },
     {
       "screen": "home",
-      "text_any": ["main account", "my credits", "om loyalty", "buy a bundle"]
+      "text_any": [
+        "main account",
+        "my credits",
+        "om loyalty",
+        "buy a bundle"
+      ]
     }
   ],
   "screen_guides": {
@@ -36,7 +65,15 @@
       "llm_summary": "Accueil Orange Max it : solde Orange Money (Main Account) et QR code en haut, crédit d'appel (My Credits) au milieu, raccourcis (Buy a bundle, Top Up, Money transfer, Cancel transaction).",
       "spoken": "Tu es sur l'accueil d'Orange Max it. En haut tu vois ton solde Orange Money (Main Account) et ton QR code, puis ton crédit d'appel, et en dessous les raccourcis pour envoyer de l'argent, acheter un forfait ou annuler un transfert.",
       "highlights": [
-        {"match": ["money transfer", "envoyer de l'argent"], "style": "frame", "label": "Envoyer", "color": "yellow"}
+        {
+          "match": [
+            "money transfer",
+            "envoyer de l'argent"
+          ],
+          "style": "frame",
+          "label": "Envoyer",
+          "color": "yellow"
+        }
       ]
     },
     "transfer": {
@@ -48,56 +85,120 @@
   "qa_shortcuts": [
     {
       "id": "maxit_transfer",
-      "screens": ["home"],
-      "triggers": ["envoyer", "envoie", "envoi", "transferer", "transfert", "money transfer"],
+      "screens": [
+        "home"
+      ],
+      "triggers": [
+        "envoyer",
+        "envoie",
+        "envoi",
+        "transferer",
+        "transfert",
+        "money transfer"
+      ],
       "spoken": "Appuie ici sur Money transfer pour envoyer de l'argent depuis ton compte Orange Money.",
-      "target_match": ["money transfer", "envoyer de l'argent"],
+      "target_match": [
+        "money transfer",
+        "envoyer de l'argent"
+      ],
       "style": "frame",
       "label": "Appuie ici",
       "color": "yellow"
     },
     {
       "id": "maxit_transfer_already_here",
-      "screens": ["transfer"],
-      "triggers": ["envoyer", "envoie", "envoi", "transferer", "transfert"],
+      "screens": [
+        "transfer"
+      ],
+      "triggers": [
+        "envoyer",
+        "envoie",
+        "envoi",
+        "transferer",
+        "transfert"
+      ],
       "spoken": "Tu es déjà sur l'écran d'envoi Orange Money ! Saisis le numéro du destinataire et le montant, puis vérifie bien avant de valider.",
       "target_match": [],
       "style": "none"
     },
     {
       "id": "maxit_sub_to_home",
-      "screens": ["transfer"],
-      "triggers": ["mon solde", "quel est mon solde", "dernieres operations", "historique", "mes transactions"],
-      "spoken": "Ton solde Orange Money et tes opérations se consultent depuis l'écran d'accueil Max it : reviens en arrière pour les voir.",
+      "screens": [
+        "transfer"
+      ],
+      "triggers": [
+        "mon solde",
+        "quel est mon solde",
+        "dernieres operations",
+        "historique",
+        "mes transactions"
+      ],
+      "spoken": "Ton solde Orange Money et tes opérations sont sur l'accueil Max it : reviens en arrière, je te les lirai dès qu'on y arrive.",
       "target_match": [],
-      "style": "none"
+      "style": "none",
+      "follow_up": {
+        "target_screens": ["home"],
+        "target_cues": ["main account", "my credits", "money transfer"],
+        "ttl_ms": 30000
+      }
     },
     {
       "id": "maxit_cancel",
-      "screens": ["home"],
-      "triggers": ["annuler une transaction", "annuler un transfert", "erreur d'envoi", "cancel transaction"],
+      "screens": [
+        "home"
+      ],
+      "triggers": [
+        "annuler une transaction",
+        "annuler un transfert",
+        "erreur d'envoi",
+        "cancel transaction"
+      ],
       "spoken": "Appuie ici sur Cancel transaction si tu viens d'envoyer de l'argent au mauvais numéro et que tu veux demander l'annulation.",
-      "target_match": ["cancel transaction", "annuler une transaction"],
+      "target_match": [
+        "cancel transaction",
+        "annuler une transaction"
+      ],
       "style": "frame",
       "label": "Annuler ici",
       "color": "red"
     },
     {
       "id": "maxit_bundle",
-      "screens": ["home"],
-      "triggers": ["forfait", "internet", "data", "bundle", "pass"],
+      "screens": [
+        "home"
+      ],
+      "triggers": [
+        "forfait",
+        "internet",
+        "data",
+        "bundle",
+        "pass"
+      ],
       "spoken": "Appuie ici sur Buy a bundle pour acheter un forfait internet ou appels.",
-      "target_match": ["buy a bundle", "acheter un forfait"],
+      "target_match": [
+        "buy a bundle",
+        "acheter un forfait"
+      ],
       "style": "frame",
       "label": "Forfaits",
       "color": "yellow"
     },
     {
       "id": "maxit_topup",
-      "screens": ["home"],
-      "triggers": ["recharger", "credit d'appel", "credit telephon", "top up"],
+      "screens": [
+        "home"
+      ],
+      "triggers": [
+        "recharger",
+        "credit d'appel",
+        "credit telephon",
+        "top up"
+      ],
       "spoken": "Appuie ici sur Top Up pour recharger du crédit d'appel sur ton numéro ou celui d'un proche.",
-      "target_match": ["top up", "recharger"],
+      "target_match": [
+        "top up",
+        "recharger"
+      ],
       "style": "frame",
       "label": "Recharger",
       "color": "yellow"

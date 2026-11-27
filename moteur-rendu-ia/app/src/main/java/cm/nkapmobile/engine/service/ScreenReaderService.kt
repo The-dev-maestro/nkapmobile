@@ -36,6 +36,7 @@ class ScreenReaderService : AccessibilityService() {
     private var orbLp: WindowManager.LayoutParams? = null
     private var drawerLp: WindowManager.LayoutParams? = null
     private var lastContext: ScreenContext? = null
+    private var snapshotCheckRunnable: Runnable? = null
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
@@ -246,9 +247,17 @@ class ScreenReaderService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            handler.postDelayed({ snapshot() }, 180)
+        val type = event?.eventType ?: return
+        val shouldCheck = type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && session?.hasPendingGoal() == true)
+        if (!shouldCheck) return
+        snapshotCheckRunnable?.let { handler.removeCallbacks(it) }
+        val r = Runnable {
+            val ctx = snapshot()
+            session?.onScreenSnapshotUpdated(ctx)
         }
+        snapshotCheckRunnable = r
+        handler.postDelayed(r, 260)
     }
 
     override fun onInterrupt() {}

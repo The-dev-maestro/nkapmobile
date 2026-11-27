@@ -21,6 +21,7 @@ import cm.nkapmobile.sdk.ui.JarvisOrbView
 import cm.nkapmobile.sdk.ui.NkapChatDrawer
 import cm.nkapmobile.sdk.ui.NkapOverlayView
 import cm.nkapmobile.sdk.voice.NkapVoiceController
+import java.text.Normalizer
 
 data class NkapConfig(
     val brainUrl: String = NkapSDK.DEFAULT_BRAIN_URL,
@@ -82,6 +83,66 @@ class NkapSession(
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
     private var lastContext: ScreenContext? = null
+
+    private data class PendingGoalState(
+        val goal: FollowUpGoal,
+        val originSig: String,
+        val expiresAtMs: Long,
+    )
+
+    private var pendingGoal: PendingGoalState? = null
+    private var pendingGoalRunnable: Runnable? = null
+
+    private fun normText(s: String): String {
+        val decomposed = Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD)
+        return decomposed.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun screenCorpus(ctx: ScreenContext): String =
+        normText(ctx.nodes.take(80).joinToString(" ") { it.text })
+
+    fun hasPendingGoal(): Boolean {
+        val g = pendingGoal ?: return false
+        if (System.currentTimeMillis() > g.expiresAtMs) {
+            clearPendingGoal()
+            return false
+        }
+        return true
+    }
+
+    fun clearPendingGoal() {
+        pendingGoal = null
+        pendingGoalRunnable?.let { mainHandler.removeCallbacks(it) }
+        pendingGoalRunnable = null
+    }
+
+    /** Appelé dès que l'écran change (ex. retour vers l'accueil Wave) : relance automatiquement l'objectif en attente. */
+    fun onScreenSnapshotUpdated(ctx: ScreenContext) {
+        val state = pendingGoal ?: return
+        if (System.currentTimeMillis() > state.expiresAtMs) {
+            clearPendingGoal()
+            return
+        }
+        val corpus = screenCorpus(ctx)
+        if (corpus.isBlank() || corpus.take(360) == state.originSig) return
+        val cueHit = state.goal.targetCues.any { cue ->
+            val nCue = normText(cue)
+            nCue.isNotEmpty() && corpus.contains(nCue)
+        }
+        val screenHit = state.goal.targetCues.isEmpty() &&
+            state.goal.targetScreens.any { normText(it) == normText(ctx.screenHint) }
+        if (!cueHit && !screenHit) return
+
+        val questionToResume = state.goal.question
+        clearPendingGoal()
+        android.util.Log.i("NkapSDK", "Pending goal target reached -> resuming: $questionToResume")
+        val r = Runnable {
+            pendingGoalRunnable = null
+            ask(questionToResume, isFollowUp = true)
+        }
+        pendingGoalRunnable = r
+        mainHandler.postDelayed(r, 380L)
+    }
 
     private var orbMarginLeft = 0
     private var orbMarginTop = 0
@@ -218,9 +279,10 @@ class NkapSession(
         onDrawerToggledExternal?.invoke(false)
     }
 
-    fun ask(question: String) {
+    fun ask(question: String, isFollowUp: Boolean = false) {
         val q = question.trim()
         if (q.isEmpty()) return
+        if (!isFollowUp) clearPendingGoal()
         closeDrawer()
         cancelScheduled()
         voiceController.stopAll()
@@ -238,6 +300,17 @@ class NkapSession(
             question = q,
             context = ctx,
             langHint = langHint,
+            onFollowUp = { fu ->
+                if (!isFollowUp && fu != null) {
+                    mainHandler.post {
+                        pendingGoal = PendingGoalState(
+                            goal = fu,
+                            originSig = screenCorpus(ctx).take(360),
+                            expiresAtMs = System.currentTimeMillis() + fu.ttlMs,
+                        )
+                    }
+                }
+            },
             onResult = { actions ->
                 mainHandler.post {
                     if (actions.isEmpty()) {
@@ -463,6 +536,7 @@ class NkapSession(
     }
 
     fun destroy() {
+        clearPendingGoal()
         cancelScheduled()
         voiceController.shutdown()
         runCatching { speechRecognizer?.destroy() }

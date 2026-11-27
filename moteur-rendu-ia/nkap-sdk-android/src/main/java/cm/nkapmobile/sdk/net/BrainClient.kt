@@ -1,6 +1,7 @@
 package cm.nkapmobile.sdk.net
 
 import cm.nkapmobile.sdk.core.ActionProtocol
+import cm.nkapmobile.sdk.core.FollowUpGoal
 import cm.nkapmobile.sdk.core.ScreenContext
 import cm.nkapmobile.sdk.core.TimedAction
 import okhttp3.MediaType.Companion.toMediaType
@@ -67,6 +68,7 @@ class BrainClient(var brainUrl: String) {
         langHint: String = "fr",
         onResult: (List<TimedAction>) -> Unit,
         onError: (String) -> Unit,
+        onFollowUp: ((FollowUpGoal?) -> Unit)? = null,
     ) {
         val base = baseUrl()
         if (base.isEmpty()) {
@@ -94,9 +96,10 @@ class BrainClient(var brainUrl: String) {
                         onError("HTTP ${resp.code}")
                         return@Thread
                     }
-                    val actions = ActionProtocol.parseAnswerResponse(body)
-                    android.util.Log.i("NkapSDK", "Parsed ${actions.size} actions from EC2 brain")
-                    onResult(actions)
+                    val bundle = ActionProtocol.parseAnswerBundle(body)
+                    android.util.Log.i("NkapSDK", "Parsed ${bundle.actions.size} actions (followUp=${bundle.followUp != null})")
+                    onFollowUp?.invoke(bundle.followUp)
+                    onResult(bundle.actions)
                 }
             } catch (e: Exception) {
                 onError(e.message ?: "Erreur réseau")

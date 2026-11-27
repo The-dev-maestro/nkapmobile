@@ -247,6 +247,15 @@ class AnswerRequest(BaseModel):
     context: ScreenContext
 
 
+class FollowUpGoal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_screens: list[str] = Field(default_factory=list)
+    target_cues: list[str] = Field(default_factory=list)
+    question: str
+    ttl_ms: int = 30000
+
+
 class AnswerResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -255,4 +264,5 @@ class AnswerResponse(BaseModel):
     meta: Optional[TurnMeta] = None
     text_fallback: Optional[str] = None
     choices: Optional[list[ChoiceItem]] = None
+    follow_up: Optional[FollowUpGoal] = None
 

@@ -288,6 +288,18 @@ data class TimedAction(
     val action: NkapAction,
 )
 
+data class FollowUpGoal(
+    val targetScreens: List<String>,
+    val targetCues: List<String>,
+    val question: String,
+    val ttlMs: Long = 30_000L,
+)
+
+data class BrainAnswer(
+    val actions: List<TimedAction>,
+    val followUp: FollowUpGoal? = null,
+)
+
 object ActionProtocol {
 
     fun parseAction(a: JSONObject): NkapAction? = runCatching {
@@ -467,18 +479,51 @@ object ActionProtocol {
         )
     }
 
-    fun parseAnswerResponse(body: String): List<TimedAction> = runCatching {
+    fun parseAnswerResponse(body: String): List<TimedAction> = parseAnswerBundle(body).actions
+
+    fun parseAnswerBundle(body: String): BrainAnswer = runCatching {
         val root = JSONObject(body)
-        val arr = root.optJSONArray("actions") ?: return emptyList()
-        (0 until arr.length()).mapNotNull { i ->
-            val item = arr.optJSONObject(i) ?: return@mapNotNull null
-            val actJson = item.optJSONObject("action") ?: item
-            val act = parseAction(actJson) ?: return@mapNotNull null
-            TimedAction(
-                seq = item.optInt("seq", i + 1),
-                runAfterMs = item.optInt("run_after_ms", i * 500),
-                action = act,
-            )
-        }.sortedBy { it.seq }
-    }.getOrElse { emptyList() }
+        val arr = root.optJSONArray("actions")
+        val actions = if (arr == null) {
+            emptyList()
+        } else {
+            (0 until arr.length()).mapNotNull { i ->
+                val item = arr.optJSONObject(i) ?: return@mapNotNull null
+                val actJson = item.optJSONObject("action") ?: item
+                val act = parseAction(actJson) ?: return@mapNotNull null
+                TimedAction(
+                    seq = item.optInt("seq", i + 1),
+                    runAfterMs = item.optInt("run_after_ms", i * 500),
+                    action = act,
+                )
+            }.sortedBy { it.seq }
+        }
+        val fuObj = root.optJSONObject("follow_up")
+        val followUp = if (fuObj != null) {
+            val screens = ArrayList<String>()
+            fuObj.optJSONArray("target_screens")?.let { sArr ->
+                for (i in 0 until sArr.length()) {
+                    val s = sArr.optString(i).trim()
+                    if (s.isNotEmpty()) screens.add(s)
+                }
+            }
+            val cues = ArrayList<String>()
+            fuObj.optJSONArray("target_cues")?.let { cArr ->
+                for (i in 0 until cArr.length()) {
+                    val c = cArr.optString(i).trim()
+                    if (c.isNotEmpty()) cues.add(c)
+                }
+            }
+            val q = fuObj.optString("question").trim()
+            if (q.isNotEmpty() && (screens.isNotEmpty() || cues.isNotEmpty())) {
+                FollowUpGoal(
+                    targetScreens = screens,
+                    targetCues = cues,
+                    question = q,
+                    ttlMs = fuObj.optLong("ttl_ms", 30_000L).coerceIn(8_000L, 60_000L),
+                )
+            } else null
+        } else null
+        BrainAnswer(actions = actions, followUp = followUp)
+    }.getOrElse { BrainAnswer(emptyList(), null) }
 }

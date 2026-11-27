@@ -601,6 +601,9 @@
           }
         } else {
           lastStep = state.step;
+          if (window.NKAP_ASSISTANT?.hasPendingGoal?.()) {
+            window.NKAP_ASSISTANT.checkPendingGoal(state.step);
+          }
           if (state.hasError && (!lastHasError || errText !== lastErrorText)) {
             lastHasError = true;
             lastErrorText = errText;

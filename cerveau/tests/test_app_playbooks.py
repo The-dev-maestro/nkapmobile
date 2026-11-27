@@ -338,17 +338,32 @@ def test_second_person_normalizer_and_safinum_cross_screen_guidance(monkeypatch)
         {"node_id": "nav_pay", "tag": "button", "text": "Payer", "clickable": True, "bounds": [560, 740, 630, 780], "tone": "light"},
     ]
     r_hist = client.post("/answer", json={"transcript": "Quelles sont mes dernières opérations ?", "lang_hint": "fr", "context": transfer_with_nav})
-    acts_hist = r_hist.json()["actions"]
+    body_hist = r_hist.json()
+    acts_hist = body_hist["actions"]
     spoken_hist = " ".join(a["action"].get("text", "") for a in acts_hist if a["action"]["t"] == "speak").lower()
     assert "incapable" not in spoken_hist and "hors contexte" not in spoken_hist
     assert "historique" in spoken_hist
     assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "nav_hist" for a in acts_hist)
+    assert body_hist.get("follow_up") is not None
+    assert "history" in body_hist["follow_up"]["target_screens"]
+    assert body_hist["follow_up"]["question"] == "Quelles sont mes dernières opérations ?"
 
     r_bal = client.post("/answer", json={"transcript": "Quel est mon solde ?", "lang_hint": "fr", "context": transfer_with_nav})
-    acts_bal = r_bal.json()["actions"]
+    body_bal = r_bal.json()
+    acts_bal = body_bal["actions"]
     spoken_bal = " ".join(a["action"].get("text", "") for a in acts_bal if a["action"]["t"] == "speak").lower()
     assert "incapable" not in spoken_bal and "accueil" in spoken_bal
     assert any(a["action"]["t"] == "frame" and a["action"]["target"]["node_id"] == "nav_home" for a in acts_bal)
+    assert body_bal.get("follow_up") is not None
+    assert body_bal["follow_up"]["target_screens"] == ["home"]
+    assert any("solde" in c or "itan ineu" in c for c in body_bal["follow_up"]["target_cues"])
+
+    # Wave Send Money -> demande de solde renvoie aussi un follow_up vers l'accueil Wave
+    r_wave_bal = client.post("/answer", json={"transcript": "C'est quoi mon solde ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    body_wb = r_wave_bal.json()
+    assert body_wb.get("follow_up") is not None
+    assert body_wb["follow_up"]["target_screens"] == ["home"]
+    assert "hide balance" in body_wb["follow_up"]["target_cues"]
 
     r_safe = client.post("/answer", json={"transcript": "Est-ce débité tout de suite si j'appuie sur Continuer ?", "lang_hint": "fr", "context": transfer_with_nav})
     spoken_safe = " ".join(a["action"].get("text", "") for a in r_safe.json()["actions"] if a["action"]["t"] == "speak").lower()

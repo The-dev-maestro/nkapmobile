@@ -174,6 +174,89 @@ window.NKAP_ASSISTANT = (() => {
   let lastExplainedErrorText = "";
   let lastExplainedUnseenText = "";
 
+  // Objectif multi-écrans en attente (Idée 1 : suivi de contexte jusqu'à l'écran cible)
+  let pendingGoal = null;
+  let pendingGoalExpireTimer = null;
+  let pendingGoalTriggerTimer = null;
+
+  function clearPendingGoal() {
+    pendingGoal = null;
+    if (pendingGoalExpireTimer) {
+      clearTimeout(pendingGoalExpireTimer);
+      pendingGoalExpireTimer = null;
+    }
+    if (pendingGoalTriggerTimer) {
+      clearTimeout(pendingGoalTriggerTimer);
+      pendingGoalTriggerTimer = null;
+    }
+  }
+
+  function currentScreenCorpus() {
+    try {
+      const root = (window.NKAP_GET_SANDBOX_ROOT && window.NKAP_GET_SANDBOX_ROOT()) || document.body;
+      const txt = norm(root ? root.innerText : "");
+      return (location.pathname.toLowerCase() + " " + txt).slice(0, 2600);
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function armPendingGoal(followUp, fallbackQuestion) {
+    clearPendingGoal();
+    if (!followUp || typeof followUp !== "object") return;
+    const ttl = Math.max(8000, Math.min(60000, Number(followUp.ttl_ms) || 30000));
+    const cues = Array.isArray(followUp.target_cues)
+      ? followUp.target_cues.map(norm).filter(Boolean)
+      : [];
+    const screens = Array.isArray(followUp.target_screens)
+      ? followUp.target_screens.map(norm).filter(Boolean)
+      : [];
+    if (!cues.length && !screens.length) return;
+    pendingGoal = {
+      question: String(followUp.question || fallbackQuestion || "").trim(),
+      targetScreens: screens,
+      targetCues: cues,
+      originCorpus: currentScreenCorpus().slice(0, 400),
+      expiresAt: Date.now() + ttl,
+    };
+    if (!pendingGoal.question) {
+      pendingGoal = null;
+      return;
+    }
+    console.log("[nkap] Objectif multi-écrans armé :", pendingGoal.question, "→", screens);
+    pendingGoalExpireTimer = setTimeout(() => {
+      clearPendingGoal();
+    }, ttl);
+  }
+
+  function hasPendingGoal() {
+    if (!pendingGoal) return false;
+    if (Date.now() > pendingGoal.expiresAt) {
+      clearPendingGoal();
+      return false;
+    }
+    return true;
+  }
+
+  function checkPendingGoal(currentStep = "") {
+    if (!hasPendingGoal() || pendingGoalTriggerTimer) return false;
+    const corpus = currentScreenCorpus();
+    if (!corpus || corpus.slice(0, 400) === pendingGoal.originCorpus) return false;
+    const stepN = norm(currentStep);
+    const cueHit = pendingGoal.targetCues.some((c) => corpus.includes(c));
+    const stepHit = stepN && pendingGoal.targetScreens.includes(stepN) && pendingGoal.targetCues.length === 0;
+    if (!cueHit && !stepHit) return false;
+
+    const goal = pendingGoal;
+    clearPendingGoal();
+    console.log("[nkap] Écran cible atteint ! Reprise automatique de la question :", goal.question);
+    pendingGoalTriggerTimer = setTimeout(() => {
+      pendingGoalTriggerTimer = null;
+      askQuestion(goal.question, null, true);
+    }, 450);
+    return true;
+  }
+
   const O = () => window.NKAP_OVERLAY;
   const Q = (t) => window.NKAP_QUERY(t);
   const hasChrome =
@@ -812,9 +895,10 @@ window.NKAP_ASSISTANT = (() => {
    * - Si `brainUrl` est configuré → POST /answer avec le ScreenContext (I5-web)
    * - Sinon (ou en cas d'erreur réseau) → routage d'intention local immédiat
    */
-  function askQuestion(questionText, fallbackScenarioId = null) {
+  function askQuestion(questionText, fallbackScenarioId = null, isFollowUp = false) {
     const q = String(questionText || "").trim();
     if (!q) return;
+    if (!isFollowUp) clearPendingGoal();
     closePanel();
 
     const state = window.NKAP_DETECT_SCREEN
@@ -838,6 +922,9 @@ window.NKAP_ASSISTANT = (() => {
             const fallbackId = fallbackScenarioId || matchQuestionToScenario(q, state);
             if (fallbackId) playParcours(fallbackId);
             return;
+          }
+          if (!isFollowUp && res.follow_up) {
+            armPendingGoal(res.follow_up, q);
           }
           cancelPendingSteps();
           O().clear();
@@ -1277,6 +1364,7 @@ window.NKAP_ASSISTANT = (() => {
     O().clear();
     cursorByScreen[newStep] = 0;
     console.log("[nkap] Changement d'étape détecté →", newStep);
+    checkPendingGoal(newStep);
   }
 
   function getActiveUnseenElement() {
@@ -1437,6 +1525,9 @@ window.NKAP_ASSISTANT = (() => {
     playParcours,
     executeAction,
     onScreenChanged,
+    hasPendingGoal,
+    checkPendingGoal,
+    clearPendingGoal,
     onUnseenContent,
     onErrorDetected,
     isSpeaking() {

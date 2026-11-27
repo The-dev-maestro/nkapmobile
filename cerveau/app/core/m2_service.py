@@ -14,6 +14,7 @@ from app.core.contracts import (
     BarItem,
     ChoiceItem,
     FlowStep,
+    FollowUpGoal,
     NotebookLine,
     ScreenContext,
     ScreenNode,
@@ -810,6 +811,12 @@ class M2Service:
         self.llm = llm or LLMAdapter()
         self.last_screen_context: ScreenContext | None = None
         self._turn_cache: dict[tuple[int, str, str], list[ActionMessage]] = {}
+        self._turn_follow_ups: dict[str, FollowUpGoal] = {}
+
+    def pop_turn_follow_up(self, turn_id: str | None) -> FollowUpGoal | None:
+        if not turn_id:
+            return None
+        return self._turn_follow_ups.pop(turn_id, None)
 
     @staticmethod
     def _norm(value: str | None) -> str:
@@ -3140,6 +3147,16 @@ class M2Service:
                     return guide_actions
             sc = self.playbooks.match_qa_shortcut(pb, screen_key, q_norm)
             if sc is not None:
+                fu = sc.get("follow_up")
+                if isinstance(fu, dict) and transcript.turn_id:
+                    self._turn_follow_ups[transcript.turn_id] = FollowUpGoal(
+                        target_screens=[str(s) for s in (fu.get("target_screens") or []) if s],
+                        target_cues=[str(c) for c in (fu.get("target_cues") or []) if c],
+                        question=str(fu.get("question") or transcript.text),
+                        ttl_ms=int(fu.get("ttl_ms") or 30000),
+                    )
+                    if len(self._turn_follow_ups) > 64:
+                        self._turn_follow_ups.pop(next(iter(self._turn_follow_ups)))
                 return self._build_playbook_shortcut_actions(sc, transcript, screen_context)
 
         if self._is_out_of_scope_question(transcript.text, screen_context):

@@ -434,6 +434,7 @@ La sandbox finale (`https://safinum.cm/sandbox/docs`) envoie chaque tour en HTTP
 - `meta`: `{ "channel": "web|mobile|ussd|atm|sms|ivr", "lang": "ewo|dua|fr", "intent": "...", "params": {}, "status": "ok|needs_clarification|corrected|error" }`
 - `text_fallback`: résumé court (≤ 182 car. GSM-7) utilisable directement sur canal texte sans écran.
 - `choices`: `[{ "id": "c1", "key": "1", "label": "...", "value": "..." }]` (boutons cliquables sur écran ou options `1/2/3` en USSD/SMS).
+- `follow_up` *(v1.2.1 — suivi d'objectif multi-écrans)* : `{ "target_screens": ["home"], "target_cues": ["solde disponible", ...], "question": "Quel est mon solde ?", "ttl_ms": 30000 }`. Renvoyé par un raccourci inter-écrans : le client (extension Web/Mobile ou SDK Android) observe passivement le changement d'écran et relance automatiquement `question` (une seule fois, sans jamais cliquer à la place de l'utilisateur) dès que l'utilisateur atteint l'écran cible dans la fenêtre `ttl_ms`.
 
 **Nouveaux types d'actions `ActionPayload.t` (en plus des 11 types v1.1) :**
 | Type `t` | Rôle | Paramètres clés |
