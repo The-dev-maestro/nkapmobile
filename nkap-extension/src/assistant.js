@@ -29,8 +29,74 @@ window.NKAP_ASSISTANT = (() => {
   // File d'attente vocale séquentielle pour le scénario actif
   const speechQueue = [];
   let isSpeaking = false;
+  let activeAudioEl = null;
+  let duaVoiceEntries = null;
+  let duaVoicePromise = null;
   const activeUtterances = []; // Rétention anti-Garbage Collection de Chrome
   const onSpeechDoneCallbacks = [];
+
+  function loadDualaVoiceBank() {
+    if (duaVoiceEntries) return Promise.resolve(duaVoiceEntries);
+    if (duaVoicePromise) return duaVoicePromise;
+    const url = hasChrome
+      ? chrome.runtime.getURL("voice-bank/dua/index.json")
+      : "voice-bank/dua/index.json";
+    duaVoicePromise = fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        duaVoiceEntries = Array.isArray(data && data.entries) ? data.entries : [];
+        return duaVoiceEntries;
+      })
+      .catch(() => {
+        duaVoiceEntries = [];
+        return duaVoiceEntries;
+      });
+    return duaVoicePromise;
+  }
+
+  function findDualaUiAudio(keyOrText) {
+    if (!duaVoiceEntries || !duaVoiceEntries.length) return null;
+    const target = norm(keyOrText);
+    if (!target) return null;
+    return (
+      duaVoiceEntries.find(
+        (e) =>
+          norm(e.key) === target ||
+          norm(e.id) === target ||
+          norm(e.dua) === target ||
+          norm(e.fr) === target
+      ) || null
+    );
+  }
+
+  function playUiAudio(keyOrText) {
+    return loadDualaVoiceBank().then((entries) => {
+      if (!entries || !entries.length) return false;
+      const hit = findDualaUiAudio(keyOrText);
+      if (!hit || !hit.file) return false;
+      stopVoice();
+      const src = hasChrome
+        ? chrome.runtime.getURL("voice-bank/dua/" + hit.file)
+        : "voice-bank/dua/" + hit.file;
+      try {
+        const audio = new Audio(src);
+        activeAudioEl = audio;
+        isSpeaking = true;
+        if (O() && O().setStatusPill) O().setStatusPill("speaking", "nkap parle…");
+        const finish = () => {
+          if (activeAudioEl === audio) activeAudioEl = null;
+          isSpeaking = false;
+          if (O() && O().setStatusPill) O().setStatusPill(null);
+        };
+        audio.onended = finish;
+        audio.onerror = finish;
+        audio.play().catch(finish);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    });
+  }
 
   // Cache mémoire des fixtures pour une réactivité instantanée à 0 ms
   const fixtureCache = new Map();
@@ -338,6 +404,13 @@ window.NKAP_ASSISTANT = (() => {
     speechQueue.length = 0;
     onSpeechDoneCallbacks.length = 0;
     isSpeaking = false;
+    if (activeAudioEl) {
+      try {
+        activeAudioEl.pause();
+        activeAudioEl.currentTime = 0;
+      } catch (_) {}
+      activeAudioEl = null;
+    }
     if (speechTimer) {
       clearTimeout(speechTimer);
       speechTimer = null;
@@ -396,6 +469,38 @@ window.NKAP_ASSISTANT = (() => {
     // Met à jour le sous-titre de façon parfaitement synchronisée avec la phrase en cours
     if (O() && O().caption) {
       O().caption(item.text, item.subFr || null);
+    }
+
+    // Si langue Duálá et enregistrement humain UI disponible dans voice-bank/dua/, priorité à la voix humaine !
+    if (item.lang === "dua") {
+      loadDualaVoiceBank().then(() => {
+        const hit = findDualaUiAudio(item.phraseKey || item.text);
+        if (hit && hit.file) {
+          const src = hasChrome
+            ? chrome.runtime.getURL("voice-bank/dua/" + hit.file)
+            : "voice-bank/dua/" + hit.file;
+          try {
+            const audio = new Audio(src);
+            activeAudioEl = audio;
+            const done = () => {
+              if (activeAudioEl === audio) activeAudioEl = null;
+              isSpeaking = false;
+              processSpeechQueue();
+            };
+            audio.onended = done;
+            audio.onerror = () => {
+              if (activeAudioEl === audio) activeAudioEl = null;
+              isSpeaking = false;
+              processSpeechQueue();
+            };
+            audio.play().catch(done);
+            return;
+          } catch (_) {}
+        }
+        isSpeaking = false;
+        processSpeechQueue();
+      });
+      return;
     }
 
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -1599,6 +1704,7 @@ window.NKAP_ASSISTANT = (() => {
     closePanel,
     askQuestion,
     playParcours,
+    playUiAudio,
     executeAction,
     onScreenChanged,
     hasPendingGoal,
