@@ -92,12 +92,10 @@
         .nkap-write-char.visible { opacity:1; }
         .nkap-word { display:inline-block;opacity:0;transform:translateY(3px);transition:opacity 0.13s ease-out,transform 0.13s ease-out;margin-right:0.28em; }
         .nkap-word.visible { opacity:1;transform:translateY(0); }
-        #nkap-bubble:hover { transform:scale(1.07); }
-        #nkap-bubble[data-state="speaking"] .nkap-orb-ring { animation:nkapOrbRipple 1.15s cubic-bezier(0.16,1,0.3,1) infinite; border-color:rgba(245,183,0,0.75); }
-        #nkap-bubble[data-state="speaking"] .nkap-orb-ring-2 { animation:nkapOrbRipple 1.15s 0.45s cubic-bezier(0.16,1,0.3,1) infinite; border-color:rgba(255,140,66,0.55); }
-        #nkap-bubble[data-state="thinking"] .nkap-orb-ring { animation:nkapOrbRipple 1.6s ease-out infinite; border-color:rgba(255,196,77,0.55); }
-        #nkap-bubble[data-state="listening"] .nkap-orb-ring { animation:nkapOrbRipple 0.95s ease-out infinite; border-color:rgba(255,92,119,0.8); }
-        #nkap-bubble[data-state="listening"] .nkap-orb-ring-2 { animation:nkapOrbRipple 0.95s 0.35s ease-out infinite; border-color:rgba(255,140,66,0.6); }
+        #nkap-bubble:hover { transform:scale(1.09); }
+        #nkap-bubble[data-state="speaking"] { filter:drop-shadow(0 0 16px rgba(245,183,0,0.65)) drop-shadow(0 2px 8px rgba(15,23,42,0.35)); }
+        #nkap-bubble[data-state="thinking"] { filter:drop-shadow(0 0 14px rgba(255,159,28,0.55)) drop-shadow(0 2px 6px rgba(15,23,42,0.3)); }
+        #nkap-bubble[data-state="listening"] { filter:drop-shadow(0 0 16px rgba(255,92,119,0.7)) drop-shadow(0 2px 8px rgba(15,23,42,0.35)); }
         .nkap-choice-btn {
           display:flex;align-items:center;gap:10px;width:100%;text-align:left;
           background:rgba(255,255,255,0.07);color:#F8FAFC;border:1.5px solid rgba(245,183,0,0.45);
@@ -1037,63 +1035,49 @@
           "transform-origin:top right;animation:nkapSlideDown 0.24s cubic-bezier(0.22,1,0.36,1) both;";
         document.documentElement.appendChild(panelEl);
 
-        // Orbe Neuronal Vivant (style Jarvis chaleureux ambre/or) ancré sous la barre du haut
+        // Constellation neuronale holographique sans contour circulaire (flotte librement façon Jarvis)
         bubbleEl = document.createElement("div");
         bubbleEl.id = "nkap-bubble";
         bubbleEl.setAttribute("data-state", orbState);
         bubbleEl.title = "Nkap — clique pour ouvrir ton assistant";
         bubbleEl.style.cssText =
-          "position:fixed;right:22px;top:70px;width:68px;height:68px;border-radius:50%;" +
-          "background:radial-gradient(circle at 38% 32%, #2B1E10 0%, #121829 62%, #080C16 100%);" +
+          "position:fixed;right:18px;top:64px;width:78px;height:78px;" +
+          "background:transparent;border:none;box-shadow:none;" +
           "display:flex;align-items:center;justify-content:center;" +
-          "border:1.5px solid rgba(245,183,0,0.65);" +
-          "animation:nkapOrbBreath 3.4s ease-in-out infinite;" +
+          "filter:drop-shadow(0 0 11px rgba(245,183,0,0.48)) drop-shadow(0 2px 6px rgba(15,23,42,0.32));" +
           "z-index:2147483647;pointer-events:auto;cursor:pointer;user-select:none;" +
-          "transition:transform 0.18s cubic-bezier(0.22,1,0.36,1);overflow:visible;";
+          "transition:transform 0.18s cubic-bezier(0.22,1,0.36,1),filter 0.25s ease;overflow:visible;";
 
-        // Ondes concentriques qui pulsent quand Nkap parle / écoute / réfléchit
-        const ring1 = document.createElement("span");
-        ring1.className = "nkap-orb-ring";
-        ring1.style.cssText =
-          "position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;pointer-events:none;";
-        const ring2 = document.createElement("span");
-        ring2.className = "nkap-orb-ring-2";
-        ring2.style.cssText =
-          "position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;pointer-events:none;";
-        bubbleEl.appendChild(ring1);
-        bubbleEl.appendChild(ring2);
-        orbRippleEl = ring1;
-
-        // Canvas 60fps : réseau de neurones dorés en orbite + filaments synaptiques + noyau solaire
+        // Canvas 60fps : réseau de neurones flottant librement + impulsions lumineuses organiques
         const canvas = document.createElement("canvas");
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const size = 64;
+        const size = 78;
         canvas.width = size * dpr;
         canvas.height = size * dpr;
-        canvas.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;display:block;pointer-events:none;`;
+        canvas.style.cssText = `width:${size}px;height:${size}px;display:block;pointer-events:none;`;
         bubbleEl.appendChild(canvas);
 
-        // Micro-pastille discrète "nkap" en bas de l'orbe
+        // Micro-pastille discrète "nkap" sous la constellation
         const tag = document.createElement("span");
         tag.textContent = "nkap";
         tag.style.cssText =
-          "position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);" +
+          "position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);" +
           "background:linear-gradient(135deg,#F5B700,#FF8C42);color:#140E07;" +
           "font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:10px;letter-spacing:0.06em;" +
-          "padding:1px 7px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.45);pointer-events:none;";
+          "padding:1px 7px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,0.35);pointer-events:none;";
         bubbleEl.appendChild(tag);
 
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.scale(dpr, dpr);
-          const N = 15;
+          const N = 16;
           const nodes = Array.from({ length: N }, (_, i) => {
             const phi = Math.acos(1 - (2 * (i + 0.5)) / N);
             const theta = Math.PI * (1 + Math.sqrt(5)) * i;
             return {
               phi,
               theta,
-              r: 14 + (i % 3) * 4.5,
+              r: 15 + (i % 3) * 5.2,
               speed: 0.45 + (i % 4) * 0.16,
               phase: i * 0.7,
             };
@@ -1114,48 +1098,61 @@
             const isThink = orbState === "thinking";
             const speedMul = isSpeak ? 2.5 : isListen ? 2.1 : isThink ? 3.2 : 0.9;
             const pulse = isSpeak
-              ? 1 + 0.18 * Math.sin(t * 9.5) + 0.08 * Math.sin(t * 17)
+              ? 1 + 0.16 * Math.sin(t * 9.5) + 0.07 * Math.sin(t * 17)
               : isListen
-              ? 1 + 0.14 * Math.sin(t * 7.2)
+              ? 1 + 0.13 * Math.sin(t * 7.2)
               : isThink
               ? 1 + 0.1 * Math.sin(t * 5.5)
               : 1 + 0.05 * Math.sin(t * 2.1);
 
             const coreHue = isListen ? "255, 92, 119" : "245, 183, 0";
-            const warmHue = isListen ? "255, 155, 90" : "255, 146, 60";
+            const warmHue = isListen ? "255, 130, 80" : "234, 118, 28";
 
-            // Halo central chaleureux (noyau solaire)
-            const coreGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 24 * pulse);
-            coreGrad.addColorStop(0, `rgba(255, 244, 200, ${isSpeak ? 0.92 : 0.68})`);
-            coreGrad.addColorStop(0.35, `rgba(${coreHue}, ${isSpeak ? 0.55 : 0.34})`);
+            // Lueur solaire diffuse sans aucun bord net (fond 100% transparent)
+            const coreGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 31 * pulse);
+            coreGrad.addColorStop(0, `rgba(255, 244, 196, ${isSpeak ? 0.85 : 0.62})`);
+            coreGrad.addColorStop(0.32, `rgba(${coreHue}, ${isSpeak ? 0.46 : 0.28})`);
+            coreGrad.addColorStop(0.68, `rgba(${warmHue}, ${isSpeak ? 0.16 : 0.08})`);
             coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
             ctx.fillStyle = coreGrad;
             ctx.beginPath();
-            ctx.arc(cx, cy, 26 * pulse, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 34 * pulse, 0, Math.PI * 2);
             ctx.fill();
 
-            // Projection 3D des neurones en orbite
+            // Onde organique diffuse quand Nkap parle ou écoute (sans bord circulaire dur)
+            if (isSpeak || isListen || isThink) {
+              const waveP = (t * (isSpeak ? 1.15 : isListen ? 1.35 : 0.85)) % 1;
+              const waveR = 12 + waveP * 25;
+              const waveAlpha = (1 - waveP) * 0.45;
+              ctx.strokeStyle = `rgba(${coreHue}, ${waveAlpha.toFixed(2)})`;
+              ctx.lineWidth = 1.6 * (1 - waveP * 0.6);
+              ctx.beginPath();
+              ctx.arc(cx, cy, waveR, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+
+            // Projection 3D des neurones en orbite libre
             const pts = nodes.map((n) => {
               const a = n.theta + t * n.speed * speedMul;
-              const b = n.phi + Math.sin(t * 0.7 + n.phase) * 0.22;
+              const b = n.phi + Math.sin(t * 0.7 + n.phase) * 0.24;
               const rad = n.r * pulse;
               const x3 = rad * Math.sin(b) * Math.cos(a);
               const y3 = rad * Math.cos(b);
               const z3 = rad * Math.sin(b) * Math.sin(a);
-              const scale = (z3 + 42) / 60;
+              const scale = (z3 + 46) / 64;
               return { x: cx + x3, y: cy + y3, z: z3, s: scale, p: n.phase };
             });
 
-            // Filaments synaptiques entre neurones proches
-            ctx.lineWidth = isSpeak ? 1.15 : 0.85;
+            // Filaments synaptiques chaleureux (lisibles sur fond clair et foncé)
+            ctx.lineWidth = isSpeak ? 1.35 : 1.05;
             for (let i = 0; i < pts.length; i++) {
               for (let j = i + 1; j < pts.length; j++) {
                 const dx = pts[i].x - pts[j].x;
                 const dy = pts[i].y - pts[j].y;
                 const dist = Math.hypot(dx, dy);
-                const maxD = isSpeak ? 26 : 22;
+                const maxD = isSpeak ? 30 : 26;
                 if (dist < maxD) {
-                  const alpha = (1 - dist / maxD) * (isSpeak ? 0.78 : isThink ? 0.66 : 0.46);
+                  const alpha = (1 - dist / maxD) * (isSpeak ? 0.88 : isThink ? 0.76 : 0.62);
                   ctx.strokeStyle = `rgba(${i % 2 === 0 ? coreHue : warmHue}, ${alpha.toFixed(2)})`;
                   ctx.beginPath();
                   ctx.moveTo(pts[i].x, pts[i].y);
@@ -1165,14 +1162,18 @@
               }
             }
 
-            // Neurones lumineux (triés par profondeur z)
+            // Neurones lumineux à cœur crème + halo doré
             pts.sort((a, b) => a.z - b.z);
             for (const p of pts) {
-              const glow = 0.55 + 0.45 * Math.sin(t * (isSpeak ? 8 : 3) + p.p);
-              const rNode = (1.6 + p.s * 1.4) * (isSpeak ? 1.12 : 1);
-              ctx.fillStyle = `rgba(255, 245, 210, ${(0.55 + glow * 0.45).toFixed(2)})`;
+              const glow = 0.55 + 0.45 * Math.sin(t * (isSpeak ? 8.5 : 3.2) + p.p);
+              const rNode = (1.7 + p.s * 1.55) * (isSpeak ? 1.12 : 1);
+              ctx.fillStyle = `rgba(${coreHue}, ${(0.38 + glow * 0.35).toFixed(2)})`;
               ctx.beginPath();
-              ctx.arc(p.x, p.y, rNode, 0, Math.PI * 2);
+              ctx.arc(p.x, p.y, rNode * 1.65, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = `rgba(255, 248, 220, ${(0.72 + glow * 0.28).toFixed(2)})`;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, rNode * 0.85, 0, Math.PI * 2);
               ctx.fill();
             }
 
