@@ -3150,6 +3150,33 @@ class M2Service:
         sb.clear(7600)
         return sb.actions
 
+    def _build_home_balance_actions(
+        self, transcript: Transcript, screen_context: ScreenContext
+    ) -> list[ActionMessage] | None:
+        """Répond instantanément (< 5 ms, même si Ollama est occupé/hors-ligne) au solde disponible sur l'accueil."""
+        semantics = self._analyze_screen(screen_context)
+        label_to_val: dict[str, str] = semantics.get("label_to_value") or {}
+        usable_nodes: dict[str, ScreenNode] = semantics.get("usable_nodes") or {}
+        bal_nid = label_to_val.get("solde disponible") or label_to_val.get("solde")
+        if not bal_nid or bal_nid not in usable_nodes:
+            return None
+        bal_node = usable_nodes[bal_nid]
+        bal_txt = (bal_node.text or "").strip()
+        if not extract_amounts(bal_txt):
+            return None
+        lang = transcript.lang or "fr"
+        sb = _StreamBuilder(transcript, transcript.ts or 0)
+        spoken = self._safe_text_for_harness(
+            f"Ton solde disponible est de {bal_txt}.",
+            screen_context,
+            self.kb.terms,
+            fallback=f"Ton solde disponible est {bal_txt}.",
+        )
+        sb.speak("playbook_balance", spoken, lang, 0)
+        sb.draw("circle", "pb-bal-1", bal_nid, color="yellow", duration_ms=580, run_after_ms=220)
+        sb.clear(6800)
+        return sb.actions
+
     def _build_history_summary_actions(
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
@@ -3259,6 +3286,14 @@ class M2Service:
                 k in q_norm for k in ("dernieres operations", "mes operations", "historique", "transactions", "derniere operation", "derniere transaction")
             ):
                 return self._build_history_summary_actions(transcript, screen_context)
+            if (
+                screen_key == "home"
+                and any(k in q_norm for k in ("solde", "combien j'ai", "combien jai", "combien il me reste", "mon argent", "ekotedi", "nje e peti"))
+                and not any(k in q_norm for k in ("apres", "restera", "cacher", "masquer", "afficher", "hide"))
+            ):
+                bal_actions = self._build_home_balance_actions(transcript, screen_context)
+                if bal_actions:
+                    return bal_actions
 
         if self._is_out_of_scope_question(transcript.text, screen_context):
             return self._build_out_of_scope_actions(transcript, screen_context)
