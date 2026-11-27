@@ -473,7 +473,7 @@ def _route_turn(
             )
 
         if text == "3" or kw_intent == "CORRECTION":
-            new_amt = parse_amount(text)
+            new_amt = None if text == "3" else parse_amount(text)
             # 1. Correction directe de montant via POST /transactions/{ref}/update si disponible (sinon cancel + recreate)
             if new_amt:
                 if state.get("reference") and callable(getattr(bank, "update", None)):
@@ -518,12 +518,15 @@ def _route_turn(
                     return err_or_clarify
                 return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
 
-            if state.get("reference"):
-                bank.cancel(state["reference"])
-                state["reference"] = None
             state["step"] = "correction_amount"
             txt, declared = render_phrase("ask_new_amount", lang, max_septets=max_septets)
-            return _reply(txt, "CORRECTION", declared, max_septets=max_septets)
+            return _reply(
+                txt,
+                "CORRECTION",
+                declared,
+                transaction={"id": state.get("reference"), "status": "pending"} if state.get("reference") else None,
+                max_septets=max_septets,
+            )
 
         txt, declared = render_phrase("confirm_prompt_retry", lang, max_septets=max_septets)
         return _reply(
@@ -536,11 +539,44 @@ def _route_turn(
 
     if step == "correction_amount":
         new_amt = parse_amount(text)
-        if not new_amt:
-            txt, declared = render_phrase("invalid_amount", lang, max_septets=max_septets)
-            return _reply(txt, "CLARIFICATION_NEEDED", declared, max_septets=max_septets)
-        state["amount"] = new_amt
-        return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
+        if new_amt:
+            if state.get("reference") and callable(getattr(bank, "update", None)):
+                res_u = bank.update(state["reference"], {"amount": new_amt})
+                if isinstance(res_u, tuple) and len(res_u) == 3:
+                    ok_u, _st_u, tx_u = res_u
+                else:
+                    ok_u, tx_u = False, {}
+                if ok_u and isinstance(tx_u, dict) and tx_u.get("id"):
+                    state["step"] = "confirm"
+                    state["amount"] = int(tx_u.get("amount", new_amt))
+                    state["fee"] = tx_u.get("fee", 0)
+                    state["total"] = tx_u.get("total", state["amount"] + state["fee"])
+                    txt, declared = _format_recap(state, lang, max_septets)
+                    return _reply(
+                        txt,
+                        "CORRECTION",
+                        declared,
+                        parameters={"amount": state["amount"], "fee": state["fee"], "total": state["total"], "currency": "XAF"},
+                        options=["Confirmer", "Annuler", "Modifier"],
+                        transaction={"id": state["reference"], "status": "pending"},
+                        max_septets=max_septets,
+                    )
+            if state.get("reference"):
+                bank.cancel(state["reference"])
+                state["reference"] = None
+            state["amount"] = new_amt
+            return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
+        # Permet aussi de modifier le bénéficiaire (ex. taper "Brenda" après avoir choisi "3. Modifier")
+        if state.get("op_type", "transfer") == "transfer" and len(text.strip()) >= 2:
+            if state.get("reference"):
+                bank.cancel(state["reference"])
+                state["reference"] = None
+            err_or_clarify = _resolve_beneficiary_or_clarify(state, text, phone, bank, lang, max_septets)
+            if err_or_clarify:
+                return err_or_clarify
+            return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
+        txt, declared = render_phrase("invalid_amount", lang, max_septets=max_septets)
+        return _reply(txt, "CLARIFICATION_NEEDED", declared, max_septets=max_septets)
 
     # ── Choix bénéficiaire homonyme ──
     if step == "transfer_pick_benef":
@@ -659,7 +695,7 @@ def _route_turn(
 
     if text == "2" or kw_intent == "TRANSFER":
         state["op_type"] = "transfer"
-        amt = parse_amount(text)
+        amt = None if text == "2" else parse_amount(text)
         if amt:
             state["amount"] = amt
         if text != "2":
@@ -676,7 +712,7 @@ def _route_turn(
         return _reply(txt, "CLARIFICATION_NEEDED", declared, max_septets=max_septets)
 
     if text == "3" or kw_intent == "FEE_INQUIRY":
-        amt = parse_amount(text)
+        amt = None if text == "3" else parse_amount(text)
         if amt:
             return _do_fees(amt, bank, lang, max_septets)
         state["step"] = "fee_amount"
@@ -688,8 +724,8 @@ def _route_turn(
 
     if text == "5" or kw_intent == "AIRTIME_PURCHASE":
         state["op_type"] = "airtime"
-        amt = parse_amount(text)
-        target_p = parse_phone(text)
+        amt = None if text == "5" else parse_amount(text)
+        target_p = None if text == "5" else parse_phone(text)
         if amt and target_p:
             state["to"] = target_p
             state["amount"] = amt
@@ -700,8 +736,8 @@ def _route_turn(
 
     if text == "6" or kw_intent == "BILL_PAYMENT":
         state["op_type"] = "bill"
-        biller = detect_biller(text)
-        amt = parse_amount(text)
+        biller = None if text == "6" else detect_biller(text)
+        amt = None if text == "6" else parse_amount(text)
         if biller and amt:
             state["biller"] = biller
             state["amount"] = amt

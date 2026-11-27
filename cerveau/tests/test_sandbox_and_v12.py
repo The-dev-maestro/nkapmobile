@@ -595,6 +595,29 @@ def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
     assert "150 FCFA" in r2["response"]["text"]
     bank.update.assert_called_with("TRX-001", {"amount": 10000})
 
+    # Régression USSD menu numéroté : "2" (Transfert) ne doit JAMAIS devenir 2 FCFA, et "3" (Modifier) ne doit JAMAIS devenir 3 FCFA !
+    SESSIONS.clear()
+    m1 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": ""}}, bank_client=bank)
+    assert "Transfert" in m1["response"]["text"]
+    m2 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "2"}}, bank_client=bank)
+    assert "beneficiaire" in m2["response"]["text"].lower()
+    m3 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "Paul"}}, bank_client=bank)
+    assert "montant" in m3["response"]["text"].lower()
+    assert "2 fcfa" not in m3["response"]["text"].lower()
+    m4 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "5000"}}, bank_client=bank)
+    assert "5 000" in m4["response"]["text"] and "Modifier" in m4["response"]["text"]
+    m5 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "3"}}, bank_client=bank)
+    assert "nouveau montant" in m5["response"]["text"].lower()
+    assert "3 fcfa" not in m5["response"]["text"].lower()
+    m6 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "10000"}}, bank_client=bank)
+    assert "10 000" in m6["response"]["text"]
+
+    # Menu "3" (Frais) doit demander le montant et JAMAIS calculer les frais pour 3 FCFA !
+    SESSIONS.clear()
+    f1 = handle_channel_turn({"session_id": "s_fee", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "3"}}, bank_client=bank)
+    assert "montant" in f1["response"]["text"].lower()
+    assert "3 fcfa" not in f1["response"]["text"].lower()
+
     # 3. Choix judicieux v1.2 côté cerveau : table (dépôt/retrait), highlight (frais), flow + callout (solde après), bars (comparaison)
     review_ctx = {
         "type": "screen_context",

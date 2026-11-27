@@ -287,10 +287,10 @@ PHRASES: dict[str, dict[str, str]] = {
         "en": "Transaction cancelled. Nothing debited.",
     },
     "ask_new_amount": {
-        "ewo": "Tili itan mfefe (FCFA):",
-        "dua": "Tila mutango mpepe (FCFA):",
-        "fr": "Entrez le nouveau montant (FCFA):",
-        "en": "Enter the new amount (FCFA):",
+        "ewo": "Tili itan mfefe (FCFA) nge dzoé mod mfe:",
+        "dua": "Tila musongi mpepe (FCFA) nga mutombwedi:",
+        "fr": "Nouveau montant (FCFA) ou nouveau beneficiaire:",
+        "en": "Enter new amount (FCFA) or beneficiary:",
     },
     "ask_airtime_target": {
         "ewo": "Kredi asu:\n1. Nombo wam\n2. Nombo mfe",
