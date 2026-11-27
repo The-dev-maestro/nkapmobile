@@ -1648,11 +1648,6 @@
 
     function anchored(el, fn) {
       if (!el || !el.isConnected) return;
-      const runWithOrb = () => {
-        fn();
-        // L'orbe neuronal glisse en douceur à côté de l'élément expliqué (toujours dans la frame)
-        floatOrbNear(el);
-      };
       const r = el.getBoundingClientRect();
       if (r.top < 40 || r.bottom > window.innerHeight - 60) {
         try {
@@ -1661,11 +1656,11 @@
         const gen = clearGen;
         const tid = setTimeout(() => {
           pendingTimers.delete(tid);
-          if (gen === clearGen && el.isConnected) runWithOrb();
+          if (gen === clearGen && el.isConnected) fn();
         }, 260);
         pendingTimers.add(tid);
       } else {
-        runWithOrb();
+        fn();
       }
     }
 
