@@ -721,7 +721,13 @@
       "spoken": "Tes dernières opérations s'affichent sur l'accueil Wave : appuie sur la flèche retour en haut à gauche, je te les montrerai dès qu'on y arrive.",
       "target_match": [
         "back",
-        "retour"
+        "navigate up",
+        "retour",
+        "revenir en haut",
+        "revenir",
+        "previous",
+        "close",
+        "fermer"
       ],
       "style": "circle",
       "color": "yellow",
@@ -754,7 +760,13 @@
       "spoken": "Ton solde s'affiche en haut de l'accueil Wave : appuie sur la flèche retour en haut à gauche, je te le lirai dès qu'on y arrive.",
       "target_match": [
         "back",
-        "retour"
+        "navigate up",
+        "retour",
+        "revenir en haut",
+        "revenir",
+        "previous",
+        "close",
+        "fermer"
       ],
       "style": "circle",
       "color": "yellow",
@@ -783,7 +795,13 @@
       "spoken": "Pour payer une facture, reviens sur l'accueil avec la flèche en haut à gauche : je te montrerai Factures (Bills) dès qu'on y arrive.",
       "target_match": [
         "back",
-        "retour"
+        "navigate up",
+        "retour",
+        "revenir en haut",
+        "revenir",
+        "previous",
+        "close",
+        "fermer"
       ],
       "style": "circle",
       "color": "yellow",
@@ -812,7 +830,13 @@
       "spoken": "Ton Coffre d'épargne (Vault) est sur l'accueil Wave : appuie sur la flèche retour en haut à gauche, je te le montrerai dès qu'on y arrive.",
       "target_match": [
         "back",
-        "retour"
+        "navigate up",
+        "retour",
+        "revenir en haut",
+        "revenir",
+        "previous",
+        "close",
+        "fermer"
       ],
       "style": "circle",
       "color": "yellow",
@@ -844,7 +868,13 @@
       "spoken": "Appuie sur la flèche retour en haut à gauche pour revenir à l'écran précédent sans rien envoyer.",
       "target_match": [
         "back",
-        "retour"
+        "navigate up",
+        "retour",
+        "revenir en haut",
+        "revenir",
+        "previous",
+        "close",
+        "fermer"
       ],
       "style": "circle",
       "color": "yellow"

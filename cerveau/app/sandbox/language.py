@@ -100,7 +100,8 @@ def detect_language_switch(text: str) -> str | None:
     n = _norm(text)
     switch_triggers = (
         "langue", "language", "parle", "parler", "passe en", "passer en", "en ",
-        "switch", "change to", "kobo", "bato", "nkobo", "bwele", "tyende nkobo", "tukwa bwambo",
+        "switch", "change to", "kobo", "bato", "nkobo", "bwele", "tyende nkobo",
+        "tukwa bwambo", "wengisane eyeme", "wenginane bwambo", "eyeme", "bwambo",
     )
     lang_map = {
         "ewo": ("ewondo", "ewo"),
@@ -122,16 +123,17 @@ def detect_term_question(text: str) -> str | None:
         k in n
         for k in (
             "c'est quoi", "cest quoi", "veut dire", "signifie", "explique",
-            "definition", "what is", "za ne", "nje ne", "e ne dze", "e ne za", "terme", "mot", "sens",
+            "definition", "what is", "za ne", "nje ne", "e ne dze", "e ne za",
+            "terme", "mot", "sens", "teleya mba",
         )
     )
     if "microfinance" in n or "micro finance" in n or "micro-finance" in n:
         return "microfinance"
-    if "plafond" in n or "limite" in n or "limit" in n or "nkuk" in n or "ndongo" in n:
+    if "plafond" in n or "limite" in n or "limit" in n or "nkuk" in n or "ndongo" in n or "jasame" in n or "mwasame" in n:
         return "limit" if (asks_def or len(n.split()) <= 3) else None
-    if "beneficiaire" in n or "destinataire" in n or "beneficiary" in n or "mukusa" in n:
+    if "beneficiaire" in n or "destinataire" in n or "beneficiary" in n or "mukusa" in n or "mukusedi" in n or "mukuse" in n:
         return "beneficiary" if (asks_def or len(n.split()) <= 3) else None
-    if asks_def and any(k in n for k in ("frais", "fee", "mbug", "mabala", "commission", "tarif")):
+    if asks_def and any(k in n for k in ("frais", "fee", "mbug", "mabala", "musen", "commission", "tarif")):
         return "fee"
     if asks_def and any(k in n for k in ("epargne", "epargner", "saving")):
         return "epargne"
@@ -186,25 +188,25 @@ def detect_intent_keyword(text: str) -> str | None:
     n = _norm(text)
     if not n:
         return None
-    if any(k in n for k in ("confirmer", "confirme", "oui", "valider", "ok", "yes", "yemban", "bamse")):
+    if any(k in n for k in ("confirmer", "confirme", "oui", "valider", "ok", "yes", "yemban", "bamse", "mbamse")):
         return "CONFIRM"
-    if any(k in n for k in ("annuler", "annule", "non", "stop", "cancel", "vaa", "buka")):
+    if any(k in n for k in ("annuler", "annule", "non", "stop", "cancel", "vaa", "buka", "esele", "essele", "a bangi")):
         return "CANCEL"
-    if any(k in n for k in ("corriger", "corrige", "modifier", "modifie", "changer", "change", "finalement", "plutot", "tyende", "tukwa")):
+    if any(k in n for k in ("corriger", "corrige", "modifier", "modifie", "changer", "change", "finalement", "plutot", "tyende", "tukwa", "wengisane", "engele", "na wondi")):
         return "CORRECTION"
-    if any(k in n for k in ("frais", "combien coute", "cout", "tarif", "fee", "mbug", "mabala")):
+    if any(k in n for k in ("frais", "combien coute", "cout", "tarif", "fee", "mbug", "mabala", "musen", "busise")):
         return "FEE_INQUIRY"
-    if any(k in n for k in ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "bebolo")):
+    if any(k in n for k in ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "bebolo", "misongi", "misondi")):
         return "TRANSACTION_HISTORY"
-    if any(k in n for k in ("credit", "airtime", "recharge", "unites", "kredi")):
+    if any(k in n for k in ("credit", "airtime", "recharge", "unites", "kredi", "ebale", "djanda la mudi", "djanta musinga", "musinga")):
         return "AIRTIME_PURCHASE"
-    if any(k in n for k in ("facture", "bill", "eneo", "camwater", "canal", "camtel", "kalara", "kalati")):
+    if any(k in n for k in ("facture", "bill", "eneo", "camwater", "canal", "camtel", "kalara", "kalati", "sawa", "saweya", "musawedi", "na pula wasa")):
         return "BILL_PAYMENT"
-    if any(k in n for k in ("retrait", "retirer", "withdraw", "gab", "atm", "nong moni", "busa moni")):
+    if any(k in n for k in ("retrait", "retirer", "withdraw", "gab", "atm", "nong moni", "busa moni", "kusa la moni")):
         return "WITHDRAWAL"
-    if any(k in n for k in ("envoyer", "envoie", "transfert", "transferer", "send", "lomo", "lom", "loma")):
+    if any(k in n for k in ("envoyer", "envoie", "transfert", "transferer", "send", "lomo", "lom", "loma", "lomea")):
         return "TRANSFER"
-    if any(k in n for k in ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "nden", "moni ma pene", "moni ma dia")):
+    if any(k in n for k in ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele")):
         return "BALANCE_INQUIRY"
     return None
 
@@ -214,25 +216,25 @@ def detect_intent_keyword(text: str) -> str | None:
 PHRASES: dict[str, dict[str, str]] = {
     "menu": {
         "ewo": "Safinum (Ewondo):\n1. Itan ineu\n2. Lomo moni\n3. Mbug\n4. Itang mvet\n5. Kredi\n6. Kalara\n7. Aide termes",
-        "dua": "Safinum (Duala):\n1. Moni ma pene\n2. Loma moni\n3. Mabala\n4. Bebolo\n5. Kredi\n6. Kalati\n7. Aide termes",
+        "dua": "Safinum (Duala) Poso:\n1. Ekotedi\n2. Loma moni\n3. Musen\n4. Misongi\n5. Ebale\n6. Sawa diyo\n7. Teleya",
         "fr": "Safinum:\n1. Mon solde\n2. Transfert\n3. Frais\n4. Historique\n5. Credit\n6. Facture\n7. Termes",
         "en": "Safinum:\n1. Balance\n2. Transfer\n3. Fees\n4. History\n5. Airtime\n6. Bills\n7. Terms",
     },
     "balance": {
         "ewo": "Itan ineu a nkwap {phone}: {balance}.",
-        "dua": "Moni ma pene o konto {phone}: {balance}.",
+        "dua": "Moni mu peti ({phone}): {balance}.",
         "fr": "Votre solde ({phone}) est de {balance}.",
         "en": "Your balance ({phone}) is {balance}.",
     },
     "ask_transfer_to": {
         "ewo": "Tili dzoé nge nombo mod wa lom moni:",
-        "dua": "Tila dina nga nimero ya mukusa:",
+        "dua": "Dina la mukusedi nga number:",
         "fr": "Nom ou numero du beneficiaire:",
         "en": "Beneficiary name or phone number:",
     },
     "ask_amount": {
         "ewo": "Itan ya lom (FCFA):",
-        "dua": "Moni ma loma (FCFA):",
+        "dua": "Moni o maloma na (FCFA):",
         "fr": "Montant en FCFA:",
         "en": "Amount in FCFA:",
     },
@@ -256,7 +258,7 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "confirm_transfer": {
         "ewo": "Lomo {amount} a {to}. Mbug {fee}, ntolan {total}.\n1. Yemban\n2. Vaa\n3. Tyende",
-        "dua": "Loma {amount} na {to}. Mabala {fee}, botali {total}.\n1. Bamse\n2. Buka\n3. Tukwa",
+        "dua": "Loma {amount} o dina la {to}. Musen {fee}, botali {total}.\n1. Bamse\n2. Esele\n3. Wengisane",
         "fr": "Envoi {amount} a {to}. Frais {fee}, total {total}.\n1. Confirmer\n2. Annuler\n3. Modifier",
         "en": "Send {amount} to {to}. Fee {fee}, total {total}.\n1. Confirm\n2. Cancel\n3. Edit",
     },
@@ -274,13 +276,13 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "confirmed": {
         "ewo": "Mvet o boban mben! {amount} a {to}. Ref {ref}.",
-        "dua": "Ebolo e bodi! {amount} na {to}. Edun {ref}.",
+        "dua": "Tombi bwam! {amount} o dina la {to}. Edun {ref}.",
         "fr": "Operation confirmee! {amount} pour {to}. Ref {ref}.",
         "en": "Confirmed! {amount} for {to}. Ref {ref}.",
     },
     "cancelled": {
         "ewo": "Mvet o vaban. Te ke itan e tsigban.",
-        "dua": "Ebolo e bukabe. To moni ma si busabe.",
+        "dua": "Esele. Moni mu si lomabe.",
         "fr": "Operation annulee. Aucun montant debite.",
         "en": "Transaction cancelled. Nothing debited.",
     },
@@ -316,19 +318,19 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "term_fee": {
         "ewo": "Mbug: itan etun banki a tsig asu na a lom moni wog (ex: 50 a 400 FCFA).",
-        "dua": "Mabala: moni banki e ma-nongo o bola loma (ex: 50 a 400 FCFA).",
+        "dua": "Musen mwe nde moni bank mba ma nongo no o loma (50 a 400 FCFA).",
         "fr": "Frais: petite somme retenue par la banque pour faire l'envoi (ex: 50 a 400 FCFA).",
         "en": "Fee: small amount the bank charges to process your transfer.",
     },
     "term_limit": {
         "ewo": "Nkuk: itan enen o ne dzam lom a mvet wua (500 000 FCFA).",
-        "dua": "Ndongo: moni ma ndene o tondi loma ngeba ewo (500 000 FCFA).",
+        "dua": "Jasame le nde musongi mwa moni o titi no na o loma nguedi po (500 000 FCFA).",
         "fr": "Plafond: montant maximum autorise par operation (500 000 FCFA).",
         "en": "Limit: maximum amount allowed in a single transaction (500 000 FCFA).",
     },
     "term_beneficiary": {
         "ewo": "Mod a non moni: nyi wa lom itan. Fombo dzoé ai nombo ossussua.",
-        "dua": "Mukusa: moto nu ma-kusa moni mongo. Ombwa dina na nimero oboso.",
+        "dua": "Mukusedi nde a makuse moni. Ombwa dina na number oboso.",
         "fr": "Beneficiaire: la personne qui recoit votre argent. Verifiez toujours son numero.",
         "en": "Beneficiary: the person receiving your money. Always check their number.",
     },
@@ -376,73 +378,73 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "lang_switched": {
         "ewo": "Nkobo o tyendeban: Ewondo. {resume}",
-        "dua": "Bwambo bo tukwabe: Duala. {resume}",
+        "dua": "Na wengisane eyeme: Duala. To lambo di si bolone. {resume}",
         "fr": "Langue changee: Francais. {resume}",
         "en": "Language switched: English. {resume}",
     },
     "history_empty": {
         "ewo": "Te ke mvet a tatan.",
-        "dua": "To ebolo tatan.",
+        "dua": "To lambo.",
         "fr": "Aucune operation recente.",
         "en": "No recent transactions.",
     },
     "invalid_amount": {
         "ewo": "Nombo itan a ne abe. Tili nombo (ex: 5000):",
-        "dua": "Mutango ma si tenge. Tila nombo (ex: 5000):",
+        "dua": "Number e si tem. Tila nombo (ex: 5000):",
         "fr": "Montant invalide. Tapez un nombre (ex: 5000):",
         "en": "Invalid amount. Enter a number (e.g. 5000):",
     },
     "invalid_phone": {
         "ewo": "Nombo a ne abe. 9 chiffres, ex: 699000002",
-        "dua": "Nimero e si tenge. 9 chiffres, ex: 699000002",
+        "dua": "Number e si tem. 9 chiffres, ex: 699000002",
         "fr": "Numero invalide. 9 chiffres, ex: 699000002",
         "en": "Invalid phone. 9 digits, e.g. 699000002",
     },
     "confirm_prompt_retry": {
         "ewo": "Tili 1 (Yemban), 2 (Vaa) nge 3 (Tyende).",
-        "dua": "Tila 1 (Bamse), 2 (Buka) nga 3 (Tukwa).",
+        "dua": "Tila 1 (Bamse), 2 (Esele) nga 3 (Wengisane).",
         "fr": "Tapez 1 (Confirmer), 2 (Annuler) ou 3 (Modifier).",
         "en": "Reply 1 (Confirm), 2 (Cancel) or 3 (Edit).",
     },
     "atm_multiple": {
         "ewo": "Nong moni a GAB: multiples 5 000 FCFA (ex: 5000, 10000).",
-        "dua": "Busa moni o GAB: multiples 5 000 FCFA (ex: 5000, 10000).",
+        "dua": "Kusa la moni o GAB: multiples 5 000 FCFA (ex: 5000, 10000).",
         "fr": "Retrait GAB uniquement par multiples de 5 000 FCFA.",
         "en": "ATM withdrawals must be multiples of 5,000 FCFA.",
     },
     "err_INSUFFICIENT_FUNDS": {
         "ewo": "Itan yoe e se dzam asu mvet nyi. Lomo itan etun.",
-        "dua": "Moni mongo ma si kolisane. Loma moni ma siti.",
+        "dua": "Moni mu si dongamene. Loma moni musadi.",
         "fr": "Solde insuffisant pour couvrir le montant et les frais. Essayez un montant plus petit.",
         "en": "Insufficient balance for this amount and fee. Try a smaller amount.",
     },
     "err_LIMIT_EXCEEDED": {
         "ewo": "Itan e lod nkuk (500 000 FCFA a mvet).",
-        "dua": "Moni ma busi ndongo (500 000 FCFA).",
+        "dua": "Diwuse! Nongo jangamene, moni mwasame (500 000 FCFA).",
         "fr": "Montant superieur au plafond autorise (500 000 FCFA).",
         "en": "Amount exceeds maximum limit (500,000 FCFA).",
     },
     "err_UNKNOWN_BENEFICIARY": {
         "ewo": "Mod a nji yenban. Fombo dzoé ai nombo.",
-        "dua": "Mukusa a si yenbe. Ombwa dina na nimero.",
+        "dua": "Mukusedi a titi. Ombwa number na dina.",
         "fr": "Beneficiaire introuvable. Verifiez le nom ou le numero.",
         "en": "Beneficiary not found. Check name or number.",
     },
     "err_UNKNOWN_ACCOUNT": {
         "ewo": "Nkwap o nji yenban.",
-        "dua": "Konto e si yenbe.",
+        "dua": "Bekotedi e si yenbe.",
         "fr": "Compte introuvable.",
         "en": "Account not found.",
     },
     "err_UNKNOWN_BILLER": {
         "ewo": "Isae e nji yenban. Tob ENEO, CAMWATER, CANAL nge CAMTEL.",
-        "dua": "Ebolo e si biabe. Pona ENEO, CAMWATER, CANAL nga CAMTEL.",
+        "dua": "Diyo di titi. Poso ENEO, CAMWATER, CANAL nga CAMTEL.",
         "fr": "Facturier inconnu. Choisissez ENEO, CAMWATER, CANAL ou CAMTEL.",
         "en": "Unknown biller. Choose ENEO, CAMWATER, CANAL or CAMTEL.",
     },
     "err_GENERIC": {
         "ewo": "Mvet o nji boban. Kele ko.",
-        "dua": "Ebolo e si bolane. Kekise pene.",
+        "dua": "Moni mu si lomabe. Kekise pene.",
         "fr": "Operation impossible pour le moment. Reessayez.",
         "en": "Operation unavailable right now. Please try again.",
     },

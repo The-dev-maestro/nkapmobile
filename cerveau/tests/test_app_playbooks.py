@@ -358,12 +358,68 @@ def test_second_person_normalizer_and_safinum_cross_screen_guidance(monkeypatch)
     assert body_bal["follow_up"]["target_screens"] == ["home"]
     assert any("solde" in c or "itan ineu" in c for c in body_bal["follow_up"]["target_cues"])
 
-    # Wave Send Money -> demande de solde renvoie aussi un follow_up vers l'accueil Wave
-    r_wave_bal = client.post("/answer", json={"transcript": "C'est quoi mon solde ?", "lang_hint": "fr", "context": WAVE_SEND_MONEY_CTX})
+    # Wave Send Money -> demande de solde renvoie aussi un follow_up vers l'accueil Wave ET entoure "Navigate up"
+    wave_nav_up = dict(WAVE_SEND_MONEY_CTX)
+    wave_nav_up["nodes"] = [
+        {"node_id": "w_nav", "tag": "button", "text": "", "content_desc": "Navigate up", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        *[n for n in WAVE_SEND_MONEY_CTX["nodes"] if n["node_id"] != "w_back"],
+    ]
+    r_wave_bal = client.post("/answer", json={"transcript": "C'est quoi mon solde ?", "lang_hint": "fr", "context": wave_nav_up})
     body_wb = r_wave_bal.json()
     assert body_wb.get("follow_up") is not None
     assert body_wb["follow_up"]["target_screens"] == ["home"]
     assert "hide balance" in body_wb["follow_up"]["target_cues"]
+    assert any(a["action"]["t"] == "circle" and a["action"]["target"]["node_id"] == "w_nav" for a in body_wb["actions"])
+
+    # Régression exacte multi-page Historique : /history avec Facture ENEO + Crédit MTN ne doit JAMAIS être classé `pay` ni reboucler !
+    history_with_bill_and_airtime = {
+        "type": "screen_context",
+        "channel": "mobile",
+        "page": {"url": "https://safinum.cm/sandbox/channel/mobile", "title": "Safinum Banque démo"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "ht", "tag": "h2", "text": "Historique", "clickable": False, "bounds": [430, 190, 560, 220], "tone": "light"},
+            {"node_id": "hf1", "tag": "button", "text": "Tout", "clickable": True, "bounds": [430, 235, 480, 265], "tone": "light"},
+            {"node_id": "hf2", "tag": "button", "text": "Entrants", "clickable": True, "bounds": [490, 235, 565, 265], "tone": "light"},
+            {"node_id": "hf3", "tag": "button", "text": "Sortants", "clickable": True, "bounds": [575, 235, 650, 265], "tone": "light"},
+            {"node_id": "tx1_l", "tag": "span", "text": "Facture ENEO", "clickable": False, "bounds": [430, 310, 560, 335], "tone": "light"},
+            {"node_id": "tx1_a", "tag": "span", "text": "-600 FCFA", "clickable": False, "bounds": [620, 310, 720, 335], "tone": "light"},
+            {"node_id": "tx2_l", "tag": "span", "text": "Crédit MTN", "clickable": False, "bounds": [430, 370, 560, 395], "tone": "light"},
+            {"node_id": "tx2_a", "tag": "span", "text": "-1 000 FCFA", "clickable": False, "bounds": [610, 370, 720, 395], "tone": "light"},
+            {"node_id": "nav_h", "tag": "button", "text": "Historique", "clickable": True, "bounds": [640, 760, 720, 800], "tone": "light"},
+        ],
+    }
+    r_hist_arrived = client.post(
+        "/answer",
+        json={"transcript": "Quelles sont mes dernières opérations ?", "lang_hint": "fr", "context": history_with_bill_and_airtime},
+    )
+    body_ha = r_hist_arrived.json()
+    assert body_ha.get("follow_up") is None  # JAMAIS reboucler vers Historique quand on y est déjà !
+    spoken_ha = " ".join(a["action"].get("text", "") for a in body_ha["actions"] if a["action"]["t"] == "speak")
+    assert "appuie sur l'onglet historique" not in spoken_ha.lower()
+    assert "facture eneo" in spoken_ha.lower() and "600 fcfa" in spoken_ha.lower()
+    assert "crédit mtn" in spoken_ha.lower() or "credit mtn" in spoken_ha.lower()
+
+    # Vérifie le nouveau lexique Douala validé ("Misongi", "Moni mu mingeyè", "Moni mu mabusè", "Sawa la ENEO")
+    history_douala = {
+        "type": "screen_context",
+        "channel": "mobile",
+        "page": {"url": "https://safinum.cm/sandbox/channel/mobile", "title": "Safinum Banque démo"},
+        "screen_hint": "home",
+        "nodes": [
+            {"node_id": "d_t", "tag": "h2", "text": "Misongi", "clickable": False, "bounds": [430, 190, 560, 220], "tone": "light"},
+            {"node_id": "d_f1", "tag": "button", "text": "Misongi mèsè", "clickable": True, "bounds": [430, 235, 510, 265], "tone": "light"},
+            {"node_id": "d_f2", "tag": "button", "text": "Moni mu mingeyè", "clickable": True, "bounds": [515, 235, 620, 265], "tone": "light"},
+            {"node_id": "d_f3", "tag": "button", "text": "Moni mu mabusè", "clickable": True, "bounds": [625, 235, 730, 265], "tone": "light"},
+            {"node_id": "d_tx1", "tag": "span", "text": "Sawa la ENEO", "clickable": False, "bounds": [430, 310, 560, 335], "tone": "light"},
+            {"node_id": "d_tx1a", "tag": "span", "text": "-600 FCFA", "clickable": False, "bounds": [620, 310, 720, 335], "tone": "light"},
+        ],
+    }
+    r_hd = client.post("/answer", json={"transcript": "Quelles sont mes dernières opérations ?", "lang_hint": "fr", "context": history_douala})
+    body_hd = r_hd.json()
+    assert body_hd.get("follow_up") is None
+    spoken_hd = " ".join(a["action"].get("text", "") for a in body_hd["actions"] if a["action"]["t"] == "speak")
+    assert "600 fcfa" in spoken_hd.lower()
 
     r_safe = client.post("/answer", json={"transcript": "Est-ce débité tout de suite si j'appuie sur Continuer ?", "lang_hint": "fr", "context": transfer_with_nav})
     spoken_safe = " ".join(a["action"].get("text", "") for a in r_safe.json()["actions"] if a["action"]["t"] == "speak").lower()

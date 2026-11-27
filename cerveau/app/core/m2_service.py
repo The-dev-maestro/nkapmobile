@@ -78,8 +78,32 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "moni ma dia": "Solde",
     "nden": "Solde",
     "mabala": "Frais",
+    "musen": "Frais",
     "mbug": "Frais",
     "mukusa": "Bénéficiaire",
+    "mukusedi": "Bénéficiaire",
+    "bakuse moni": "Mes bénéficiaires",
+    "botea": "Accueil",
+    "sawa": "Payer",
+    "sawa la moni": "Payer une facture",
+    "djanda la mudi": "Acheter du crédit",
+    "misongi": "Historique",
+    "misongi mese": "Tout",
+    "moni mu mingeye": "Entrants",
+    "moni mu mabuse": "Sortants",
+    "musawedi": "Factures",
+    "ebale": "Crédit",
+    "poso": "Choisir le service",
+    "miiyo": "Opérateur",
+    "epetele": "Nouveau solde",
+    "kwese": "Terminer",
+    "esele": "Annuler",
+    "essele": "Annuler",
+    "di tombi bwam": "Effectuée",
+    "jenguele": "En attente",
+    "a bangi": "Annulée",
+    "to lambo": "Aucune opération pour le moment.",
+    "ekotedi": "Solde disponible",
     "nyi a non": "Bénéficiaire",
     "botali": "Récapitulatif",
     "ntolan": "Récapitulatif",
@@ -3126,6 +3150,79 @@ class M2Service:
         sb.clear(7600)
         return sb.actions
 
+    def _build_history_summary_actions(
+        self, transcript: Transcript, screen_context: ScreenContext
+    ) -> list[ActionMessage]:
+        """Résume de façon déterministe et sans hallucination les transactions réellement visibles sur l'écran Historique."""
+        lang = transcript.lang or "fr"
+        sb = _StreamBuilder(transcript, transcript.ts or 0)
+        usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+        usable.sort(key=lambda n: (n.bounds[1] if len(n.bounds) == 4 else 9999, n.bounds[0] if len(n.bounds) == 4 else 9999))
+
+        skip_words = {
+            "tout", "entrants", "sortants", "recus", "envoyes", "historique", "accueil",
+            "transfert", "envoyer", "payer", "date", "operation", "statut", "montant",
+            "mese", "bi bi", "bi lom", "nda", "lomo", "yaan", "itang", "misongi", "botea", "sawa",
+            "effectuee", "confirme", "en attente", "annulee", "annule", "echouee", "echoue",
+            "di tombi bwam", "jenguele", "a bangi", "kem", "e maneya", "e vaban", "e ne a yange", "e nji bo",
+            "ecouter", "wog", "senga", "deconnexion", "kui", "busa",
+        }
+        tx_rows: list[tuple[str, str, str]] = []
+        seen_ids: set[str] = set()
+        for amt_node in usable:
+            raw_amt = (amt_node.text or "").strip()
+            if not extract_amounts(raw_amt):
+                continue
+            low_amt = self._norm(raw_amt)
+            if any(h in low_amt for h in ("jusqu'a", "par operation", "akui", "tinga", "moni mudene", "up to")):
+                continue
+            if len(amt_node.bounds) != 4:
+                continue
+            ay = (amt_node.bounds[1] + amt_node.bounds[3]) / 2.0
+            # Cherche le libellé d'opération sur la même ligne visuelle (|Δy| <= 38px)
+            lbl_parts: list[str] = []
+            for sib in usable:
+                if sib.node_id == amt_node.node_id or len(sib.bounds) != 4:
+                    continue
+                sy = (sib.bounds[1] + sib.bounds[3]) / 2.0
+                if abs(sy - ay) > 38:
+                    continue
+                sib_txt = self._to_french_text(sib.text or "").strip()
+                sib_n = self._norm(sib_txt)
+                if not sib_n or sib_n in skip_words or extract_amounts(sib_txt):
+                    continue
+                # Ignore les horodatages purs ("27/11 07:11") si un meilleur libellé existe
+                if re.match(r"^\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2})?$", sib_txt):
+                    continue
+                if sib_txt not in lbl_parts:
+                    lbl_parts.append(sib_txt)
+            label = lbl_parts[0] if lbl_parts else "Opération"
+            if amt_node.node_id not in seen_ids:
+                seen_ids.add(amt_node.node_id)
+                tx_rows.append((label[:44], raw_amt, amt_node.node_id))
+            if len(tx_rows) >= 3:
+                break
+
+        if not tx_rows:
+            sb.speak(
+                "history_empty",
+                "Tu n'as encore aucune opération enregistrée pour le moment dans ton historique.",
+                lang,
+                0,
+            )
+            sb.clear(5600)
+            return sb.actions
+
+        spoken_parts = [f"{lbl} ({amt})" for lbl, amt, _ in tx_rows]
+        spoken_raw = "Voici tes dernières opérations : " + ", ".join(spoken_parts) + "."
+        spoken = self._safe_text_for_harness(spoken_raw, screen_context, self.kb.terms, fallback="Voici tes dernières opérations affichées ici.")
+        sb.speak("history_summary", spoken, lang, 0)
+        lines = [NotebookLine(id=f"h-l{i + 1}", label=lbl, value=amt, color="yellow" if i == 0 else "white") for i, (lbl, amt, _) in enumerate(tx_rows)]
+        sb.notebook("nb-history", "Dernières opérations", lines, anchor_id=tx_rows[0][2], run_after_ms=180)
+        sb.draw("highlight", "h-hl-1", tx_rows[0][2], color="yellow", duration_ms=480, run_after_ms=340)
+        sb.clear(8600)
+        return sb.actions
+
     def candidate_actions(
         self, transcript: Transcript, screen_context: ScreenContext
     ) -> list[ActionMessage]:
@@ -3158,6 +3255,10 @@ class M2Service:
                     if len(self._turn_follow_ups) > 64:
                         self._turn_follow_ups.pop(next(iter(self._turn_follow_ups)))
                 return self._build_playbook_shortcut_actions(sc, transcript, screen_context)
+            if screen_key == "history" and any(
+                k in q_norm for k in ("dernieres operations", "mes operations", "historique", "transactions", "derniere operation", "derniere transaction")
+            ):
+                return self._build_history_summary_actions(transcript, screen_context)
 
         if self._is_out_of_scope_question(transcript.text, screen_context):
             return self._build_out_of_scope_actions(transcript, screen_context)

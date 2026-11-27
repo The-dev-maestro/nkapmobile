@@ -126,11 +126,22 @@ class ScreenReaderService : AccessibilityService() {
         val sensitive = node.isPassword || node.className?.toString()?.contains("EditText") == true
         val text = node.text?.toString()?.trim().orEmpty()
         val desc = node.contentDescription?.toString()?.trim().orEmpty()
-        val label = if (text.isNotEmpty()) text else desc
+        var label = if (text.isNotEmpty()) text else desc
+        val r = Rect()
+        node.getBoundsInScreen(r)
+
+        // Détecte aussi la flèche Retour ← en haut à gauche quand l'app (ex. Wave) n'a pas mis de contentDescription
+        if (label.isEmpty() && !sensitive && node.isClickable && !r.isEmpty) {
+            val isTopLeftBack = r.left <= dp(40) &&
+                r.top in dp(16)..dp(96) &&
+                r.width() in dp(24)..dp(88) &&
+                r.height() in dp(24)..dp(88)
+            if (isTopLeftBack) {
+                label = "Back"
+            }
+        }
 
         if (label.isNotEmpty() && !sensitive) {
-            val r = Rect()
-            node.getBoundsInScreen(r)
             if (r.width() > 10 && r.height() > 10 && !r.isEmpty) {
                 out.add(
                     ScreenNode(

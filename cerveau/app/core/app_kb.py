@@ -172,7 +172,10 @@ class AppPlaybookStore:
         # Barre d'en-tête Android (titre à droite de la flèche retour ←, y < 165, x >= 80)
         if len(node.bounds) == 4:
             x1, y1, x2, _y2 = node.bounds
-            top_bar_buttons = {"settings", "parametres", "hide balance", "show balance", "back", "retour", "close", "fermer"}
+            top_bar_buttons = {
+                "settings", "parametres", "hide balance", "show balance",
+                "back", "navigate up", "retour", "revenir en haut", "revenir", "previous", "close", "fermer",
+            }
             if y1 < 165 and x1 >= 80 and x2 <= 580 and txt_n not in top_bar_buttons:
                 return True
         return False

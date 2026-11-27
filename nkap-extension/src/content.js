@@ -119,28 +119,36 @@
   const SANDBOX_LOCAL_TO_FR = {
     "nda": "Accueil",
     "mboa": "Accueil",
+    "botea": "Accueil",
     "lomo": "Transfert",
     "loma": "Transfert",
     "yaan": "Payer",
     "sawedi": "Payer",
+    "sawa": "Payer",
     "itang": "Historique",
     "bebolo": "Historique",
+    "misongi": "Historique",
     "itan ineu": "Solde disponible",
     "moni ma pene": "Solde disponible",
+    "ekotedi": "Solde disponible",
     "za dzam wa yi bo?": "Que voulez-vous faire ?",
     "nje o tondi bola?": "Que voulez-vous faire ?",
+    "wa pula bola nje ?": "Que voulez-vous faire ?",
     "lomo moni": "Envoyer de l'argent",
     "loma moni": "Envoyer de l'argent",
     "yaan mfie ai kalara": "Payer une facture",
     "sawedi kalati": "Payer une facture",
+    "sawa la moni": "Payer une facture",
     "kus kredi telefon": "Acheter du crédit",
     "ande kredi telefone": "Acheter du crédit",
+    "djanda la mudi": "Acheter du crédit",
     "itang mvet yam": "Mes opérations",
     "bebolo bam": "Mes opérations",
     "itang o nga kene nong": "Dernières opérations",
     "bebolo ba sukan": "Dernières opérations",
     "fombo mese": "Tout voir",
     "ombwa mese": "Tout voir",
+    "misongi mese": "Tout voir",
     "ewolo connexion": "Connexion sécurisée",
     "diwuta la musango": "Connexion sécurisée",
     "kui": "Déconnexion",
@@ -149,27 +157,37 @@
     "senga": "Écouter",
     "tele wog": "Arrêter la lecture",
     "tele senga": "Arrêter la lecture",
+    "embe": "Arrêter la lecture",
+    "telame": "Chargement",
     "e maneya": "Confirmé",
     "e bodi": "Confirmé",
+    "di tombi bwam": "Effectuée",
     "e vaban": "Annulé",
     "e bukabe": "Annulé",
+    "a bangi": "Annulée",
     "e ne a yange": "En attente",
     "e ma-enge": "En attente",
+    "jenguele": "En attente",
     "e nji bo": "Échoué",
     "e bobi": "Échoué",
+    "kem": "Échouée",
     "mod a non": "Bénéficiaire",
     "mod a non moni": "Bénéficiaire",
     "mukusa": "Bénéficiaire",
+    "mukusedi": "Bénéficiaire",
     "itan": "Montant",
     "moni": "Montant",
     "mbug": "Frais",
     "mabala": "Frais",
+    "musen": "Frais",
     "ntolan wog": "Total à débiter",
     "botali ba busa": "Total à débiter",
     "itan e li'i": "Solde après opération",
     "moni ombusa": "Solde après opération",
     "itan mfefe": "Nouveau solde",
     "moni ma pene ma dia": "Nouveau solde",
+    "epetele": "Nouveau solde",
+    "kwese": "Terminer",
     "fombo ossussua eneu wa yemban": "Vérifiez avant de confirmer",
     "ombwa oboso ba bamse": "Vérifiez avant de confirmer",
     "yemban": "Confirmer",
@@ -178,6 +196,8 @@
     "tukwa": "Modifier",
     "vaa": "Annuler",
     "buka": "Annuler",
+    "esele": "Annuler",
+    "essele": "Annuler",
     "bulan": "Retour",
     "timba": "Retour",
     "kele obusu": "Continuer",
@@ -189,24 +209,35 @@
     "edun": "Référence",
     "bot bam ba non moni": "Mes bénéficiaires",
     "bakusa bam": "Mes bénéficiaires",
+    "bakuse moni": "Mes bénéficiaires",
     "nombo telefon nge dzoe": "Numéro de téléphone ou nom",
+    "number musinga to dina longo": "Numéro de téléphone ou nom",
     "nombo ya lomo kredi": "Numéro à recharger",
     "tob isae": "Choisir le service",
+    "poso": "Choisir le service",
     "nsaa telefon": "Opérateur téléphone",
+    "miiyo": "Opérateur",
     "te ke mvet a tatan.": "Aucune opération pour le moment.",
     "to ebolo tatan.": "Aucune opération pour le moment.",
+    "to lambo": "Aucune opération pour le moment.",
     "ayaane mfie": "Électricité (ENEO)",
     "kalati a weya": "Électricité (ENEO)",
     "mendim": "Eau (CAMWATER)",
     "madiba": "Eau (CAMWATER)",
+    "elimb'a dikalo": "Télévision (Canal+)",
     "kredi": "Crédit téléphone",
+    "ebale": "Crédit",
     "kalara": "Facture",
     "kalati": "Facture",
+    "musawedi": "Factures",
     "mese": "Tout",
-    "bi bi": "Reçus",
-    "ma-poy": "Reçus",
-    "bi lom": "Envoyés",
-    "ma-ala": "Envoyés",
+    "bi bi": "Entrants",
+    "ma-poy": "Entrants",
+    "moni mu mingeye": "Entrants",
+    "bi lom": "Sortants",
+    "ma-ala": "Sortants",
+    "moni mu mabuse": "Sortants",
+    "kusa la moni": "Retrait",
   };
 
   function sandboxPhraseToFr(rawText) {
@@ -216,12 +247,15 @@
     if (SANDBOX_LOCAL_TO_FR[n]) return SANDBOX_LOCAL_TO_FR[n];
     let m;
     if ((m = clean.match(/^Mbembe kiri\s+(.+)$/i))) return `Bonjour ${m[1]}`;
-    if ((m = clean.match(/^(?:Nkwap|Konto)\s+(\d[\d\s]+)$/i))) return `Compte ${m[1]}`;
-    if ((m = clean.match(/^(?:Bi lom a|Loma na)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
-    if ((m = clean.match(/^(?:Bi bi a|Kusa na)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
-    if ((m = clean.match(/^(?:Kredi)\s+(.+)$/i))) return `Crédit ${m[1]}`;
-    if ((m = clean.match(/^(?:Kalara|Kalati)\s+(.+)$/i))) return `Facture ${m[1]}`;
-    if ((m = clean.match(/^(?:Mbug|Mabala)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
+    if ((m = clean.match(/^Mbole\s+(.+)$/i))) return `Bonjour ${m[1]}`;
+    if ((m = clean.match(/^(?:Nkwap|Konto|Bekotedi)\s+(\d[\d\s]+)$/i))) return `Compte ${m[1]}`;
+    if ((m = clean.match(/^(?:Bi lom a|Loma na|Lomea)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
+    if ((m = clean.match(/^(?:Bi bi a|Kusa na|Moni mwa)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
+    if ((m = clean.match(/^(?:Kredi|Ekotedi mwa musinga)\s+(.+)$/i))) return `Crédit ${m[1]}`;
+    if ((m = clean.match(/^(?:Kalara|Kalati|Sawa la)\s+(.+)$/i))) return `Facture ${m[1]}`;
+    if ((m = clean.match(/^(?:Mbug|Mabala|Musen)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
+    if ((m = clean.match(/^Miiyo\s*:\s*(.+)$/i))) return `Opérateur détecté : ${m[1]}`;
+    if ((m = clean.match(/^Moni mud[èe]n[èe]\s*:\s*(.+)$/i))) return `Jusqu'à ${m[1]} par opération`;
     if ((m = clean.match(/^Akui\s+(.+?)\s+a\s+mvet\s+wuo$/i))) return `Jusqu'à ${m[1]} par opération`;
     if ((m = clean.match(/^Tena\s+(.+?)\s+o\s+ebolo\s+ewo$/i))) return `Jusqu'à ${m[1]} par opération`;
     return clean;
@@ -449,6 +483,20 @@
       (window.NKAP_QUERY && (window.NKAP_QUERY("Frais de transfert") || window.NKAP_QUERY("Mabála ma loma") || window.NKAP_QUERY("Montant à envoyer")))
     ) {
       step = "fees";
+    }
+    // Historique des opérations (FR + EN + EWO + DUA)
+    else if (
+      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
+      (/entrants.*sortants|sortants.*entrants|recus.*envoyes|bi bi.*bi lom|moni mu mingeye.*moni mu mabuse|incoming.*outgoing|historique des operations|itang mvet/.test(fullText))
+    ) {
+      step = "history";
+    }
+    // Paiement Factures & Crédit (FR + EN + EWO + DUA)
+    else if (
+      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
+      (/choisir le service|tob isae|pona ebolo|choose the service|numero a recharger|nombo ya lomo kredi|nimero ya kredi|number to top up|operateur detecte|nsaa a yenban|miiyo :/.test(fullText))
+    ) {
+      step = "pay";
     }
     // Étape 1 : Solde & Accueil
     else {
