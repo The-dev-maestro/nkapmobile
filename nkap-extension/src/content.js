@@ -35,6 +35,32 @@
     return /^\/sandbox(\/|$)/i.test(location.pathname || "");
   }
 
+  /** True sur le simulateur USSD texte seul (où l'orbe visuel flottant Nkap ne doit jamais apparaître). */
+  function isSafinumUssd() {
+    return /^\/sandbox\/ussd(\/|$)/i.test(location.pathname || "");
+  }
+
+  let lastKnownPath = location.pathname || "";
+
+  function syncUssdOrbVisibility() {
+    const bubble = document.getElementById("nkap-bubble");
+    const host = document.getElementById("nkap-overlay-host");
+    if (isSafinumUssd()) {
+      window.NKAP_ASSISTANT?.closePanel?.();
+      window.NKAP_ASSISTANT?.onScreenChanged?.("ussd");
+      if (bubble) bubble.style.display = "none";
+      if (host) host.style.display = "none";
+      return false;
+    }
+    if (host) host.style.display = "";
+    if (bubble) {
+      bubble.style.display = "";
+    } else {
+      window.NKAP_OVERLAY?.bubble?.(() => window.NKAP_ASSISTANT?.next());
+    }
+    return true;
+  }
+
   function detectSandboxChannel() {
     const p = (location.pathname || "").toLowerCase();
     if (p.includes("/sandbox/channel/mobile")) return "mobile";
@@ -632,6 +658,13 @@
     if (domChanged) {
       if (stepCheckTimer) clearTimeout(stepCheckTimer);
       stepCheckTimer = setTimeout(() => {
+        const curPath = location.pathname || "";
+        if (curPath !== lastKnownPath) {
+          lastKnownPath = curPath;
+          if (!syncUssdOrbVisibility()) return;
+        } else if (isSafinumUssd()) {
+          return;
+        }
         // Re-traduit après layout/transition (bannières dynamiques, texte asynchrone)
         if (langOn) {
           isTranslatingDom = true;
@@ -1010,13 +1043,22 @@
     });
     const effectiveBrainUrl = (cfg.brainUrl || "").trim() || (isSafinumSandbox() ? DEFAULT_SANDBOX_BRAIN_URL : "");
     if (effectiveBrainUrl) window.NKAP_ASSISTANT?.setBrainUrl(effectiveBrainUrl);
-    window.NKAP_OVERLAY?.bubble?.(() => window.NKAP_ASSISTANT?.next());
+    lastKnownPath = location.pathname || "";
+    syncUssdOrbVisibility();
+    window.addEventListener("popstate", () => {
+      lastKnownPath = location.pathname || "";
+      syncUssdOrbVisibility();
+    });
     console.log(
       "[nkap] prêt sur",
       location.href,
       "— écran actif:",
       lastStep,
-      isSafinumSandbox() ? "(mode copilote SAFINUM sandbox, traduction DOM désactivée)" : ""
+      isSafinumUssd()
+        ? "(USSD détecté — orbe visuel flottant désactivé)"
+        : isSafinumSandbox()
+        ? "(mode copilote SAFINUM sandbox, traduction DOM désactivée)"
+        : ""
     );
   }
 
