@@ -32,8 +32,41 @@ window.NKAP_ASSISTANT = (() => {
   const activeUtterances = []; // Rétention anti-Garbage Collection de Chrome
   const onSpeechDoneCallbacks = [];
 
-  // Cache mémoire des fixtures pour une réactivité instantanée à 0 ms
+  // Cache mémoire des fixtures & banque vocale native Duálá (45 enregistrements .webm)
   const fixtureCache = new Map();
+  const duaVoiceIndex = new Map();
+  let activeAudioEl = null;
+
+  function loadDuaVoiceBank() {
+    if (duaVoiceIndex.size > 0) return;
+    const url =
+      typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL
+        ? chrome.runtime.getURL("voice-bank/dua/manifest.json")
+        : "../voice-bank/dua/manifest.json";
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data || !Array.isArray(data.entries)) return;
+        for (const e of data.entries) {
+          if (!e.file) continue;
+          const rel = `voice-bank/dua/${e.file}`;
+          if (e.dua) duaVoiceIndex.set(norm(e.dua), rel);
+          if (e.fr) duaVoiceIndex.set(norm(e.fr), rel);
+        }
+      })
+      .catch(() => {});
+  }
+
+  function resolveVoiceBankUrl(item) {
+    if (item.audioUrl) return item.audioUrl;
+    if (item.lang === "dua" || duaVoiceIndex.has(norm(item.text))) {
+      const rel = duaVoiceIndex.get(norm(item.text));
+      if (rel) {
+        return hasChrome ? chrome.runtime.getURL(rel) : "../" + rel;
+      }
+    }
+    return null;
+  }
 
   const FIXTURES_LIST = [
     "p1-solde",
@@ -351,6 +384,13 @@ window.NKAP_ASSISTANT = (() => {
         window.speechSynthesis.cancel();
       } catch (_) {}
     }
+    if (activeAudioEl) {
+      try {
+        activeAudioEl.pause();
+        activeAudioEl.currentTime = 0;
+      } catch (_) {}
+      activeAudioEl = null;
+    }
     activeUtterances.length = 0;
     if (O() && O().setStatusPill) {
       O().setStatusPill(null);
@@ -396,6 +436,41 @@ window.NKAP_ASSISTANT = (() => {
     // Met à jour le sous-titre de façon parfaitement synchronisée avec la phrase en cours
     if (O() && O().caption) {
       O().caption(item.text, item.subFr || null);
+    }
+
+    const nativeAudioUrl = resolveVoiceBankUrl(item);
+    if (nativeAudioUrl && typeof Audio !== "undefined") {
+      try {
+        const audio = new Audio(nativeAudioUrl);
+        activeAudioEl = audio;
+        let finished = false;
+        const finishNative = () => {
+          if (finished) return;
+          finished = true;
+          if (speechTimer) {
+            clearTimeout(speechTimer);
+            speechTimer = null;
+          }
+          activeAudioEl = null;
+          isSpeaking = false;
+          processSpeechQueue();
+        };
+        audio.onended = finishNative;
+        audio.onerror = () => {
+          activeAudioEl = null;
+          if (speechTimer) {
+            clearTimeout(speechTimer);
+            speechTimer = null;
+          }
+          // Repli propre sur speechSynthesis si la lecture fichier échoue
+          isSpeaking = false;
+          speechQueue.unshift({ ...item, audioUrl: null });
+          processSpeechQueue();
+        };
+        speechTimer = setTimeout(finishNative, 15000);
+        audio.play().catch(audio.onerror);
+        return;
+      } catch (_) {}
     }
 
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -487,9 +562,9 @@ window.NKAP_ASSISTANT = (() => {
     }
   }
 
-  function enqueueSpeech(text, subFr = null) {
+  function enqueueSpeech(text, subFr = null, lang = "fr", audioUrl = null) {
     if (!audioEnabled || !text) return;
-    speechQueue.push({ text, subFr });
+    speechQueue.push({ text, subFr, lang, audioUrl });
     if (!isSpeaking) {
       processSpeechQueue();
     }
@@ -521,6 +596,7 @@ window.NKAP_ASSISTANT = (() => {
   }
 
   function preloadFixtures() {
+    loadDuaVoiceBank();
     FIXTURES_LIST.forEach((id) => {
       loadFixture(id).catch(() => {});
     });
@@ -616,7 +692,7 @@ window.NKAP_ASSISTANT = (() => {
     switch (action.t) {
       case "speak": {
         const spokenText = action.text || action.caption_fr || "";
-        enqueueSpeech(spokenText, action.sub_fr || null);
+        enqueueSpeech(spokenText, action.sub_fr || null, action.lang || "fr", action.audio_url || action.audioUrl || null);
         break;
       }
       case "caption":

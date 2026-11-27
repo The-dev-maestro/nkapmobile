@@ -25,7 +25,7 @@ window.NKAP_LEXICON = {
     { fr: "Votre compte", en: "Your account", dua: "Konto ango", ewo: "Nkwap woué", status: "validated", key: "your_account" },
     { fr: "Bonjour, Amina", en: "Hello, Amina", dua: "Idiba bwam, Amina", ewo: "Mbə̀mbə̀ kírí, Amina", status: "validated", key: "hello_amina" },
     { fr: "Bonjour", en: "Hello", dua: "Idiba bwam", ewo: "Mbə̀mbə̀ kírí", status: "validated", key: "hello" },
-    { fr: "Compte courant", en: "Current account", dua: "Konto ya pondi", ewo: "Bɔ́l á mɛlú", status: "demo", key: "current_account" },
+    { fr: "Compte courant", en: "Current account", dua: "Kalata konti", ewo: "Bɔ́l á mɛlú", status: "validated", key: "current_account" },
     { fr: "Solde disponible", en: "Available balance", dua: "Moni ma peńe", ewo: "Itan ineu", status: "validated", key: "balance_label" },
     { fr: "Consultez votre solde et lancez un transfert en toute sécurité.", en: "Check your balance and start a secure transfer.", dua: "Ombwa moni mango pe loma moni na musango.", ewo: "Bebgeu itan o beleu ou lom moany voae.", status: "validated", key: "balance_hint" },
     { fr: "Numéro de compte", en: "Account number", dua: "Number benengedi ba mbolo", ewo: "Nombo nkwap", status: "validated", key: "account_number" },
@@ -51,28 +51,28 @@ window.NKAP_LEXICON = {
 
     // ── Écran 2 : Frais de transfert ──
     { fr: "Frais de transfert", en: "Transfer fees", dua: "Mususedi mwa betombedi", ewo: "Mbug í nděn", status: "validated", key: "fees_header" },
-    { fr: "Choisissez le type de transfert et le montant. Les frais sont calculés automatiquement.", en: "Choose the transfer type and amount. Fees are calculated automatically.", dua: "Pona njika loma na муtango. Mususedi mabolan muso.", ewo: "Lɔ́ mvet nděn, mbug á ɔwɔ́n lɛ́.", status: "demo", key: "transfer_hint" },
-    { fr: "Type d'opération", en: "Operation type", dua: "Njika ebolo", ewo: "Mvet", status: "demo", key: "op_type" },
-    { fr: "Compte Safinum", en: "Safinum account", dua: "Konto Safinum", ewo: "Bɔ́l Safinum", status: "demo", key: "op_safinum" },
-    { fr: "Autre banque", en: "Other bank", dua: "Banki epepe", ewo: "Bɔ́l éfe", status: "demo", key: "op_other_bank" },
-    { fr: "Transfert instantané et gratuit", en: "Instant, free transfer", dua: "Loma la dibokimene pe mususedi to mô", ewo: "Nděn nɛ́lɛ́, ɔ́ mbug lɛ́", status: "demo", key: "transfer_instant" },
+    { fr: "Choisissez le type de transfert et le montant. Les frais sont calculés automatiquement.", en: "Choose the transfer type and amount. Fees are calculated automatically.", dua: "Poso mwaninga o maloma no, Musongi mwèsè mu ma busa.", ewo: "Lɔ́ mvet nděn, mbug á ɔwɔ́n lɛ́.", status: "validated", key: "transfer_hint" },
+    { fr: "Type d'opération", en: "Operation type", dua: "Loma", ewo: "Mvet", status: "validated", key: "op_type" },
+    { fr: "Compte Safinum", en: "Safinum account", dua: "Kont a safinum", ewo: "Bɔ́l Safinum", status: "validated", key: "op_safinum" },
+    { fr: "Autre banque", en: "Other bank", dua: "Bank ni pè pè", ewo: "Bɔ́l éfe", status: "validated", key: "op_other_bank" },
+    { fr: "Transfert instantané et gratuit", en: "Instant, free transfer", dua: "Loma tatan e si bè sawa", ewo: "Nděn nɛ́lɛ́, ɔ́ mbug lɛ́", status: "validated", key: "transfer_instant" },
     { fr: "Transfert standard", dua: "Loma la pondi", ewo: "Nděn ya mɛlú", status: "demo", key: "transfer_standard" },
     { fr: "Transfert express", dua: "Loma la ponda", ewo: "Nděn avól", status: "demo", key: "transfer_express" },
     { fr: "Montant à envoyer", en: "Amount to send", dua: "Musongi mwa muloloma", ewo: "Nděn tó", status: "validated", key: "amount_to_send" },
     { fr: "Gratuit", en: "Free", dua: "Mususedi to mô", ewo: "Zɛ́zɛ", status: "validated", key: "free_badge" },
     { fr: "Total à débiter", en: "Total to debit", dua: "Nje yese bangamene no o sumua", ewo: "Ntolán wɔ́g", status: "validated", key: "total_to_debit" },
-    { fr: "Solde après opération", en: "Balance after transfer", dua: "Moni ma dia ombusa", ewo: "Nděn wɔ́g í bɔ́l á mvet", status: "demo", key: "balance_after" },
+    { fr: "Solde après opération", en: "Balance after transfer", dua: "Ndje e peti", ewo: "Nděn wɔ́g í bɔ́l á mvet", status: "validated", key: "balance_after" },
     { fr: "Retour", en: "Back", dua: "Timba", ewo: "Bulan", status: "validated", key: "btn_back" },
     { fr: "Continuer", en: "Continue", dua: "Wa la ne", ewo: "Kɛlɛ́ obúsú", status: "validated", key: "btn_continue" },
 
     // ── Écran 3 : Bénéficiaire ──
-    { fr: "Renseignez les informations du destinataire. Vérifiez toujours le numéro avant de valider.", en: "Enter the recipient details. Always verify the number before confirming.", dua: "Tila myango ma mukusedi. Jombwa number oboso ba bamse.", ewo: "Bɔ́l nem á lɔ́n, ɛlɛ́ɛ́ kɛ́.", status: "demo", key: "recipient_hint" },
-    { fr: "Ce bénéficiaire n'a jamais été utilisé sur ce compte. Vérifiez le numéro avant de continuer.", en: "This beneficiary has never been used on this account. Verify the number before continuing.", dua: "Nu mutombwedi a si bolane o konto. Jombwa number oboso ba ala.", ewo: "Nyi nyɔ́ a ngenan tekeulan. Fombɔ́k nɔ́mbɔ.", status: "demo", key: "new_benef_warn" },
+    { fr: "Renseignez les informations du destinataire. Vérifiez toujours le numéro avant de valider.", en: "Enter the recipient details. Always verify the number before confirming.", dua: "Tila mambo ma mukasedi. Ombwa numb ao bwam o boso na o maloma.", ewo: "Bɔ́l nem á lɔ́n, ɛlɛ́ɛ́ kɛ́.", status: "validated", key: "recipient_hint" },
+    { fr: "Ce bénéficiaire n'a jamais été utilisé sur ce compte. Vérifiez le numéro avant de continuer.", en: "This beneficiary has never been used on this account. Verify the number before continuing.", dua: "Nu mukasedi a titi o kalata konti. Ombwa bwam o bia na o mala o boso.", ewo: "Nyi nyɔ́ a ngenan tekeulan. Fombɔ́k nɔ́mbɔ.", status: "validated", key: "new_benef_warn" },
     { fr: "Nom du bénéficiaire", en: "Beneficiary name", dua: "Dina la mutombwedi", ewo: "Nem á nyi", status: "validated", key: "benef_name" },
     { fr: "Numéro de téléphone", en: "Phone number", dua: "Number ebelane", ewo: "Nem tɛlɛfɔ́n", status: "validated", key: "benef_phone" },
     { fr: "Motif du transfert", en: "Transfer reason", dua: "Nyoma betombedi", ewo: "Sɔ́n nděn", status: "validated", key: "transfer_reason" },
     { fr: "Note (optionnel)", en: "Note (optional)", dua: "Mwendi (o tondi te)", ewo: "Efíá", status: "demo", key: "note_opt" },
-    { fr: "J'ai vérifié le nom et le numéro du bénéficiaire.", en: "I have verified the beneficiary name and phone number.", dua: "Na ombwe dina na number mutombwedi.", ewo: "Nɛ́lɛ nem á nyi.", status: "demo", key: "benef_checked" },
+    { fr: "J'ai vérifié le nom et le numéro du bénéficiaire.", en: "I have verified the beneficiary name and phone number.", dua: "Nombo dina na number mukasedi.", ewo: "Nɛ́lɛ nem á nyi.", status: "validated", key: "benef_checked" },
 
     // ── Écran 4 : Récapitulatif ──
     { fr: "Vérifiez les informations avant de confirmer le transfert.", en: "Check the details before confirming the transfer.", dua: "Sele jombwa miango mese to denga wa bamse.", ewo: "Ɛlɛ́ɛ́ kɛ́, zɔ́ bɔ́l.", status: "validated", key: "verify_hint" },
@@ -80,9 +80,9 @@ window.NKAP_LEXICON = {
     { fr: "Total débité", en: "Total debited", dua: "Musongi mu londi", ewo: "Ntolán", status: "validated", key: "label_total_debited" },
     { fr: "Téléphone", en: "Phone", dua: "Number ebelane", ewo: "Tɛlɛfɔ́n", status: "validated", key: "label_phone" },
     { fr: "Référence", en: "Reference", dua: "Epasi", ewo: "Nɔ́mbɔ ndem", status: "validated", key: "label_ref" },
-    { fr: "Opération", en: "Operation", dua: "Ebolo", ewo: "Mvet", status: "demo", key: "label_op" },
+    { fr: "Opération", en: "Operation", dua: "Ebolo", ewo: "Mvet", status: "validated", key: "label_op" },
     { fr: "Motif", dua: "Nyoma", ewo: "Sɔ́n", status: "validated", key: "label_reason" },
-    { fr: "Je confirme que les informations ci-dessus sont correctes.", en: "I confirm the information above is correct.", dua: "Na bamse na miango ma tenge.", ewo: "Me yemban ná mam mese me ne mbɛn.", status: "demo", key: "confirm_checkbox" },
+    { fr: "Je confirme que les informations ci-dessus sont correctes.", en: "I confirm the information above is correct.", dua: "Matila ma tenguènè.", ewo: "Me yemban ná mam mese me ne mbɛn.", status: "validated", key: "confirm_checkbox" },
     { fr: "Modifier", en: "Edit", dua: "Tukwa", ewo: "Tyendé", status: "validated", key: "btn_edit" },
     { fr: "Confirmer le transfert", en: "Confirm transfer", dua: "Bamse", ewo: "Yemban nděn", status: "validated", key: "btn_confirm_transfer" },
     { fr: "Annuler", en: "Cancel", dua: "Sumua", ewo: "Vaa", status: "validated", key: "btn_cancel" },
@@ -91,10 +91,10 @@ window.NKAP_LEXICON = {
     { fr: "Aide", en: "Help", dua: "Jongwane", ewo: "Vol", status: "validated", key: "btn_help" },
 
     // ── Écran 5 : Reçu / Confirmation ──
-    { fr: ["Transfert effectué", "Transfert confirmé"], en: "Transfer completed", dua: "Loma dibamsebe", ewo: "Nděn é kɛ́ya", status: "demo", key: "receipt_title" },
-    { fr: ["Votre transfert a été envoyé avec succès.", "Votre opération a été enregistrée avec succès."], en: "Your transfer has been sent successfully.", dua: "Ebolo ango e tilabe na bwam.", ewo: "Mvet wɔ́g ó tiliban mbɛn.", status: "demo", key: "receipt_sub" },
+    { fr: ["Transfert effectué", "Transfert confirmé"], en: "Transfer completed", dua: "Ebolanè", ewo: "Nděn é kɛ́ya", status: "validated", key: "receipt_title" },
+    { fr: ["Votre transfert a été envoyé avec succès.", "Votre opération a été enregistrée avec succès."], en: "Your transfer has been sent successfully.", dua: "Moni mu busi mbwam.", ewo: "Mvet wɔ́g ó tiliban mbɛn.", status: "validated", key: "receipt_sub" },
     { fr: "Nouveau solde disponible", dua: "Moni ma peńe ma dia", ewo: "Nděn mfefé í bɔ́l", status: "demo", key: "receipt_new_balance" },
-    { fr: "Nouveau transfert", en: "New transfer", dua: "Loma dipepe", ewo: "Nděn mfefé", status: "demo", key: "btn_new_transfer" },
+    { fr: "Nouveau transfert", en: "New transfer", dua: "Loma la pena", ewo: "Nděn mfefé", status: "validated", key: "btn_new_transfer" },
     { fr: "Retour à l'accueil", dua: "Timba o bekombo", ewo: "Bulan á ndá", status: "demo", key: "btn_back_home" },
 
     // ── Bannières d'erreurs & Contenu inédit (P5 / Jury) ──
@@ -108,7 +108,7 @@ window.NKAP_LEXICON = {
     { fr: "Erreur réseau", en: "Network error", dua: "Njom a singi", ewo: "Ɛ́vúdú á nsíŋgi", status: "demo", key: "err_network_short" },
     { fr: "Erreur réseau : le service est temporairement indisponible. Réessayez.", en: "Network error: the service is temporarily unavailable. Please try again.", dua: "Njom a singi : kekise peńe.", ewo: "Ɛ́vúdú á nsíŋgi. Lɔ́ kɔ́.", status: "demo", key: "err_network" },
     { fr: "Le service est temporairement indisponible. Réessayez.", en: "The service is temporarily unavailable. Please try again.", dua: "Ebolo e si ma-babe tatan. Kekise peńe.", ewo: "Isáɛ é sě bɛ́n. Lɔ́ kɔ́.", status: "demo", key: "err_network_body" },
-    { fr: "Message important", en: "Important message", dua: "Mwendi ma mweńa", ewo: "Efíá é ne mfi", status: "demo", key: "unseen_header" },
+    { fr: "Message important", en: "Important message", dua: "Mwendi mwa muegna", ewo: "Efíá é ne mfi", status: "validated", key: "unseen_header" },
   ],
 
   /** true si l'entrée peut remplacer le texte affiché. */
