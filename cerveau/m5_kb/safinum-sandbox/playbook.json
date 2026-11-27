@@ -432,7 +432,10 @@
       "label": "Historique",
       "color": "yellow",
       "follow_up": {
-        "target_screens": ["history", "home"],
+        "target_screens": [
+          "history",
+          "home"
+        ],
         "target_cues": [
           "entrants", "sortants", "historique des operations", "itang mvet",
           "moni mu mingeye", "moni mu mabuse", "bi bi", "bi lom",
@@ -454,7 +457,9 @@
       "label": "Accueil",
       "color": "yellow",
       "follow_up": {
-        "target_screens": ["home"],
+        "target_screens": [
+          "home"
+        ],
         "target_cues": [
           "solde disponible", "itan ineu", "moni ma pene", "available balance",
           "que voulez-vous faire", "za dzam wa yi bo", "nje o tondi bola", "wa pula bola nje"
@@ -472,7 +477,11 @@
       "label": "Payer",
       "color": "yellow",
       "follow_up": {
-        "target_screens": ["pay", "pay_bill", "pay_airtime"],
+        "target_screens": [
+          "pay",
+          "pay_bill",
+          "pay_airtime"
+        ],
         "target_cues": [
           "choisir le service", "tob isae", "pona ebolo", "poso", "choose the service",
           "numero a recharger", "nombo ya lomo kredi", "nimero ya kredi"
@@ -490,7 +499,9 @@
       "label": "Transfert",
       "color": "yellow",
       "follow_up": {
-        "target_screens": ["transfer"],
+        "target_screens": [
+          "transfer"
+        ],
         "target_cues": [
           "mes beneficiaires", "bot bam ba non moni", "bakusa bam", "bakuse moni",
           "nombo telefon nge dzoe", "number musinga to dina longo", "jusqu'a 500 000", "akui 500 000"

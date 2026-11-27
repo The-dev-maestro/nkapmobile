@@ -224,7 +224,7 @@
         if (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking) {
           return true;
         }
-      } catch (_) {}
+      } catch (_) { }
       return false;
     }
 
@@ -263,7 +263,7 @@
       if (typeof global.NKAP_GET_SANDBOX_ROOT === "function") {
         try {
           root = global.NKAP_GET_SANDBOX_ROOT();
-        } catch (_) {}
+        } catch (_) { }
       }
       if (!root) root = findFallbackSandboxRoot();
       if (!root) {
@@ -695,7 +695,7 @@
             );
             latestCursorPt = { x: pt.x + (activeCursorMark.dx || 0), y: pt.y + (activeCursorMark.dy || 0) };
             latestColor = activeCursorMark.strokeColor || "#F5B700";
-          } catch (_) {}
+          } catch (_) { }
         }
 
         if (latestCursorPt) moveCursor(latestCursorPt.x, latestCursorPt.y, latestColor, true);
@@ -737,7 +737,7 @@
       if (r.top < 40 || r.bottom > window.innerHeight - 60) {
         try {
           el.scrollIntoView({ behavior: "smooth", block: "center" });
-        } catch (_) {}
+        } catch (_) { }
         const gen = clearGen;
         const tid = setTimeout(() => {
           pendingTimers.delete(tid);
@@ -1515,10 +1515,10 @@
             const pulse = isSpeak
               ? 1 + 0.16 * Math.sin(t * 9.5) + 0.07 * Math.sin(t * 17)
               : isListen
-              ? 1 + 0.13 * Math.sin(t * 7.2)
-              : isThink
-              ? 1 + 0.1 * Math.sin(t * 5.5)
-              : 1 + 0.05 * Math.sin(t * 2.1);
+                ? 1 + 0.13 * Math.sin(t * 7.2)
+                : isThink
+                  ? 1 + 0.1 * Math.sin(t * 5.5)
+                  : 1 + 0.05 * Math.sin(t * 2.1);
 
             const coreHue = isListen ? "255, 92, 119" : "245, 183, 0";
             const warmHue = isListen ? "255, 130, 80" : "234, 118, 28";
@@ -1597,7 +1597,7 @@
           orbRaf = requestAnimationFrame(drawOrb);
         }
 
-        bubbleEl.__nkapTap = onTap || (() => {});
+        bubbleEl.__nkapTap = onTap || (() => { });
 
         // Glisser-déposer fluide de l'orbe (toujours confiné dans la frame Web/Mobile)
         let dragStartX = 0;
@@ -1615,7 +1615,7 @@
           dragOrigL = br.left;
           dragOrigT = br.top;
           isDraggingOrb = false;
-          try { bubbleEl.setPointerCapture(ev.pointerId); } catch (_) {}
+          try { bubbleEl.setPointerCapture(ev.pointerId); } catch (_) { }
         });
 
         bubbleEl.addEventListener("pointermove", (ev) => {
@@ -1642,7 +1642,7 @@
 
         const endOrbDrag = (ev) => {
           if (dragPointerId === null || ev.pointerId !== dragPointerId) return;
-          try { bubbleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+          try { bubbleEl.releasePointerCapture(ev.pointerId); } catch (_) { }
           dragPointerId = null;
           bubbleEl.style.transition = ORB_TRANSITION_SMOOTH;
           bubbleEl.style.cursor = "grab";

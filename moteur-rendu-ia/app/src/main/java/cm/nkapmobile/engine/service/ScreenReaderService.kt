@@ -52,11 +52,6 @@ class ScreenReaderService : AccessibilityService() {
     }
 
     fun snapshot(): ScreenContext {
-        // Synchronise immédiatement l'URL si l'utilisateur vient d'appuyer sur "EC2 Prod" dans MainActivity
-        val latestUrl = getSharedPreferences("nkap_sdk", Context.MODE_PRIVATE)
-            .getString("brain_url", NkapSDK.DEFAULT_BRAIN_URL) ?: NkapSDK.DEFAULT_BRAIN_URL
-        session?.brainClient?.brainUrl = latestUrl
-
         val root = findTargetAppRoot()
         if (root == null) {
             return lastContext ?: ScreenContext(packageName, "Écran", "home", "mobile", emptyList())
