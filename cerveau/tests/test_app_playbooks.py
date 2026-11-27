@@ -77,17 +77,22 @@ WAVE_SEND_AMOUNT_CTX = {
     ],
 }
 
-# 4. Wave Vault / Bills / Settings / Fullscreen QR
+# 4. Wave Vault (écran réel avec icône Hide balance à côté de 0F + Add Vault + Transfer in/out + Lock your Vault)
 WAVE_VAULT_CTX = {
     "type": "screen_context",
-    "app": {"package": "com.wave.personal", "activity": "VaultActivity"},
+    "app": {"package": "com.wave.personal", "activity": "PersonalHomeActivity"},
     "channel": "mobile",
     "screen_hint": "home",
     "nodes": [
-        {"node_id": "wv_back", "tag": "span", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
-        {"node_id": "wv_title", "tag": "span", "text": "My Vault", "clickable": False, "bounds": [126, 98, 300, 146], "tone": "light"},
-        {"node_id": "wv_tr", "tag": "button", "text": "Transfer to Vault", "clickable": True, "bounds": [40, 500, 680, 570], "tone": "light"},
-        {"node_id": "wv_wd", "tag": "button", "text": "Withdraw from Vault", "clickable": True, "bounds": [40, 600, 680, 670], "tone": "light"},
+        {"node_id": "wv_back", "tag": "button", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "wv_add", "tag": "button", "text": "Add Vault", "clickable": True, "bounds": [520, 96, 690, 144], "tone": "light"},
+        {"node_id": "wv_title", "tag": "span", "text": "VAULT", "clickable": False, "bounds": [340, 180, 440, 215], "tone": "light"},
+        {"node_id": "wv_amt", "tag": "span", "text": "0F", "clickable": False, "bounds": [320, 230, 395, 290], "tone": "light"},
+        {"node_id": "wv_eye", "tag": "button", "text": "", "content_desc": "Hide balance", "clickable": True, "bounds": [400, 242, 438, 280], "tone": "light"},
+        {"node_id": "wv_in", "tag": "button", "text": "Transfer in", "clickable": True, "bounds": [30, 340, 345, 420], "tone": "light"},
+        {"node_id": "wv_out", "tag": "button", "text": "Transfer out", "clickable": True, "bounds": [375, 340, 690, 420], "tone": "light"},
+        {"node_id": "wv_lock", "tag": "button", "text": "Lock your Vault", "clickable": True, "bounds": [30, 460, 690, 540], "tone": "light"},
+        {"node_id": "wv_empty", "tag": "span", "text": "Your Vault is empty! Tap \"Transfer in\" to start putting money aside.", "clickable": False, "bounds": [40, 600, 680, 690], "tone": "light"},
     ],
 }
 
@@ -653,6 +658,33 @@ def test_wave_payments_real_screen_send_and_utilities():
     assert any(a["action"]["target"]["node_id"] == "wp_water" for a in r_w.json()["actions"] if a["action"].get("target"))
     r_c = client.post("/answer", json={"transcript": "Comment payer Canal+ ?", "lang_hint": "fr", "context": WAVE_PAYMENTS_REAL_CTX})
     assert any(a["action"]["target"]["node_id"] == "wp_canal" for a in r_c.json()["actions"] if a["action"].get("target"))
+
+
+def test_wave_vault_real_screen_with_hide_balance_eye_never_confused_with_home():
+    """Régression exacte capture Vault : même avec l'icône œil `Hide balance` à côté de `0F`, Vault n'est JAMAIS confondu avec Home !"""
+    # 1. "Comment envoyer de l'argent ?" depuis Vault -> cercle Back + follow_up home (JAMAIS "Appuie ici sur Envoyer (Send)")
+    r_send = client.post("/answer", json={"transcript": "Comment envoyer de l'argent ?", "lang_hint": "fr", "context": WAVE_VAULT_CTX})
+    assert r_send.status_code == 200
+    body_s = r_send.json()
+    spoken_s = " ".join(a["action"].get("text", "") for a in body_s["actions"] if a["action"]["t"] == "speak").lower()
+    assert "reviens d'abord sur l'accueil" in spoken_s
+    assert any(a["action"]["t"] == "circle" and a["action"]["target"]["node_id"] == "wv_back" for a in body_s["actions"])
+    assert body_s.get("follow_up") is not None and body_s["follow_up"]["target_screens"] == ["home"]
+
+    # 2. "C'est quoi mon solde ?" depuis Vault -> n'encercle JAMAIS 0F du coffre ! Explique que c'est le coffre + cercle Back + follow_up home
+    r_bal = client.post("/answer", json={"transcript": "C'est quoi mon solde ?", "lang_hint": "fr", "context": WAVE_VAULT_CTX})
+    assert r_bal.status_code == 200
+    body_b = r_bal.json()
+    spoken_b = " ".join(a["action"].get("text", "") for a in body_b["actions"] if a["action"]["t"] == "speak").lower()
+    assert "coffre" in spoken_b and "accueil" in spoken_b
+    target_ids_b = [a["action"]["target"]["node_id"] for a in body_b["actions"] if a["action"].get("target")]
+    assert "wv_amt" not in target_ids_b
+    assert "wv_back" in target_ids_b
+    assert body_b.get("follow_up") is not None and body_b["follow_up"]["target_screens"] == ["home"]
+
+    # 3. "À quoi sert Lock your Vault ?" -> cadre Lock your Vault
+    r_lock = client.post("/answer", json={"transcript": "À quoi sert Lock your Vault ?", "lang_hint": "fr", "context": WAVE_VAULT_CTX})
+    assert any(a["action"]["target"]["node_id"] == "wv_lock" for a in r_lock.json()["actions"] if a["action"].get("target"))
 
 
 def test_full_nxm_coverage_matrix_wave_safinum_maxit(monkeypatch):

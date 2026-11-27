@@ -237,8 +237,8 @@ class NkapChatDrawer(
                     "C'est quoi mon solde ?",
                 )
                 "vault" -> "Wave · Coffre" to listOf(
-                    "Je dois faire quoi ici ?",
-                    "Comment épargner ou retirer du coffre ?",
+                    "Comment mettre ou retirer de l'argent ?",
+                    "À quoi sert Lock your Vault ?",
                     "Comment envoyer de l'argent ?",
                     "C'est quoi mon solde ?",
                 )

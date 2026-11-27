@@ -110,16 +110,20 @@ class NkapSession(
         val pkg = ctx.appPackage.lowercase()
         val corpus = screenCorpus(ctx)
         val isWave = pkg.contains("wave") ||
-            listOf("hide balance", "enter a new number", "scan to send", "gimac transfer", "eneo prepaid", "cam-water").any { corpus.contains(it) }
+            listOf("hide balance", "enter a new number", "scan to send", "gimac transfer", "eneo prepaid", "cam-water", "lock your vault").any { corpus.contains(it) }
         if (isWave) {
             val hasHomeCue = listOf("hide balance", "show balance", "masquer le solde", "afficher le solde").any { corpus.contains(it) }
+            val hasHomeActionBar = listOf("bills", "factures", "more", "gimac transfer").any { corpus.contains(it) }
             val screen = when {
+                !hasHomeActionBar && listOf(
+                    "add vault", "transfer in", "transfer out", "lock your vault", "your vault is empty",
+                    "lock vault", "transfer to vault", "withdraw from vault", "my vault", "mon coffre"
+                ).any { corpus.contains(it) } -> "vault"
                 !hasHomeCue && (corpus.contains("scan to send") || corpus.contains("scanner pour envoyer") ||
                     (corpus.contains("enter a new number") && corpus.contains("contacts"))) -> "send_money"
                 !hasHomeCue && listOf("send amount", "receive amount", "montant envoye", "montant recu", "wave fee").any { corpus.contains(it) } -> "send_amount"
                 !hasHomeCue && listOf("full name", "nom complet", "enter a phone number").any { corpus.contains(it) } -> "send_new_number"
                 !hasHomeCue && (ctx.title.lowercase().contains("cardfullscreen") || corpus.contains("scan to pay")) -> "card_qr"
-                !hasHomeCue && listOf("lock vault", "transfer to vault", "withdraw from vault", "my vault", "mon coffre").any { corpus.contains(it) } -> "vault"
                 !hasHomeCue && listOf("reset secret code", "call support", "find nearby agents", "verify your limit").any { corpus.contains(it) } -> "settings"
                 !hasHomeCue && listOf(
                     "search by name", "rechercher par nom", "electricity", "utilities", "payments", "paiements",
@@ -223,13 +227,15 @@ class NkapSession(
         }
         val corpus = screenCorpus(ctx)
         if (corpus.isBlank() || corpus.take(360) == state.originSig) return
-        val cueHit = state.goal.targetCues.any { cue ->
+        val inferredScreen = inferAppAndScreen(ctx).second
+        val targetScreensHit = state.goal.targetScreens.isNotEmpty() &&
+            state.goal.targetScreens.any { normText(it) == normText(inferredScreen) }
+        val cueHit = state.goal.targetScreens.isEmpty() && state.goal.targetCues.any { cue ->
             val nCue = normText(cue)
             nCue.isNotEmpty() && corpus.contains(nCue)
         }
-        val screenHit = state.goal.targetCues.isEmpty() &&
-            state.goal.targetScreens.any { normText(it) == normText(ctx.screenHint) }
-        if (!cueHit && !screenHit) return
+        val screenHit = targetScreensHit || cueHit
+        if (!screenHit) return
 
         val questionToResume = state.goal.question
         clearPendingGoal()

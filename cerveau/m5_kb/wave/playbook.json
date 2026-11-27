@@ -223,6 +223,11 @@
         "savings"
       ],
       "text_any": [
+        "add vault",
+        "transfer in",
+        "transfer out",
+        "lock your vault",
+        "your vault is empty",
         "lock vault",
         "verrouiller le coffre",
         "transfer to vault",
@@ -235,9 +240,10 @@
         "mon coffre"
       ],
       "not_text_any": [
-        "hide balance",
-        "show balance",
-        "masquer le solde"
+        "bills",
+        "factures",
+        "more",
+        "gimac transfer"
       ]
     },
     {
@@ -468,9 +474,38 @@
       ]
     },
     "vault": {
-      "llm_summary": "Écran Coffre (Vault) Wave : espace d'épargne séparé du solde principal pour mettre de l'argent de côté ou le retirer.",
-      "spoken": "Tu es dans ton Coffre d'épargne Wave. Tu peux y transférer de l'argent depuis ton solde principal pour le garder de côté, ou le retirer quand tu en as besoin.",
-      "highlights": []
+      "llm_summary": "Écran Coffre (Vault) Wave : affiche le solde du coffre (séparé du solde principal), les boutons Transfer in (déposer), Transfer out (retirer), Lock your Vault (verrouiller) et Add Vault (ajouter un coffre).",
+      "spoken": "Tu es dans ton Coffre d'épargne Wave (Vault). Appuie sur « Transfer in » pour mettre de l'argent de côté, sur « Transfer out » pour le retirer vers ton solde principal, ou sur « Lock your Vault » pour verrouiller ton épargne.",
+      "highlights": [
+        {
+          "match": [
+            "transfer in",
+            "transfer to vault"
+          ],
+          "style": "num",
+          "step": 1,
+          "label": "Déposer",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "transfer out",
+            "withdraw from vault"
+          ],
+          "style": "num",
+          "step": 2,
+          "label": "Retirer",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "lock your vault",
+            "lock vault"
+          ],
+          "style": "highlight",
+          "color": "yellow"
+        }
+      ]
     },
     "more": {
       "llm_summary": "Écran Plus (More) Wave : services complémentaires (crédit téléphonique Airtime, banque, récompenses, transport).",
@@ -879,7 +914,6 @@
         "send_new_number",
         "send_amount",
         "bills",
-        "vault",
         "more",
         "settings",
         "card_qr"
@@ -1455,6 +1489,89 @@
       ]
     },
     {
+      "id": "wave_vault_balance",
+      "screens": [
+        "vault"
+      ],
+      "triggers": [
+        "mon solde",
+        "quel est mon solde",
+        "c'est quoi mon solde",
+        "cest quoi mon solde",
+        "combien j'ai",
+        "combien jai",
+        "solde disponible",
+        "combien il me reste"
+      ],
+      "spoken": "Le montant affiché ici est uniquement celui de ton Coffre (Vault). Pour voir ton solde principal Wave, appuie sur la flèche retour en haut à gauche : je te le lirai dès qu'on arrive sur l'accueil.",
+      "target_match": [
+        "back",
+        "navigate up",
+        "retour",
+        "revenir en haut",
+        "revenir",
+        "previous",
+        "close",
+        "fermer"
+      ],
+      "style": "circle",
+      "color": "yellow",
+      "follow_up": {
+        "target_screens": [
+          "home"
+        ],
+        "target_cues": [
+          "bills",
+          "factures",
+          "more",
+          "gimac transfer"
+        ],
+        "ttl_ms": 30000
+      }
+    },
+    {
+      "id": "wave_vault_lock",
+      "screens": [
+        "vault"
+      ],
+      "triggers": [
+        "lock your vault",
+        "lock vault",
+        "verrouill",
+        "bloqu"
+      ],
+      "spoken": "Appuie ici sur « Lock your Vault » pour bloquer ton coffre jusqu'à une date choisie et éviter de dépenser ton épargne trop tôt.",
+      "target_match": [
+        "lock your vault",
+        "lock vault",
+        "verrouiller le coffre"
+      ],
+      "style": "frame",
+      "label": "Verrouiller",
+      "color": "yellow"
+    },
+    {
+      "id": "wave_vault_add",
+      "screens": [
+        "vault"
+      ],
+      "triggers": [
+        "add vault",
+        "ajouter un coffre",
+        "nouveau coffre",
+        "creer un coffre"
+      ],
+      "spoken": "Appuie ici sur « Add Vault » en haut à droite pour créer un coffre d'épargne supplémentaire pour un autre objectif.",
+      "target_match": [
+        "add vault",
+        "create a vault",
+        "creer un coffre"
+      ],
+      "style": "frame",
+      "label": "Nouveau coffre",
+      "color": "yellow"
+    },
+    {
       "id": "wave_vault_help",
       "screens": [
         "vault"
@@ -1464,12 +1581,34 @@
         "coffre",
         "epargn",
         "mettre de cote",
-        "retirer",
-        "bloquer"
+        "transfer in",
+        "transfer out",
+        "deposer",
+        "retirer"
       ],
-      "spoken": "Tu es déjà dans ton Coffre Wave : tu peux y déposer de l'argent pour l'épargner séparément de ton solde principal, ou le transférer de nouveau vers ton solde principal.",
-      "target_match": [],
-      "style": "none"
+      "spoken": "Tu es dans ton Coffre Wave : appuie sur « Transfer in » pour mettre de l'argent dans le coffre, ou sur « Transfer out » pour le remettre sur ton solde principal.",
+      "highlights": [
+        {
+          "match": [
+            "transfer in",
+            "transfer to vault"
+          ],
+          "style": "num",
+          "step": 1,
+          "label": "Déposer",
+          "color": "yellow"
+        },
+        {
+          "match": [
+            "transfer out",
+            "withdraw from vault"
+          ],
+          "style": "num",
+          "step": 2,
+          "label": "Retirer",
+          "color": "yellow"
+        }
+      ]
     },
     {
       "id": "wave_more_help",
