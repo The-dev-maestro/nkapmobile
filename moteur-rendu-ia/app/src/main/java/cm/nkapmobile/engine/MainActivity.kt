@@ -1,11 +1,14 @@
 package cm.nkapmobile.engine
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
@@ -211,6 +214,15 @@ class MainActivity : Activity() {
         }
         setContentView(scroll)
         pingBrain()
+        ensureMicPermission()
+    }
+
+    private fun ensureMicPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 701)
+        }
     }
 
     private fun saveUrlOnly(): String {

@@ -1,8 +1,11 @@
 package cm.nkapmobile.sdk
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -575,8 +578,27 @@ class NkapSession(
     }
 
     private fun toggleMic() {
+        // 1. Vérifie d'abord la permission RECORD_AUDIO (sinon SpeechRecognizer échoue silencieusement avec code 9)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) {
+            if (context is Activity) {
+                context.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 701)
+                overlayView.showCaption("Autorise le micro puis appuie de nouveau sur le bouton.")
+            } else {
+                overlayView.showCaption("Permission micro requise : ouvre l'app nkap engine pour l'autoriser.")
+                runCatching {
+                    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    if (launch != null) {
+                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(launch)
+                    }
+                }
+            }
+            return
+        }
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            overlayView.showCaption("Micro vocal non disponible sur cet appareil")
+            overlayView.showCaption("Reconnaissance vocale indisponible sur cet appareil.")
             return
         }
         if (isListening) {
@@ -584,9 +606,16 @@ class NkapSession(
             isListening = false
             drawerView.setMicActive(false)
             orbView.state = JarvisOrbView.OrbState.IDLE
+            overlayView.showCaption(null)
             return
         }
         voiceController.stopAll()
+        isListening = true
+        drawerView.setMicActive(true)
+        orbView.state = JarvisOrbView.OrbState.LISTENING
+        orbView.showLabel = true
+        overlayView.showCaption("Je t'écoute… parle maintenant")
+
         if (speechRecognizer == null) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
                 setRecognitionListener(object : RecognitionListener {
@@ -594,7 +623,6 @@ class NkapSession(
                         isListening = true
                         drawerView.setMicActive(true)
                         orbView.state = JarvisOrbView.OrbState.LISTENING
-                        orbView.showLabel = true
                         overlayView.showCaption("Je t'écoute…")
                     }
                     override fun onBeginningOfSpeech() {}
@@ -608,16 +636,32 @@ class NkapSession(
                         isListening = false
                         drawerView.setMicActive(false)
                         orbView.state = JarvisOrbView.OrbState.IDLE
-                        overlayView.showCaption(null)
+                        val msg = when (error) {
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Permission micro refusée."
+                            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Je n'ai rien entendu, réessaie."
+                            SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Réseau vocal indisponible."
+                            else -> "Micro interrompu (code $error), réessaie."
+                        }
+                        android.util.Log.w("NkapSDK", "SpeechRecognizer error=$error")
+                        overlayView.showCaption(msg)
                     }
                     override fun onResults(results: Bundle?) {
                         isListening = false
                         drawerView.setMicActive(false)
                         val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                        if (!text.isNullOrBlank()) ask(text)
-                        else orbView.state = JarvisOrbView.OrbState.IDLE
+                        if (!text.isNullOrBlank()) {
+                            ask(text)
+                        } else {
+                            orbView.state = JarvisOrbView.OrbState.IDLE
+                            overlayView.showCaption("Je n'ai rien entendu, réessaie.")
+                        }
                     }
-                    override fun onPartialResults(partialResults: Bundle?) {}
+                    override fun onPartialResults(partialResults: Bundle?) {
+                        val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                        if (!partial.isNullOrBlank()) {
+                            overlayView.showCaption("« $partial »")
+                        }
+                    }
                     override fun onEvent(eventType: Int, params: Bundle?) {}
                 })
             }
@@ -625,9 +669,16 @@ class NkapSession(
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         }
-        runCatching { speechRecognizer?.startListening(intent) }
+        runCatching { speechRecognizer?.startListening(intent) }.onFailure { err ->
+            isListening = false
+            drawerView.setMicActive(false)
+            orbView.state = JarvisOrbView.OrbState.IDLE
+            overlayView.showCaption("Impossible de démarrer le micro : ${err.localizedMessage ?: "erreur"}")
+        }
     }
 
     private fun cancelScheduled() {

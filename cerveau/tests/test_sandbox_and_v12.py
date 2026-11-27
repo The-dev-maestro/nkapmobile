@@ -605,12 +605,18 @@ def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
     assert "montant" in m3["response"]["text"].lower()
     assert "2 fcfa" not in m3["response"]["text"].lower()
     m4 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "5000"}}, bank_client=bank)
-    assert "5 000" in m4["response"]["text"] and "Modifier" in m4["response"]["text"]
+    assert "5 000" in m4["response"]["text"] and "Modifier montant" in m4["response"]["text"] and "Modifier destinataire" in m4["response"]["text"]
     m5 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "3"}}, bank_client=bank)
     assert "nouveau montant" in m5["response"]["text"].lower()
     assert "3 fcfa" not in m5["response"]["text"].lower()
     m6 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "10000"}}, bank_client=bank)
     assert "10 000" in m6["response"]["text"]
+    # Choix 4 : Modifier destinataire
+    m7 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "4"}}, bank_client=bank)
+    assert "destinataire" in m7["response"]["text"].lower()
+    bank.beneficiaries.return_value = (True, 200, {"beneficiaries": [{"name": "Brenda Ndi", "phone": "237699000099"}]})
+    m8 = handle_channel_turn({"session_id": "s_num", "channel": "ussd", "phone": "237690000001", "language": "fr", "input": {"text": "Brenda"}}, bank_client=bank)
+    assert "Brenda Ndi" in m8["response"]["text"] and "10 000" in m8["response"]["text"]
 
     # Menu "3" (Frais) doit demander le montant et JAMAIS calculer les frais pour 3 FCFA !
     SESSIONS.clear()

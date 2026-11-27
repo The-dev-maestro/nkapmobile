@@ -5,6 +5,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Android 11+ (API 30+) : visibilité requise pour SpeechRecognizer.isRecognitionAvailable() -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <application
         android:label="nkap engine"
         android:icon="@android:drawable/sym_def_app_icon"

@@ -180,12 +180,17 @@ def _create_pending_operation(
         params["beneficiary"] = state["to_name"]
     if state.get("biller"):
         params["biller"] = state["biller"]
+    confirm_options = (
+        ["Confirmer", "Annuler", "Modifier montant", "Modifier destinataire"]
+        if op == "transfer"
+        else ["Confirmer", "Annuler", "Modifier montant"]
+    )
     return _reply(
         txt,
         intent,
         declared,
         parameters=params,
-        options=["Confirmer", "Annuler", "Modifier"],
+        options=confirm_options,
         transaction={"id": state["reference"], "status": "pending"},
         max_septets=max_septets,
     )
@@ -472,6 +477,17 @@ def _route_turn(
                 max_septets=max_septets,
             )
 
+        if text == "4" and state.get("op_type", "transfer") == "transfer":
+            state["step"] = "correction_beneficiary"
+            txt, declared = render_phrase("ask_new_beneficiary", lang, max_septets=max_septets)
+            return _reply(
+                txt,
+                "CORRECTION",
+                declared,
+                transaction={"id": state.get("reference"), "status": "pending"} if state.get("reference") else None,
+                max_septets=max_septets,
+            )
+
         if text == "3" or kw_intent == "CORRECTION":
             new_amt = None if text == "3" else parse_amount(text)
             # 1. Correction directe de montant via POST /transactions/{ref}/update si disponible (sinon cancel + recreate)
@@ -536,6 +552,15 @@ def _route_turn(
             transaction={"id": state.get("reference"), "status": "pending"},
             max_septets=max_septets,
         )
+
+    if step == "correction_beneficiary":
+        if state.get("reference"):
+            bank.cancel(state["reference"])
+            state["reference"] = None
+        err_or_clarify = _resolve_beneficiary_or_clarify(state, text, phone, bank, lang, max_septets)
+        if err_or_clarify:
+            return err_or_clarify
+        return _create_pending_operation(state, phone, bank, lang, "CORRECTION", max_septets)
 
     if step == "correction_amount":
         new_amt = parse_amount(text)
