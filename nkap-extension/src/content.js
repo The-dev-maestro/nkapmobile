@@ -60,23 +60,41 @@
       return (scr && scr.closest('[class*="rounded-[2rem]"]')) || scr || null;
     }
     if (p.includes("/sandbox/channel/web")) {
+      const SIDEBAR_CTRL_RE = /Lecture vocale|Diagnostics de traduction|Nouvelle session|Langue annoncée/i;
       const addrEl = Array.from(document.querySelectorAll("div, span, p")).find(
-        (el) => el.children.length === 0 && /banque-demo\.sandbox/i.test(el.textContent || "")
+        (el) =>
+          !el.querySelector("div, section, main, article, header, aside") &&
+          /banque-demo\.sandbox/i.test(el.textContent || "")
       );
       if (addrEl) {
         let cur = addrEl.parentElement;
-        for (let i = 0; i < 6 && cur && cur !== document.body; i++, cur = cur.parentElement) {
+        for (let i = 0; i < 8 && cur && cur !== document.body; i++, cur = cur.parentElement) {
           const r = cur.getBoundingClientRect();
-          if (r.width >= 480 && r.height >= 300 && !/Compte de test|Lecture vocale/i.test(cur.textContent || "")) {
+          if (r.width >= 420 && r.height >= 280 && !SIDEBAR_CTRL_RE.test(cur.textContent || "")) {
             return cur;
           }
         }
       }
-      const grid = document.querySelector("main .grid");
+      const bankTitle = Array.from(document.querySelectorAll("div, span, h1, h2, h3, p")).find(
+        (el) =>
+          !el.querySelector("div, section, main") &&
+          /Banque d[ée]mo/i.test(el.textContent || "")
+      );
+      if (bankTitle) {
+        let cur = bankTitle.parentElement;
+        for (let i = 0; i < 8 && cur && cur !== document.body; i++, cur = cur.parentElement) {
+          const r = cur.getBoundingClientRect();
+          if (r.width >= 420 && r.height >= 280 && !SIDEBAR_CTRL_RE.test(cur.textContent || "")) {
+            return cur;
+          }
+        }
+      }
+      const grid = document.querySelector("main .grid, .grid");
       if (grid) {
         for (const child of grid.children) {
+          const r = child.getBoundingClientRect();
           const txt = child.textContent || "";
-          if (!/Compte de test|Lecture vocale|Diagnostics de traduction/i.test(txt) && txt.trim().length > 10) {
+          if (r.width >= 420 && r.height >= 280 && !SIDEBAR_CTRL_RE.test(txt) && txt.trim().length > 10) {
             return child;
           }
         }

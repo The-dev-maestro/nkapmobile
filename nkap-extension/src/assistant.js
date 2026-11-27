@@ -19,6 +19,7 @@ window.NKAP_ASSISTANT = (() => {
   let brainUrl = "";
   let stepTimers = [];
   let speechTimer = null;
+  let speechKeepAliveTimer = null;
   let clearGuardTimer = null;
   let audioEnabled = true;
   let recognition = null;
@@ -26,9 +27,13 @@ window.NKAP_ASSISTANT = (() => {
   let wakeWordEnabled = true;
   let wakeRec = null;
   let wakeActive = false;
+  let wakeStatus = "off"; // off | waiting_gesture | listening | denied | unsupported | error
   let wakeRestartTimer = null;
-  let wakeArmedOnce = false;
+  let wakeInterimTimer = null;
+  let wakeGestureAttached = false;
   let activePanelEl = null;
+  let activeSubTitleEl = null;
+  let activeLiveDotEl = null;
 
   // File d'attente vocale séquentielle pour le scénario actif
   const speechQueue = [];
@@ -193,6 +198,14 @@ window.NKAP_ASSISTANT = (() => {
 
   // ── 1. Gestionnaire vocal séquentiel sans coupure ni double lecture ──
 
+  function isSynthSpeaking() {
+    try {
+      return typeof window !== "undefined" && "speechSynthesis" in window && !!window.speechSynthesis.speaking;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function stopVoice() {
     speechQueue.length = 0;
     onSpeechDoneCallbacks.length = 0;
@@ -200,6 +213,10 @@ window.NKAP_ASSISTANT = (() => {
     if (speechTimer) {
       clearTimeout(speechTimer);
       speechTimer = null;
+    }
+    if (speechKeepAliveTimer) {
+      clearInterval(speechKeepAliveTimer);
+      speechKeepAliveTimer = null;
     }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
@@ -213,7 +230,7 @@ window.NKAP_ASSISTANT = (() => {
   }
 
   function onSpeechDoneOnce(cb) {
-    if (!isSpeaking && speechQueue.length === 0) {
+    if (!isSpeaking && speechQueue.length === 0 && !isSynthSpeaking()) {
       cb();
     } else {
       onSpeechDoneCallbacks.push(cb);
@@ -223,6 +240,10 @@ window.NKAP_ASSISTANT = (() => {
   function processSpeechQueue() {
     if (!audioEnabled || isSpeaking || speechQueue.length === 0) {
       if (!isSpeaking && speechQueue.length === 0) {
+        if (speechKeepAliveTimer) {
+          clearInterval(speechKeepAliveTimer);
+          speechKeepAliveTimer = null;
+        }
         if (O() && O().setStatusPill) O().setStatusPill(null);
         if (wakeWordEnabled && !isListening) {
           setTimeout(startWakeWordListener, 500);
@@ -279,25 +300,61 @@ window.NKAP_ASSISTANT = (() => {
       // Retient la référence en mémoire globale pour contrer le bug de Garbage Collection de Chrome
       activeUtterances.push(utter);
 
+      let finished = false;
+      const startedAt = Date.now();
       const onFinish = () => {
+        if (finished) return;
+        finished = true;
         const idx = activeUtterances.indexOf(utter);
         if (idx !== -1) activeUtterances.splice(idx, 1);
         if (speechTimer) {
           clearTimeout(speechTimer);
           speechTimer = null;
         }
+        if (speechKeepAliveTimer) {
+          clearInterval(speechKeepAliveTimer);
+          speechKeepAliveTimer = null;
+        }
         isSpeaking = false;
         processSpeechQueue();
       };
 
+      utter.onstart = () => {
+        if (O() && O().setStatusPill) {
+          O().setStatusPill("speaking", "nkap parle…");
+        }
+      };
       utter.onend = onFinish;
       utter.onerror = onFinish;
 
-      // Timeout de sécurité au cas où un bug interne de navigateur n'émettrait pas onend
-      const estMs = Math.max(2500, Math.min(12000, item.text.length * 85));
-      speechTimer = setTimeout(() => {
-        if (isSpeaking) onFinish();
-      }, estMs);
+      // Anti-gel Chrome TTS (> 15 s) : relance resume() toutes les 4 s tant que la voix parle
+      if (speechKeepAliveTimer) clearInterval(speechKeepAliveTimer);
+      speechKeepAliveTimer = setInterval(() => {
+        if (!isSpeaking || finished) {
+          clearInterval(speechKeepAliveTimer);
+          speechKeepAliveTimer = null;
+          return;
+        }
+        try {
+          if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        } catch (_) {}
+      }, 4000);
+
+      // Timeout de sécurité adaptatif (prend en compte les nombres lus à voix haute) et ne coupe JAMAIS tant que speechSynthesis parle !
+      const numGroups = (item.text.match(/\d[\d\s]*/g) || []).length;
+      const estMs = Math.max(4000, Math.min(35000, item.text.length * 115 + numGroups * 1500));
+      const scheduleWatchdog = (delayMs) => {
+        speechTimer = setTimeout(() => {
+          if (finished || !isSpeaking) return;
+          const elapsed = Date.now() - startedAt;
+          if (isSynthSpeaking() && elapsed < 45000) {
+            scheduleWatchdog(2000);
+            return;
+          }
+          onFinish();
+        }, delayMs);
+      };
+      scheduleWatchdog(estMs);
 
       window.speechSynthesis.speak(utter);
     } catch (_) {
@@ -603,12 +660,19 @@ window.NKAP_ASSISTANT = (() => {
           }
           O().clear();
         };
-        // Si l'assistant parle encore, attend la fin (plafonné à 3,5 s anti-blocage TTS) avant d'effacer
-        if (isSpeaking || speechQueue.length > 0) {
+        // Si l'assistant parle encore, attend la fin réelle de la voix avant d'effacer (ne coupe jamais la pulsation vocale !)
+        if (isSpeaking || speechQueue.length > 0 || isSynthSpeaking()) {
           if (clearGuardTimer) clearTimeout(clearGuardTimer);
-          clearGuardTimer = setTimeout(runClear, 3500);
+          const checkClearGuard = () => {
+            if (isSpeaking || speechQueue.length > 0 || isSynthSpeaking()) {
+              clearGuardTimer = setTimeout(checkClearGuard, 2000);
+              return;
+            }
+            runClear();
+          };
+          clearGuardTimer = setTimeout(checkClearGuard, 20000);
           onSpeechDoneOnce(() => {
-            const t = setTimeout(runClear, 500);
+            const t = setTimeout(runClear, 650);
             stepTimers.push(t);
           });
         } else {
@@ -861,15 +925,64 @@ window.NKAP_ASSISTANT = (() => {
     } catch (_) {}
   }
 
-  /** Détecte le mot-clé « Hey Nkap » (tolérant aux transcriptions STT françaises : hey nkap, hey ncap, ok nkap, encap...). */
+  function refreshWakeStatusUI() {
+    if (!activeSubTitleEl) return;
+    if (!wakeWordEnabled) {
+      activeSubTitleEl.textContent = brainUrl ? "Copilote vivant · connecté" : "Copilote visuel · mode local";
+      activeSubTitleEl.style.color = "#A8A29E";
+      activeSubTitleEl.style.cursor = "default";
+      activeSubTitleEl.style.textDecoration = "none";
+      if (activeLiveDotEl) {
+        activeLiveDotEl.style.background = "radial-gradient(circle,#FFF3C4,#F5B700)";
+        activeLiveDotEl.style.boxShadow = "0 0 10px rgba(245,183,0,0.85)";
+      }
+      return;
+    }
+    if (wakeActive) {
+      activeSubTitleEl.textContent = "Écoute « Hey Nkap » active ✓";
+      activeSubTitleEl.style.color = "#6EE7B7";
+      activeSubTitleEl.style.cursor = "default";
+      activeSubTitleEl.style.textDecoration = "none";
+      if (activeLiveDotEl) {
+        activeLiveDotEl.style.background = "radial-gradient(circle,#A7F3D0,#10B981)";
+        activeLiveDotEl.style.boxShadow = "0 0 10px rgba(16,185,129,0.9)";
+      }
+    } else if (wakeStatus === "denied") {
+      activeSubTitleEl.textContent = "Micro bloqué — autorise-le dans Chrome";
+      activeSubTitleEl.style.color = "#FDA4AF";
+      activeSubTitleEl.style.cursor = "pointer";
+      activeSubTitleEl.style.textDecoration = "underline";
+    } else if (wakeStatus === "unsupported") {
+      activeSubTitleEl.textContent = "Micro vocal indisponible · écris ci-dessous";
+      activeSubTitleEl.style.color = "#A8A29E";
+      activeSubTitleEl.style.cursor = "default";
+    } else {
+      activeSubTitleEl.textContent = "Clique ici pour activer le micro « Hey Nkap »";
+      activeSubTitleEl.style.color = "#FDE68A";
+      activeSubTitleEl.style.cursor = "pointer";
+      activeSubTitleEl.style.textDecoration = "underline";
+    }
+  }
+
+  /** Détecte le mot-clé « Hey Nkap » (très tolérant aux transcriptions STT françaises : hey/hé/et/ok + nkap/ncap/encap/en cap/un cap/handicap/cap...). */
   function parseWakeCommand(rawText) {
     const clean = String(rawText || "").trim();
     if (!clean) return null;
-    const n = norm(clean);
-    const re = /\b(?:hey|eh|et|ok|okay|salut|bonjour|dis|allo)\s+(?:n[\s-]?kap|n[\s-]?cap|encap|en\s+cap|en\s+cape|incap|nkab|cap|cape)\b|\b(?:n[\s-]?kap|encap)\b/i;
+    const n = norm(clean).replace(/['’`]/g, " ");
+    const re =
+      /\b(?:hey|he|eh|et|est|ai|ok|okay|salut|bonjour|dis|allo|oh|oui)\s+(?:n\s*kap+|n\s*cap+|m\s*kap+|m\s*cap+|encap+|en\s+cap+e?|incap+|un\s+cap+e?|une\s+cap+e?|ne\s+cap+e?|handicap|recap|ngap+|ngab|nkab|nkap\s*mobile|cap+e?|kapp?|cab|cup)\b|\b(?:n\s*kap+|n\s*cap+|encap+|nkab|ngap+)\b/i;
     const m = n.match(re);
     if (!m) return null;
-    const after = clean.slice(m.index + m[0].length).replace(/^[\s,.:;!?-]+/, "").trim();
+    // Calcule le reste de la phrase après le mot-clé dans le texte original
+    const afterNorm = n.slice(m.index + m[0].length).replace(/^[\s,.:;!?-]+/, "").trim();
+    let after = afterNorm;
+    if (afterNorm) {
+      const words = clean.split(/\s+/);
+      const afterWordCount = afterNorm.split(/\s+/).length;
+      if (afterWordCount <= words.length) {
+        after = words.slice(words.length - afterWordCount).join(" ").replace(/^[\s,.:;!?-]+/, "").trim();
+      }
+    }
     return { matched: true, command: after };
   }
 
@@ -878,101 +991,171 @@ window.NKAP_ASSISTANT = (() => {
       clearTimeout(wakeRestartTimer);
       wakeRestartTimer = null;
     }
+    if (wakeInterimTimer) {
+      clearTimeout(wakeInterimTimer);
+      wakeInterimTimer = null;
+    }
     if (wakeRec) {
-      try { wakeRec.onend = null; wakeRec.stop(); } catch (_) {}
+      try { wakeRec.onend = null; wakeRec.onerror = null; wakeRec.stop(); } catch (_) {}
       wakeRec = null;
     }
     wakeActive = false;
+    refreshWakeStatusUI();
+  }
+
+  function triggerWakeAction(command) {
+    stopWakeWordListener();
+    playWakeChime();
+    if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
+    if (command && command.length >= 3) {
+      console.info("[nkap-wake] Commande directe :", command);
+      askQuestion(command);
+      return;
+    }
+    console.info("[nkap-wake] Réveil « Hey Nkap » → écoute active");
+    if (O().returnOrbHome) O().returnOrbHome();
+    const pEl = O().getPanelEl ? O().getPanelEl() : activePanelEl;
+    if (pEl && pEl.style.display !== "flex") {
+      togglePanel(pEl);
+    }
+    setTimeout(() => toggleVoiceRecognition(null), 160);
   }
 
   function startWakeWordListener() {
-    if (!wakeWordEnabled || wakeActive || isListening || isSpeaking) return;
+    if (!wakeWordEnabled || wakeActive || isListening || isSpeaking || wakeRec) return;
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) return;
+    if (!SpeechRec) {
+      wakeStatus = "unsupported";
+      refreshWakeStatusUI();
+      return;
+    }
 
     try {
       const rec = new SpeechRec();
       rec.lang = "fr-FR";
       rec.continuous = true;
       rec.interimResults = true;
-      rec.maxAlternatives = 1;
+      rec.maxAlternatives = 5;
       wakeRec = rec;
 
       rec.onstart = () => {
         wakeActive = true;
+        wakeStatus = "listening";
+        console.info("[nkap-wake] Écoute « Hey Nkap » démarrée");
+        refreshWakeStatusUI();
       };
 
       rec.onresult = (ev) => {
         if (!wakeWordEnabled || isListening || isSpeaking) return;
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           const res = ev.results[i];
-          const txt = res && res[0] ? res[0].transcript : "";
-          const hit = parseWakeCommand(txt);
-          if (!hit) continue;
-
-          // Si la phrase est finale et contient déjà la question ("Hey Nkap quel est mon solde ?"), on exécute directement !
-          if (res.isFinal && hit.command.length >= 4) {
-            stopWakeWordListener();
-            playWakeChime();
-            if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
-            askQuestion(hit.command);
-            return;
-          }
-          // Sinon, réveil immédiat dès "Hey Nkap" détecté -> ouvre l'écoute vocale active !
-          if (res.isFinal || hit.command.length === 0) {
-            stopWakeWordListener();
-            playWakeChime();
-            if (O().setOrbLabelVisible) O().setOrbLabelVisible(true);
-            if (O().returnOrbHome) O().returnOrbHome();
-            const pEl = O().getPanelEl ? O().getPanelEl() : activePanelEl;
-            if (pEl && pEl.style.display !== "flex") {
-              togglePanel(pEl);
+          let hit = null;
+          let matchedText = "";
+          for (let a = 0; a < res.length; a++) {
+            const altTxt = res[a] && res[a].transcript ? res[a].transcript : "";
+            const parsed = parseWakeCommand(altTxt);
+            if (parsed) {
+              hit = parsed;
+              matchedText = altTxt;
+              break;
             }
-            setTimeout(() => toggleVoiceRecognition(null), 160);
+          }
+          if (!hit) continue;
+          console.info("[nkap-wake] Entendu :", matchedText, "→", hit, "final=", res.isFinal);
+
+          if (wakeInterimTimer) {
+            clearTimeout(wakeInterimTimer);
+            wakeInterimTimer = null;
+          }
+
+          if (res.isFinal) {
+            triggerWakeAction(hit.command);
             return;
           }
+
+          // Résultat intermédiaire : attend 800 ms pour laisser l'utilisateur finir sa question si il enchaîne ("Hey Nkap, quel est mon solde ?")
+          const pendingCmd = hit.command;
+          wakeInterimTimer = setTimeout(() => {
+            wakeInterimTimer = null;
+            if (wakeWordEnabled && !isListening && !isSpeaking) {
+              triggerWakeAction(pendingCmd);
+            }
+          }, 800);
         }
       };
 
       rec.onerror = (ev) => {
         wakeActive = false;
         const err = ev && ev.error ? ev.error : "";
+        console.warn("[nkap-wake] Erreur STT :", err);
         if (err === "not-allowed" || err === "service-not-allowed") {
-          // L'utilisateur a refusé le micro : on ne boucle pas en erreur
+          wakeStatus = "denied";
           stopWakeWordListener();
           return;
+        }
+        if (err !== "no-speech" && err !== "aborted") {
+          wakeStatus = "waiting_gesture";
+          refreshWakeStatusUI();
         }
       };
 
       rec.onend = () => {
         wakeActive = false;
         wakeRec = null;
-        if (wakeWordEnabled && !isListening && !isSpeaking) {
+        refreshWakeStatusUI();
+        if (wakeWordEnabled && !isListening && !isSpeaking && wakeStatus !== "denied") {
           wakeRestartTimer = setTimeout(startWakeWordListener, 650);
         }
       };
 
       rec.start();
-    } catch (_) {
+    } catch (e) {
       wakeActive = false;
+      wakeRec = null;
+      wakeStatus = "waiting_gesture";
+      console.warn("[nkap-wake] Attente interaction utilisateur :", e && e.message);
+      refreshWakeStatusUI();
+    }
+  }
+
+  /** Demande explicitement l'autorisation micro Chrome puis lance l'écoute « Hey Nkap ». */
+  function requestWakePermission() {
+    wakeStatus = "waiting_gesture";
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((t) => t.stop());
+          wakeStatus = "listening";
+          startWakeWordListener();
+        })
+        .catch(() => {
+          wakeStatus = "denied";
+          refreshWakeStatusUI();
+        });
+    } else {
+      startWakeWordListener();
     }
   }
 
   function setWakeWordEnabled(enabled) {
     wakeWordEnabled = !!enabled;
     if (!wakeWordEnabled) {
+      wakeStatus = "off";
       stopWakeWordListener();
       return;
     }
-    // Tente le démarrage direct (marche si permission micro déjà accordée), sinon arme sur la 1re interaction
+    wakeStatus = "waiting_gesture";
     startWakeWordListener();
-    if (!wakeArmedOnce) {
-      wakeArmedOnce = true;
-      const arm = () => {
-        if (wakeWordEnabled && !wakeActive && !isListening) startWakeWordListener();
+    if (!wakeGestureAttached) {
+      wakeGestureAttached = true;
+      const armOnGesture = () => {
+        if (wakeWordEnabled && !wakeActive && !wakeRec && !isListening && !isSpeaking && wakeStatus !== "denied" && wakeStatus !== "unsupported") {
+          startWakeWordListener();
+        }
       };
-      document.addEventListener("pointerdown", arm, { once: true, passive: true });
-      document.addEventListener("keydown", arm, { once: true, passive: true });
+      document.addEventListener("pointerdown", armOnGesture, { passive: true });
+      document.addEventListener("keydown", armOnGesture, { passive: true });
     }
   }
 
@@ -1107,8 +1290,16 @@ window.NKAP_ASSISTANT = (() => {
     title.style.cssText =
       "font-size:13.5px;font-weight:700;color:#FDE68A;letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
     const subTitle = document.createElement("div");
-    subTitle.textContent = wakeWordEnabled ? "Dis « Hey Nkap » ou écris" : (brainUrl ? "Copilote vivant · connecté" : "Copilote visuel · mode local");
     subTitle.style.cssText = "font-size:10.5px;color:#A8A29E;";
+    subTitle.addEventListener("click", (ev) => {
+      if (wakeWordEnabled && !wakeActive) {
+        ev.stopPropagation();
+        requestWakePermission();
+      }
+    });
+    activeSubTitleEl = subTitle;
+    activeLiveDotEl = liveDot;
+    refreshWakeStatusUI();
     titleCol.appendChild(title);
     titleCol.appendChild(subTitle);
     titleWrap.appendChild(liveDot);
@@ -1534,7 +1725,11 @@ window.NKAP_ASSISTANT = (() => {
     onUnseenContent,
     onErrorDetected,
     setWakeWordEnabled,
+    requestWakePermission,
     parseWakeCommand,
+    isSpeaking() {
+      return isSpeaking || speechQueue.length > 0 || isSynthSpeaking();
+    },
     SCENARIOS_BY_SCREEN,
     setBrainUrl(u) {
       brainUrl = String(u || "").trim().replace(/\/+$/, "");

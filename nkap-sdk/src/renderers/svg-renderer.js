@@ -28,6 +28,9 @@
     let orbFloatingTarget = null;
     let orbSizePx = 74;
     let orbSyncTimer = null;
+    let userHomeRel = null; // Position relative choisie par l'utilisateur via glisser-déposer ({ rx, ry })
+    let isDraggingOrb = false;
+    let justDraggedOrb = false;
     let wordTimer = null;
     let raf = null;
     let activeCursorMarkId = null;
@@ -213,6 +216,48 @@
       if (cursorEl) cursorEl.style.opacity = "0";
     }
 
+    function isVoiceActiveNow() {
+      try {
+        if (global.NKAP_ASSISTANT && typeof global.NKAP_ASSISTANT.isSpeaking === "function" && global.NKAP_ASSISTANT.isSpeaking()) {
+          return true;
+        }
+        if (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking) {
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    function findFallbackSandboxRoot() {
+      const p = (typeof location !== "undefined" && location.pathname ? location.pathname : "").toLowerCase();
+      if (!p.includes("/sandbox/")) return null;
+      if (p.includes("/sandbox/channel/mobile")) {
+        return document.querySelector('[class*="rounded-[1.8rem]"]') || document.querySelector('[class*="rounded-[2.5rem]"]');
+      }
+      if (p.includes("/sandbox/ussd")) {
+        const scr = document.querySelector('[class*="bg-emerald-950"]');
+        return (scr && scr.closest('[class*="rounded-[2rem]"]')) || scr || null;
+      }
+      if (p.includes("/sandbox/channel/web")) {
+        const SIDEBAR_CTRL_RE = /Lecture vocale|Diagnostics de traduction|Nouvelle session|Langue annoncée/i;
+        const addrEl = Array.from(document.querySelectorAll("div, span, p")).find(
+          (el) =>
+            !el.querySelector("div, section, main, article, header, aside") &&
+            /banque-demo\.sandbox/i.test(el.textContent || "")
+        );
+        if (addrEl) {
+          let cur = addrEl.parentElement;
+          for (let i = 0; i < 8 && cur && cur !== document.body; i++, cur = cur.parentElement) {
+            const r = cur.getBoundingClientRect();
+            if (r.width >= 420 && r.height >= 280 && !SIDEBAR_CTRL_RE.test(cur.textContent || "")) {
+              return cur;
+            }
+          }
+        }
+      }
+      return null;
+    }
+
     function getFrameBounds() {
       let root = null;
       if (typeof global.NKAP_GET_SANDBOX_ROOT === "function") {
@@ -220,6 +265,7 @@
           root = global.NKAP_GET_SANDBOX_ROOT();
         } catch (_) {}
       }
+      if (!root) root = findFallbackSandboxRoot();
       if (!root) {
         const sim = document.querySelector("[data-nkap-channel]");
         if (sim && sim.getBoundingClientRect().width >= 260) root = sim;
@@ -255,11 +301,27 @@
     function getOrbHomePosition() {
       const fb = getFrameBounds();
       orbSizePx = fb.isMobile ? 58 : (fb.inFrame ? 64 : 74);
+      const minX = fb.left + 6;
+      const maxX = Math.max(minX, fb.right - orbSizePx - 6);
+      const minY = fb.top + (fb.inFrame && fb.isMobile ? 26 : 4);
+      const maxY = Math.max(minY, fb.bottom - orbSizePx - 8);
+
+      if (userHomeRel) {
+        const x = minX + userHomeRel.rx * Math.max(0, maxX - minX);
+        const y = minY + userHomeRel.ry * Math.max(0, maxY - minY);
+        return {
+          x: Math.max(minX, Math.min(maxX, x)),
+          y: Math.max(minY, Math.min(maxY, y)),
+          size: orbSizePx,
+          fb,
+        };
+      }
+
       const padR = fb.isMobile ? 8 : (fb.inFrame ? 16 : 14);
       // Dans la frame web : sous la barre d'adresse et le bouton Wog ; dans mobile : sous la barre 09:41
       const padT = fb.inFrame ? (fb.isMobile ? 28 : 104) : 6;
-      const x = Math.max(fb.left + 6, Math.min(fb.right - orbSizePx - padR, fb.right - orbSizePx - padR));
-      const y = Math.max(fb.top + 4, Math.min(fb.bottom - orbSizePx - 12, fb.top + padT));
+      const x = Math.max(minX, Math.min(maxX, fb.right - orbSizePx - padR));
+      const y = Math.max(minY, Math.min(maxY, fb.top + padT));
       return { x, y, size: orbSizePx, fb };
     }
 
@@ -273,13 +335,27 @@
       panelEl.style.width = `${panelW}px`;
 
       let left = bRect.right - panelW;
+      if (left < fb.left + 8) left = bRect.left;
       left = Math.max(fb.left + 8, Math.min(fb.right - panelW - 8, left));
-      const top = Math.min(fb.bottom - 180, bRect.bottom + 10);
-      const maxH = Math.max(200, fb.bottom - top - 12);
-      panelEl.style.left = `${Math.round(left)}px`;
-      panelEl.style.right = "auto";
-      panelEl.style.top = `${Math.round(top)}px`;
-      panelEl.style.maxHeight = `${Math.round(maxH)}px`;
+
+      const spaceBelow = fb.bottom - bRect.bottom - 14;
+      const spaceAbove = bRect.top - fb.top - 14;
+      if (spaceBelow < 220 && spaceAbove > spaceBelow) {
+        const maxH = Math.max(200, spaceAbove);
+        const estH = Math.min(maxH, panelEl.offsetHeight || 340);
+        const top = Math.max(fb.top + 8, bRect.top - estH - 10);
+        panelEl.style.left = `${Math.round(left)}px`;
+        panelEl.style.right = "auto";
+        panelEl.style.top = `${Math.round(top)}px`;
+        panelEl.style.maxHeight = `${Math.round(maxH)}px`;
+      } else {
+        const top = Math.min(fb.bottom - 180, bRect.bottom + 10);
+        const maxH = Math.max(200, fb.bottom - top - 12);
+        panelEl.style.left = `${Math.round(left)}px`;
+        panelEl.style.right = "auto";
+        panelEl.style.top = `${Math.round(top)}px`;
+        panelEl.style.maxHeight = `${Math.round(maxH)}px`;
+      }
     }
 
     function applyOrbCoords(x, y, size) {
@@ -1108,7 +1184,7 @@
         }
         if (!text || !String(text).trim()) {
           capLayer.style.opacity = "0";
-          setStatusPill(null);
+          if (!isVoiceActiveNow()) setStatusPill(null);
           setTimeout(() => {
             if (capLayer && capLayer.style.opacity === "0") {
               capLayer.style.display = "none";
@@ -1162,7 +1238,7 @@
         marks.clear();
         activeCursorMarkId = null;
         hideCursor();
-        setStatusPill(null);
+        if (!isVoiceActiveNow()) setStatusPill(null);
         returnOrbHome();
         if (!panelEl || panelEl.style.display !== "flex") {
           setOrbLabelVisible(false);
@@ -1198,14 +1274,17 @@
         bubbleEl = document.createElement("div");
         bubbleEl.id = "nkap-bubble";
         bubbleEl.setAttribute("data-state", orbState);
-        bubbleEl.title = "Clique ou dis « Hey Nkap »";
+        bubbleEl.title = "Clique, glisse ou dis « Hey Nkap »";
+        const ORB_TRANSITION_SMOOTH =
+          "left 0.65s cubic-bezier(0.22,1,0.36,1),top 0.65s cubic-bezier(0.22,1,0.36,1),transform 0.18s cubic-bezier(0.22,1,0.36,1),filter 0.25s ease";
+        const ORB_TRANSITION_DRAG = "transform 0.12s ease,filter 0.25s ease";
         bubbleEl.style.cssText =
           `position:fixed;left:${Math.round(home.x)}px;top:${Math.round(home.y)}px;width:${home.size}px;height:${home.size}px;` +
           "background:transparent;border:none;box-shadow:none;" +
           "display:flex;align-items:center;justify-content:center;" +
           "filter:drop-shadow(0 0 11px rgba(245,183,0,0.48)) drop-shadow(0 2px 6px rgba(15,23,42,0.32));" +
-          "z-index:2147483647;pointer-events:auto;cursor:pointer;user-select:none;" +
-          "transition:left 0.65s cubic-bezier(0.22,1,0.36,1),top 0.65s cubic-bezier(0.22,1,0.36,1),transform 0.18s cubic-bezier(0.22,1,0.36,1),filter 0.25s ease;overflow:visible;";
+          "z-index:2147483647;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;" +
+          `transition:${ORB_TRANSITION_SMOOTH};overflow:visible;`;
 
         // Canvas 60fps : réseau de neurones flottant librement + impulsions lumineuses organiques
         const canvas = document.createElement("canvas");
@@ -1255,9 +1334,14 @@
             const cy = size / 2;
             ctx.clearRect(0, 0, size, size);
 
-            const isSpeak = orbState === "speaking";
+            const voiceLive = isVoiceActiveNow();
             const isListen = orbState === "listening";
-            const isThink = orbState === "thinking";
+            const isSpeak = !isListen && (orbState === "speaking" || voiceLive);
+            const isThink = !isListen && !isSpeak && orbState === "thinking";
+            const expectedAttr = isListen ? "listening" : isSpeak ? "speaking" : isThink ? "thinking" : "idle";
+            if (bubbleEl.getAttribute("data-state") !== expectedAttr) {
+              bubbleEl.setAttribute("data-state", expectedAttr);
+            }
             const speedMul = isSpeak ? 2.5 : isListen ? 2.1 : isThink ? 3.2 : 0.9;
             const pulse = isSpeak
               ? 1 + 0.16 * Math.sin(t * 9.5) + 0.07 * Math.sin(t * 17)
@@ -1345,10 +1429,78 @@
         }
 
         bubbleEl.__nkapTap = onTap || (() => {});
+
+        // Glisser-déposer fluide de l'orbe (toujours confiné dans la frame Web/Mobile)
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragOrigL = 0;
+        let dragOrigT = 0;
+        let dragPointerId = null;
+
+        bubbleEl.addEventListener("pointerdown", (ev) => {
+          if (ev.button !== 0 && ev.pointerType === "mouse") return;
+          dragPointerId = ev.pointerId;
+          dragStartX = ev.clientX;
+          dragStartY = ev.clientY;
+          const br = bubbleEl.getBoundingClientRect();
+          dragOrigL = br.left;
+          dragOrigT = br.top;
+          isDraggingOrb = false;
+          try { bubbleEl.setPointerCapture(ev.pointerId); } catch (_) {}
+        });
+
+        bubbleEl.addEventListener("pointermove", (ev) => {
+          if (dragPointerId === null || ev.pointerId !== dragPointerId) return;
+          const dx = ev.clientX - dragStartX;
+          const dy = ev.clientY - dragStartY;
+          if (!isDraggingOrb && Math.hypot(dx, dy) > 6) {
+            isDraggingOrb = true;
+            orbFloatingTarget = null;
+            bubbleEl.style.transition = ORB_TRANSITION_DRAG;
+            bubbleEl.style.cursor = "grabbing";
+          }
+          if (!isDraggingOrb) return;
+          const fb = getFrameBounds();
+          const sz = orbSizePx || 64;
+          const minX = fb.left + 6;
+          const maxX = Math.max(minX, fb.right - sz - 6);
+          const minY = fb.top + (fb.inFrame && fb.isMobile ? 26 : 4);
+          const maxY = Math.max(minY, fb.bottom - sz - 8);
+          const nx = Math.max(minX, Math.min(maxX, dragOrigL + dx));
+          const ny = Math.max(minY, Math.min(maxY, dragOrigT + dy));
+          applyOrbCoords(nx, ny, sz);
+        });
+
+        const endOrbDrag = (ev) => {
+          if (dragPointerId === null || ev.pointerId !== dragPointerId) return;
+          try { bubbleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+          dragPointerId = null;
+          bubbleEl.style.transition = ORB_TRANSITION_SMOOTH;
+          bubbleEl.style.cursor = "grab";
+          if (isDraggingOrb) {
+            const fb = getFrameBounds();
+            const sz = orbSizePx || 64;
+            const br = bubbleEl.getBoundingClientRect();
+            const minX = fb.left + 6;
+            const maxX = Math.max(minX, fb.right - sz - 6);
+            const minY = fb.top + (fb.inFrame && fb.isMobile ? 26 : 4);
+            const maxY = Math.max(minY, fb.bottom - sz - 8);
+            const rx = maxX > minX ? Math.max(0, Math.min(1, (br.left - minX) / (maxX - minX))) : 1;
+            const ry = maxY > minY ? Math.max(0, Math.min(1, (br.top - minY) / (maxY - minY))) : 0;
+            userHomeRel = { rx, ry };
+            isDraggingOrb = false;
+            justDraggedOrb = true;
+            setTimeout(() => { justDraggedOrb = false; }, 90);
+          }
+        };
+        bubbleEl.addEventListener("pointerup", endOrbDrag);
+        bubbleEl.addEventListener("pointercancel", endOrbDrag);
+
         bubbleEl.addEventListener("click", () => {
+          if (justDraggedOrb) return;
           bubbleEl.style.transform = "scale(0.9)";
           setTimeout(() => (bubbleEl.style.transform = ""), 150);
-          returnOrbHome();
+          if (orbFloatingTarget) returnOrbHome();
           positionPanelUnderOrb();
           if (global.NKAP_ASSISTANT && global.NKAP_ASSISTANT.togglePanel) {
             global.NKAP_ASSISTANT.togglePanel(panelEl);
@@ -1361,7 +1513,7 @@
 
         // Maintient l'orbe dans la frame web/mobile après chargement asynchrone ou redimensionnement
         const syncOrb = () => {
-          if (!bubbleEl || !bubbleEl.isConnected) return;
+          if (!bubbleEl || !bubbleEl.isConnected || isDraggingOrb) return;
           if (orbFloatingTarget && orbFloatingTarget.isConnected) {
             floatOrbNear(orbFloatingTarget);
           } else {
@@ -1378,7 +1530,7 @@
             orbSyncTimer = null;
             return;
           }
-          if (!orbFloatingTarget) {
+          if (!orbFloatingTarget && !isDraggingOrb) {
             const h = getOrbHomePosition();
             const curL = parseFloat(bubbleEl.style.left) || 0;
             const curT = parseFloat(bubbleEl.style.top) || 0;
@@ -1386,7 +1538,7 @@
               applyOrbCoords(h.x, h.y, h.size);
             }
           }
-        }, 700);
+        }, 500);
         return bubbleEl;
       },
 
