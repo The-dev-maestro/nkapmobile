@@ -255,7 +255,7 @@ def _do_history(phone: str, bank: SafinumBankClient, lang: str, max_septets: int
         )[:12]
         lines.append(f"- {kind} {who} {amt} ({st})".replace("  ", " ").strip())
     declared = resolve_lang(lang)
-    header = {"ewo": "Itang mvet:", "dua": "Bebolo:", "en": "History:"}.get(declared, "Historique:")
+    header = {"ewo": "Itang mvet:", "dua": "Miango:", "en": "History:"}.get(declared, "Historique:")
     return _reply(
         header + "\n" + "\n".join(lines),
         "TRANSACTION_HISTORY",
@@ -293,12 +293,23 @@ def _resolve_beneficiary_or_clarify(
         txt, declared = render_phrase("ask_transfer_to", lang, max_septets=max_septets)
         return _reply(txt, "CLARIFICATION_NEEDED", declared, max_septets=max_septets)
 
-    ok, _st, data = bank.beneficiaries(clean_q, phone=phone)
+    # IMPORTANT : GET /beneficiaries?q=&phone= cherche par nom OU par numéro du bénéficiaire
+    # (ne JAMAIS passer le numéro de l'expéditeur `phone` dans `phone=`, sinon l'API renvoie [] !)
+    ok, _st, data = bank.beneficiaries(clean_q)
     if not ok:
         return _bank_error(data, "TRANSFER", lang, max_septets=max_septets)
 
     raw_items = data.get("beneficiaries") or data.get("items") or data.get("data") or []
+    # Si la saisie contient "Prénom Nom" et ne renvoie rien, tente le prénom seul pour permettre la clarification
+    if not raw_items and " " in clean_q:
+        first_tok = clean_q.split()[0]
+        if len(first_tok) >= 2:
+            ok2, _st2, data2 = bank.beneficiaries(first_tok)
+            if ok2:
+                raw_items = data2.get("beneficiaries") or data2.get("items") or data2.get("data") or []
+
     # Déduplique par téléphone (l'API SAFINUM peut renvoyer un même bénéficiaire sur plusieurs institutions)
+    # et évite de proposer l'expéditeur lui-même quand d'autres bénéficiaires correspondent.
     dedup_by_phone: dict[str, dict[str, Any]] = {}
     for it in raw_items:
         ph = str(it.get("phone") or "").strip()
@@ -307,6 +318,9 @@ def _resolve_beneficiary_or_clarify(
         if ph not in dedup_by_phone or str(it.get("institution") or "").upper() == "SAFINUM":
             dedup_by_phone[ph] = it
     items = list(dedup_by_phone.values()) if dedup_by_phone else raw_items
+    non_self = [it for it in items if str(it.get("phone") or "").strip() != phone]
+    if non_self:
+        items = non_self
     if not items:
         return _bank_error({"error": "UNKNOWN_BENEFICIARY"}, "TRANSFER", lang, max_septets=max_septets)
     if len(items) > 1:

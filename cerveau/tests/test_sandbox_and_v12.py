@@ -583,6 +583,8 @@ def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
         bank_client=bank,
     )
     assert r1["transaction"]["id"] == "TRX-001"
+    # Régression USSD : GET /beneficiaries?q=<nom> ne doit JAMAIS recevoir le phone de l'expéditeur !
+    bank.beneficiaries.assert_called_with("Paul")
     r2 = handle_channel_turn(
         {"session_id": "s_upd", "channel": "ussd", "phone": "237690000001", "language": "ewo", "input": {"text": "modifier 10000"}},
         trace_id="t_u2",

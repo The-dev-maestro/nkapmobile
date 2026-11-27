@@ -59,11 +59,15 @@ class SafinumBankClient:
     def history(self, phone: str, limit: int = 5) -> tuple[bool, int, dict[str, Any]]:
         return self.call("GET", f"/accounts/{_q(phone)}/transactions?limit={int(limit)}")
 
-    def beneficiaries(self, query: str, phone: str | None = None) -> tuple[bool, int, dict[str, Any]]:
-        qs = f"q={_q(query)}"
+    def beneficiaries(self, query: str | None = None, phone: str | None = None) -> tuple[bool, int, dict[str, Any]]:
+        """Recherche un bénéficiaire par nom (`q`) OU par numéro (`phone`). Ne jamais passer le numéro de l'expéditeur ici !"""
+        params: list[str] = []
+        if query:
+            params.append(f"q={_q(query)}")
         if phone:
-            qs += f"&phone={_q(phone)}"
-        return self.call("GET", f"/beneficiaries?{qs}")
+            params.append(f"phone={_q(phone)}")
+        qs = "&".join(params)
+        return self.call("GET", f"/beneficiaries?{qs}" if qs else "/beneficiaries")
 
     def fees(self, kind: str, amount: int) -> tuple[bool, int, dict[str, Any]]:
         return self.call("GET", f"/fees?type={_q(kind)}&amount={int(amount)}")
