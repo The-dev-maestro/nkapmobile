@@ -93,7 +93,8 @@
     "kus kredi telefon", "ande kredi telefone", "djanda la mudi", "itang mvet yam", "bebolo bam",
     "misongi", "botea", "sawa", "kele obusu", "ala oboso", "yemban", "bamse",
     "tyende", "tukwa", "vaa", "buka", "esele", "bulan", "timba", "kwese", "wog", "senga",
-    "facture", "factures", "credit", "kalara", "kalati", "musawedi", "kredi", "ebale"
+    "facture", "factures", "credit", "kalara", "kalati", "musawedi", "kredi", "ebale",
+    "accueil", "transfert", "payer", "historique", "nda", "lomo", "yaan", "itang"
   ],
   "screen_detectors": [
     {
@@ -264,9 +265,9 @@
     {
       "id": "sbx_home_transfer",
       "screens": ["home"],
-      "triggers": ["envoyer", "envoie", "envoi", "transferer", "faire un transfert", "lomo", "loma"],
+      "triggers": ["envoyer", "envoie", "envoi", "transferer", "faire un transfert", "faire un envoi", "lomo", "loma"],
       "spoken": "Appuie ici sur Envoyer de l'argent pour choisir un bénéficiaire et saisir le montant à envoyer.",
-      "target_match": ["envoyer de l'argent", "lomo moni", "loma moni", "send money"],
+      "target_match": ["envoyer de l'argent", "lomo moni", "loma moni", "transfert", "lomo", "loma", "send money"],
       "style": "frame",
       "label": "Appuie ici",
       "color": "yellow"
@@ -274,9 +275,9 @@
     {
       "id": "sbx_home_bill",
       "screens": ["home"],
-      "triggers": ["facture", "eneo", "camwater", "canal", "camtel", "payer une facture", "kalara", "kalati", "sawa la moni"],
+      "triggers": ["facture", "eneo", "camwater", "canal", "camtel", "payer une facture", "electricite", "eau", "kalara", "kalati", "sawa la moni"],
       "spoken": "Appuie ici sur Payer une facture pour régler ENEO, CAMWATER, CANAL ou CAMTEL.",
-      "target_match": ["payer une facture", "yaan mfie ai kalara", "sawedi kalati", "sawa la moni", "pay a bill"],
+      "target_match": ["payer une facture", "yaan mfie ai kalara", "sawedi kalati", "sawa la moni", "payer", "yaan", "sawa", "pay a bill"],
       "style": "frame",
       "label": "Factures",
       "color": "yellow"
@@ -286,7 +287,7 @@
       "screens": ["home"],
       "triggers": ["credit telephon", "acheter du credit", "recharger", "unites", "airtime", "kredi", "djanda la mudi", "ebale"],
       "spoken": "Appuie ici sur Acheter du crédit pour recharger ton numéro ou celui d'un proche.",
-      "target_match": ["acheter du credit", "kus kredi telefon", "ande kredi telefone", "djanda la mudi", "buy airtime"],
+      "target_match": ["acheter du credit", "kus kredi telefon", "ande kredi telefone", "djanda la mudi", "payer", "yaan", "buy airtime"],
       "style": "frame",
       "label": "Crédit",
       "color": "yellow"
@@ -296,7 +297,7 @@
       "screens": ["home"],
       "triggers": ["voir tout", "toutes mes operations", "ouvrir l'historique", "voir l'historique"],
       "spoken": "Appuie ici sur Mes opérations pour ouvrir tout ton historique et filtrer les entrées et sorties.",
-      "target_match": ["mes operations", "itang mvet yam", "bebolo bam", "misongi", "tout voir", "fombo mese", "ombwa mese", "misongi mese"],
+      "target_match": ["mes operations", "itang mvet yam", "bebolo bam", "misongi", "tout voir", "fombo mese", "ombwa mese", "historique", "itang"],
       "style": "frame",
       "label": "Historique",
       "color": "yellow"
@@ -304,7 +305,7 @@
     {
       "id": "sbx_transfer_already_here",
       "screens": ["transfer", "beneficiary"],
-      "triggers": ["envoyer de l'argent", "je veux envoyer", "comment envoyer", "faire un transfert", "faire un envoi"],
+      "triggers": ["envoyer de l'argent", "je veux envoyer", "comment envoyer", "faire un transfert", "faire un envoi", "lomo moni", "loma moni"],
       "spoken": "Tu es déjà sur l'écran de transfert ! Choisis un bénéficiaire dans la liste ou tape son numéro, saisis le montant, puis appuie sur Continuer.",
       "highlights": [
         {"match": ["beneficiaire", "mod a non moni", "mukusa", "mukusedi", "beneficiary"], "style": "num", "step": 1, "label": "Bénéficiaire", "color": "yellow"},
@@ -333,8 +334,8 @@
     {
       "id": "sbx_pay_bill_already_here",
       "screens": ["pay_bill", "pay"],
-      "triggers": ["payer une facture", "eneo", "camwater", "canal", "camtel", "electricite", "eau"],
-      "spoken": "Tu es déjà sur l'écran de paiement ! Sélectionne ton fournisseur, entre le montant puis appuie sur Continuer.",
+      "triggers": ["facture", "payer une facture", "payer", "eneo", "camwater", "canal", "camtel", "electricite", "eau", "kalara", "kalati"],
+      "spoken": "Tu es déjà sur l'écran de paiement ! Sélectionne ton fournisseur (ENEO, CAMWATER, CANAL ou CAMTEL), entre le montant puis appuie sur Continuer.",
       "highlights": [
         {"match": ["choisir le service", "tob isae", "pona ebolo", "poso", "choose the service"], "style": "num", "step": 1, "label": "Fournisseur", "color": "yellow"},
         {"match": ["continuer", "kele obusu", "ala oboso", "continue"], "style": "frame", "label": "Continuer", "color": "red"}
@@ -342,8 +343,8 @@
     },
     {
       "id": "sbx_pay_switch_to_airtime",
-      "screens": ["pay_bill"],
-      "triggers": ["credit", "recharger", "airtime", "unites", "kredi", "ebale"],
+      "screens": ["pay_bill", "pay"],
+      "triggers": ["credit", "acheter du credit", "recharger", "airtime", "unites", "mtn", "orange", "kredi", "ebale", "djanda la mudi"],
       "spoken": "Appuie sur l'onglet Crédit juste en haut pour passer à la recharge téléphonique.",
       "target_match": ["credit", "kredi", "ebale", "airtime"],
       "style": "frame",
@@ -353,7 +354,7 @@
     {
       "id": "sbx_pay_airtime_already_here",
       "screens": ["pay_airtime"],
-      "triggers": ["credit", "recharger", "airtime", "unites", "operateur", "mtn", "orange", "ebale"],
+      "triggers": ["credit", "acheter du credit", "recharger", "airtime", "unites", "operateur", "mtn", "orange", "numero a recharger", "kredi", "ebale", "djanda la mudi"],
       "spoken": "Tu es déjà sur l'écran Crédit ! Tape le numéro à recharger (l'opérateur est détecté automatiquement), entre le montant puis appuie sur Continuer.",
       "highlights": [
         {"match": ["numero a recharger", "nombo ya lomo kredi", "nimero ya kredi", "number", "number to top up"], "style": "num", "step": 1, "label": "Numéro", "color": "yellow"},
@@ -363,7 +364,7 @@
     {
       "id": "sbx_pay_switch_to_bill",
       "screens": ["pay_airtime"],
-      "triggers": ["facture", "eneo", "camwater", "canal", "kalara", "kalati", "musawedi"],
+      "triggers": ["facture", "payer une facture", "eneo", "camwater", "canal", "camtel", "electricite", "eau", "kalara", "kalati", "musawedi"],
       "spoken": "Appuie sur l'onglet Factures juste en haut pour payer une facture ENEO, CAMWATER, CANAL ou CAMTEL.",
       "target_match": ["factures", "facture", "kalara", "kalati", "musawedi", "bills"],
       "style": "frame",
@@ -378,6 +379,26 @@
       "target_match": ["confirmer", "yemban", "bamse", "confirm"],
       "style": "frame",
       "label": "Confirmer",
+      "color": "red"
+    },
+    {
+      "id": "sbx_review_already_sending",
+      "screens": ["review", "recap"],
+      "triggers": ["envoyer", "envoie", "envoi", "transferer", "comment envoyer", "faire un transfert"],
+      "spoken": "Tu es déjà à la dernière étape de ton opération ! Vérifie bien le bénéficiaire, le montant et les frais ici, puis appuie sur Confirmer pour envoyer.",
+      "target_match": ["confirmer", "yemban", "bamse", "confirm"],
+      "style": "frame",
+      "label": "Confirmer",
+      "color": "red"
+    },
+    {
+      "id": "sbx_review_nav_to_pay",
+      "screens": ["review", "recap"],
+      "triggers": ["facture", "payer une facture", "acheter du credit", "recharger", "eneo", "camwater", "canal", "camtel"],
+      "spoken": "Tu es sur le récapitulatif d'une opération en cours : confirme-la ou appuie sur Annuler avant d'aller payer une facture ou acheter du crédit.",
+      "target_match": ["annuler", "vaa", "buka", "esele", "cancel"],
+      "style": "frame",
+      "label": "Annuler",
       "color": "red"
     },
     {
@@ -410,9 +431,28 @@
       "color": "green"
     },
     {
+      "id": "sbx_receipt_balance",
+      "screens": ["receipt"],
+      "triggers": ["nouveau solde", "mon solde", "quel est mon solde", "c'est quoi mon solde", "combien il me reste", "combien j'ai"],
+      "spoken": "Ton nouveau solde après cette opération s'affiche juste ici sur le reçu.",
+      "target_match": ["nouveau solde", "itan mfefe", "moni ma pene ma dia", "epetele"],
+      "style": "highlight",
+      "color": "yellow"
+    },
+    {
+      "id": "sbx_receipt_done",
+      "screens": ["receipt"],
+      "triggers": ["terminer", "quitter", "fermer", "et maintenant", "ensuite", "kwese"],
+      "spoken": "Ton opération est terminée : appuie sur Accueil ou Terminer pour revenir sur ton tableau de bord.",
+      "target_match": ["terminer", "kwese", "retour a l'accueil", "accueil", "nda", "mboa", "botea", "retour"],
+      "style": "frame",
+      "label": "Accueil",
+      "color": "yellow"
+    },
+    {
       "id": "sbx_history_filters",
       "screens": ["history"],
-      "triggers": ["filtrer", "trier", "seulement les recus", "seulement les entrants", "seulement les envoyes", "seulement les sortants", "statut", "en attente", "annule", "echoue"],
+      "triggers": ["filtrer", "trier", "seulement les recus", "seulement les entrants", "seulement les envoyes", "seulement les sortants", "entrants", "sortants", "statut", "en attente", "annule", "echoue"],
       "spoken": "Tu peux filtrer la liste avec Tout, Entrants ou Sortants. Chaque ligne indique son statut : Effectuée, En attente, Annulée ou Échouée.",
       "highlights": [
         {"match": ["entrants", "recus", "bi bi", "ma-poy", "moni mu mingeye", "incoming"], "style": "num", "step": 1, "label": "Entrants", "color": "yellow"},
@@ -421,7 +461,7 @@
     },
     {
       "id": "sbx_nav_to_history",
-      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review", "receipt"],
+      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review", "recap", "receipt"],
       "triggers": [
         "dernieres operations", "mes operations", "historique", "dernieres transactions",
         "mes transactions", "derniere operation", "derniere transaction", "voir mes operations"
@@ -469,8 +509,12 @@
     },
     {
       "id": "sbx_nav_to_pay",
-      "screens": ["transfer", "beneficiary", "history"],
-      "triggers": ["payer une facture", "acheter du credit", "facture eneo", "camwater", "canal", "camtel", "recharger mon numero"],
+      "screens": ["transfer", "beneficiary", "history", "receipt"],
+      "triggers": [
+        "facture", "payer une facture", "acheter du credit", "credit telephon", "recharger",
+        "airtime", "unites", "facture eneo", "eneo", "camwater", "canal", "camtel",
+        "electricite", "eau", "kalara", "kalati", "kredi", "ebale", "sawa la moni", "djanda la mudi"
+      ],
       "spoken": "Pour payer une facture ou acheter du crédit téléphonique, appuie sur l'onglet Payer : je te guiderai dès qu'on y arrive.",
       "target_match": ["payer", "yaan", "sawedi", "sawa", "pay"],
       "style": "frame",
@@ -491,10 +535,14 @@
     },
     {
       "id": "sbx_nav_to_transfer",
-      "screens": ["pay", "pay_bill", "pay_airtime", "history"],
-      "triggers": ["envoyer de l'argent", "faire un transfert", "je veux envoyer", "comment envoyer"],
-      "spoken": "Pour envoyer de l'argent à un bénéficiaire, appuie sur l'onglet Envoyer / Transfert : je te guiderai dès qu'on y arrive.",
-      "target_match": ["envoyer", "transfert", "lomo", "loma", "loma moni", "send"],
+      "screens": ["pay", "pay_bill", "pay_airtime", "history", "receipt"],
+      "triggers": [
+        "envoyer", "envoie", "envoi", "transferer", "envoyer de l'argent",
+        "faire un transfert", "faire un envoi", "je veux envoyer", "comment envoyer",
+        "lomo", "loma"
+      ],
+      "spoken": "Pour envoyer de l'argent à un bénéficiaire, appuie sur l'onglet Transfert : je te guiderai dès qu'on y arrive.",
+      "target_match": ["transfert", "envoyer", "lomo", "loma", "loma moni", "nouveau transfert", "send"],
       "style": "frame",
       "label": "Transfert",
       "color": "yellow",
@@ -510,16 +558,37 @@
       }
     },
     {
+      "id": "sbx_home_already_here",
+      "screens": ["home"],
+      "triggers": ["revenir a l'accueil", "aller a l'accueil", "retour a l'accueil", "retour accueil", "page d'accueil", "ou est l'accueil"],
+      "spoken": "Tu es déjà sur ton écran d'Accueil ! Tu y vois ton solde disponible en haut et tes raccourcis en dessous.",
+      "target_match": [],
+      "style": "none"
+    },
+    {
+      "id": "sbx_nav_to_home",
+      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review", "recap", "receipt", "history"],
+      "triggers": [
+        "revenir a l'accueil", "aller a l'accueil", "retour a l'accueil", "retour accueil",
+        "page d'accueil", "accueil", "nda", "mboa", "botea"
+      ],
+      "spoken": "Appuie ici sur Accueil pour revenir sur ton tableau de bord principal.",
+      "target_match": ["accueil", "retour a l'accueil", "nda", "mboa", "botea", "terminer", "kwese", "home"],
+      "style": "frame",
+      "label": "Accueil",
+      "color": "yellow"
+    },
+    {
       "id": "sbx_fee_schedule_general",
-      "screens": ["home", "transfer", "beneficiary", "pay", "pay_bill", "pay_airtime"],
-      "triggers": ["grille de frais", "grille tarifaire", "combien coutent les frais", "tarifs de transfert", "est-ce gratuit", "est ce gratuit"],
+      "screens": ["home", "transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "history", "receipt"],
+      "triggers": ["grille de frais", "grille tarifaire", "combien coutent les frais", "tarifs de transfert", "frais de transfert", "est-ce gratuit", "est ce gratuit"],
       "spoken": "Sur cette banque démo, la recharge de crédit téléphone est sans frais, le paiement de facture a un tarif fixe, et les transferts suivent des paliers selon le montant. Le montant exact des frais s'affiche toujours sur l'écran de récapitulatif avant que tu confirmes.",
       "target_match": [],
       "style": "none"
     },
     {
       "id": "sbx_pending_safety",
-      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review"],
+      "screens": ["transfer", "beneficiary", "pay", "pay_bill", "pay_airtime", "review", "recap"],
       "triggers": ["debite tout de suite", "est-ce deja parti", "est ce deja parti", "si j'appuie sur continuer", "si jappuie sur continuer"],
       "spoken": "Rassure-toi : appuyer sur Continuer ouvre seulement un récapitulatif et ne débite rien. Ton argent ne part que lorsque tu appuies sur Confirmer sur l'écran suivant.",
       "target_match": [],

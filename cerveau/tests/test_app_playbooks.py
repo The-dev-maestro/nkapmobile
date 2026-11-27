@@ -498,3 +498,256 @@ def test_safinum_all_six_screens_flows():
     r_hi = client.post("/answer", json={"transcript": "Comment filtrer seulement les reçus ?", "lang_hint": "fr", "context": SAFINUM_HISTORY_CTX})
     tids_hi = [a["action"]["target"]["node_id"] for a in r_hi.json()["actions"] if a["action"].get("target")]
     assert "hi_in" in tids_hi and "hi_out" in tids_hi
+
+
+# ── RÉGRESSIONS EXACTES CAPTURES UTILISATEUR + MATRICE N×M COMPLÈTE ─────────
+
+WAVE_PAYMENTS_REAL_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "PersonalHomeActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "wp_back", "tag": "button", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "wp_title", "tag": "span", "text": "Payments", "clickable": False, "bounds": [126, 98, 300, 146], "tone": "light"},
+        {"node_id": "wp_sec", "tag": "span", "text": "Utilities", "clickable": False, "bounds": [28, 190, 160, 224], "tone": "light"},
+        {"node_id": "wp_epre", "tag": "span", "text": "ENEO Prepaid", "clickable": False, "bounds": [70, 340, 210, 410], "tone": "light"},
+        {"node_id": "wp_epost", "tag": "span", "text": "ENEO Postpaid", "clickable": False, "bounds": [250, 340, 400, 410], "tone": "light"},
+        {"node_id": "wp_water", "tag": "span", "text": "CAM-WATER", "clickable": False, "bounds": [440, 340, 580, 410], "tone": "light"},
+        {"node_id": "wp_canal", "tag": "span", "text": "Canal+", "clickable": False, "bounds": [610, 340, 710, 410], "tone": "light"},
+    ],
+}
+
+WAVE_SEND_NEW_NUM_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "NewNumberActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "wn_back", "tag": "button", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "wn_name", "tag": "span", "text": "Full Name", "clickable": False, "bounds": [32, 240, 240, 280], "tone": "light"},
+        {"node_id": "wn_phone", "tag": "span", "text": "Phone Number", "clickable": False, "bounds": [32, 360, 260, 400], "tone": "light"},
+        {"node_id": "wn_next", "tag": "button", "text": "Next", "clickable": True, "bounds": [40, 1340, 680, 1430], "tone": "light"},
+    ],
+}
+
+WAVE_MORE_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "MoreActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "wm_back", "tag": "button", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "wm_air", "tag": "button", "text": "Airtime", "clickable": True, "bounds": [60, 280, 220, 350], "tone": "light"},
+        {"node_id": "wm_rew", "tag": "button", "text": "Rewards", "clickable": True, "bounds": [280, 280, 440, 350], "tone": "light"},
+    ],
+}
+
+WAVE_SETTINGS_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.wave.personal", "activity": "SettingsActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "ws_back", "tag": "button", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "ws_pin", "tag": "button", "text": "Reset secret code", "clickable": True, "bounds": [40, 260, 560, 320], "tone": "light"},
+        {"node_id": "ws_sup", "tag": "button", "text": "Call support", "clickable": True, "bounds": [40, 360, 560, 420], "tone": "light"},
+    ],
+}
+
+MAXIT_HOME_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.orange.maxit", "activity": "MainActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "m_acc", "tag": "span", "text": "Main Account", "clickable": False, "bounds": [40, 180, 240, 215], "tone": "dark"},
+        {"node_id": "m_bal", "tag": "span", "text": "24 828,58 FCFA", "clickable": False, "bounds": [40, 220, 320, 270], "tone": "dark"},
+        {"node_id": "m_eye", "tag": "button", "text": "Hide balance", "clickable": True, "bounds": [340, 225, 390, 265], "tone": "dark"},
+        {"node_id": "m_cred", "tag": "span", "text": "My Credits", "clickable": False, "bounds": [40, 340, 220, 375], "tone": "light"},
+        {"node_id": "m_tr", "tag": "button", "text": "Money transfer", "clickable": True, "bounds": [40, 520, 220, 590], "tone": "light"},
+        {"node_id": "m_bun", "tag": "button", "text": "Buy a bundle", "clickable": True, "bounds": [240, 520, 420, 590], "tone": "light"},
+        {"node_id": "m_top", "tag": "button", "text": "Top Up", "clickable": True, "bounds": [440, 520, 620, 590], "tone": "light"},
+        {"node_id": "m_can", "tag": "button", "text": "Cancel transaction", "clickable": True, "bounds": [40, 620, 280, 690], "tone": "light"},
+        {"node_id": "m_loy", "tag": "button", "text": "OM Loyalty", "clickable": True, "bounds": [320, 620, 520, 690], "tone": "light"},
+    ],
+}
+
+MAXIT_TRANSFER_CTX = {
+    "type": "screen_context",
+    "app": {"package": "com.orange.maxit", "activity": "TransferActivity"},
+    "channel": "mobile",
+    "screen_hint": "home",
+    "nodes": [
+        {"node_id": "mt_back", "tag": "button", "text": "", "content_desc": "Back", "clickable": True, "bounds": [28, 96, 76, 144], "tone": "light"},
+        {"node_id": "mt_rec", "tag": "span", "text": "Recipient number", "clickable": False, "bounds": [40, 260, 320, 300], "tone": "light"},
+        {"node_id": "mt_amt", "tag": "span", "text": "Enter amount", "clickable": False, "bounds": [40, 380, 280, 420], "tone": "light"},
+    ],
+}
+
+
+def test_safinum_history_never_frames_transaction_row_on_send_question():
+    """Régression exacte capture #1 : SAFINUM Mobile /history avec 'Transfert vers Achille Bello' (traduction de 'Bi lom a Achille Bello') + onglet bas 'Transfert'."""
+    ctx = {
+        "type": "screen_context",
+        "channel": "mobile",
+        "page": {"url": "https://safinum.cm/sandbox/channel/mobile", "title": "Safinum Banque démo"},
+        "screen_hint": "history",
+        "nodes": [
+            {"node_id": "hi_t", "tag": "h2", "text": "Historique des opérations", "clickable": False, "bounds": [420, 170, 620, 200], "tone": "light"},
+            {"node_id": "hi_f1", "tag": "button", "text": "Tout", "clickable": True, "bounds": [420, 215, 480, 248], "tone": "light"},
+            {"node_id": "hi_f2", "tag": "button", "text": "Sortants", "clickable": True, "bounds": [490, 215, 560, 248], "tone": "light"},
+            {"node_id": "hi_f3", "tag": "button", "text": "Entrants", "clickable": True, "bounds": [570, 215, 640, 248], "tone": "light"},
+            {"node_id": "tx_1", "tag": "span", "text": "Facture ENEO", "clickable": False, "bounds": [440, 290, 590, 315], "tone": "light"},
+            {"node_id": "tx_1a", "tag": "span", "text": "-600 FCFA", "clickable": False, "bounds": [620, 290, 710, 315], "tone": "light"},
+            {"node_id": "tx_2", "tag": "span", "text": "Transfert vers Achille Bello", "clickable": False, "bounds": [440, 405, 610, 430], "tone": "light"},
+            {"node_id": "tx_2a", "tag": "span", "text": "-50 400 FCFA", "clickable": False, "bounds": [610, 405, 710, 430], "tone": "light"},
+            {"node_id": "tx_3", "tag": "span", "text": "Transfert vers Carine Njoya", "clickable": False, "bounds": [440, 470, 610, 495], "tone": "light"},
+            # Barre de navigation basse (Nda / Lomo / Yaan / Itang traduits en FR par content.js)
+            {"node_id": "nav_home", "tag": "button", "text": "Accueil", "clickable": True, "bounds": [410, 750, 475, 795], "tone": "light"},
+            {"node_id": "nav_send", "tag": "button", "text": "Transfert", "clickable": True, "bounds": [490, 750, 560, 795], "tone": "light"},
+            {"node_id": "nav_pay", "tag": "button", "text": "Payer", "clickable": True, "bounds": [575, 750, 640, 795], "tone": "light"},
+            {"node_id": "nav_hist", "tag": "button", "text": "Historique", "clickable": True, "bounds": [650, 750, 725, 795], "tone": "light"},
+        ],
+    }
+    r = client.post("/answer", json={"transcript": "Comment envoyer de l'argent ?", "lang_hint": "fr", "context": ctx})
+    assert r.status_code == 200
+    body = r.json()
+    target_ids = [a["action"]["target"]["node_id"] for a in body["actions"] if a["action"].get("target")]
+    assert "nav_send" in target_ids
+    assert "tx_2" not in target_ids and "tx_3" not in target_ids
+    assert body.get("follow_up") is not None
+    assert body["follow_up"]["target_screens"] == ["transfer"]
+
+    # Même test pour Payer une facture depuis /history : doit cadrer `nav_pay` (Yaan) et JAMAIS la ligne `Facture ENEO` (tx_1) !
+    r_pay = client.post("/answer", json={"transcript": "Comment payer une facture ENEO ?", "lang_hint": "fr", "context": ctx})
+    assert r_pay.status_code == 200
+    tids_pay = [a["action"]["target"]["node_id"] for a in r_pay.json()["actions"] if a["action"].get("target")]
+    assert "nav_pay" in tids_pay
+    assert "tx_1" not in tids_pay
+
+
+def test_wave_payments_real_screen_send_and_utilities():
+    """Régression exacte capture #2 : Wave `Payments` (ENEO Prepaid / Postpaid / CAM-WATER / Canal+)."""
+    # 1. "Comment envoyer de l'argent ?" depuis Wave Payments -> cercle Back + follow_up vers home (JAMAIS "incapable"!)
+    r_send = client.post("/answer", json={"transcript": "Comment envoyer de l'argent ?", "lang_hint": "fr", "context": WAVE_PAYMENTS_REAL_CTX})
+    assert r_send.status_code == 200
+    body = r_send.json()
+    spoken = " ".join(a["action"].get("text", "") for a in body["actions"] if a["action"]["t"] == "speak").lower()
+    assert "incapable" not in spoken and "hors contexte" not in spoken
+    assert "accueil" in spoken and "envoyer" in spoken
+    assert any(a["action"]["t"] == "circle" and a["action"]["target"]["node_id"] == "wp_back" for a in body["actions"])
+    assert body.get("follow_up") is not None
+    assert body["follow_up"]["target_screens"] == ["home"]
+
+    # 2. Différence ENEO Prepaid vs Postpaid
+    r_eneo = client.post("/answer", json={"transcript": "C'est quoi ENEO Prepaid vs Postpaid ?", "lang_hint": "fr", "context": WAVE_PAYMENTS_REAL_CTX})
+    assert r_eneo.status_code == 200
+    spoken_e = " ".join(a["action"].get("text", "") for a in r_eneo.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "prepaid" in spoken_e and "postpaid" in spoken_e
+    tids_e = [a["action"]["target"]["node_id"] for a in r_eneo.json()["actions"] if a["action"].get("target")]
+    assert "wp_epre" in tids_e and "wp_epost" in tids_e
+
+    # 3. CAM-WATER & Canal+
+    r_w = client.post("/answer", json={"transcript": "Comment payer CAM-WATER ?", "lang_hint": "fr", "context": WAVE_PAYMENTS_REAL_CTX})
+    assert any(a["action"]["target"]["node_id"] == "wp_water" for a in r_w.json()["actions"] if a["action"].get("target"))
+    r_c = client.post("/answer", json={"transcript": "Comment payer Canal+ ?", "lang_hint": "fr", "context": WAVE_PAYMENTS_REAL_CTX})
+    assert any(a["action"]["target"]["node_id"] == "wp_canal" for a in r_c.json()["actions"] if a["action"].get("target"))
+
+
+def test_full_nxm_coverage_matrix_wave_safinum_maxit(monkeypatch):
+    """Garantit une couverture totale N×M sans aucun 'Je suis incapable' sur TOUS les écrans × TOUTES les intentions."""
+    monkeypatch.setattr(
+        "app.llm.requests.post",
+        lambda *a, **kw: _FakeResp({
+            "spoken": "Ton solde disponible est affiché sur ton écran.",
+            "title": "Solde",
+            "rows": [],
+            "targets": [],
+        }),
+    )
+
+    wave_screens = {
+        "home": WAVE_REAL_CTX,
+        "send_money": WAVE_SEND_MONEY_CTX,
+        "send_new_number": WAVE_SEND_NEW_NUM_CTX,
+        "send_amount": WAVE_SEND_AMOUNT_CTX,
+        "bills": WAVE_PAYMENTS_REAL_CTX,
+        "vault": WAVE_VAULT_CTX,
+        "more": WAVE_MORE_CTX,
+        "settings": WAVE_SETTINGS_CTX,
+        "card_qr": WAVE_CARD_QR_CTX,
+    }
+    wave_intents = [
+        "Je dois faire quoi ici ?",
+        "Comment envoyer de l'argent ?",
+        "Comment payer une facture ENEO ?",
+        "C'est quoi mon solde ?",
+        "Quelles sont mes dernières opérations ?",
+        "Comment ouvrir le coffre Vault ?",
+        "Comment acheter du crédit téléphonique ?",
+        "Où sont les paramètres ?",
+        "Comment cacher mon solde ?",
+        "À quoi sert le QR code ?",
+        "Combien coûtent les frais Wave ?",
+    ]
+    for scr_name, ctx in wave_screens.items():
+        for q in wave_intents:
+            r = client.post("/answer", json={"transcript": q, "lang_hint": "fr", "context": ctx})
+            assert r.status_code == 200, f"Wave {scr_name} / {q} -> HTTP {r.status_code}"
+            spoken = " ".join(a["action"].get("text", "") for a in r.json()["actions"] if a["action"]["t"] == "speak").lower()
+            assert "incapable" not in spoken and "hors contexte" not in spoken, f"Wave {scr_name} / {q} -> {spoken}"
+
+    # Sur Wave Home, "Quelles sont mes dernières opérations ?" lit la vraie transaction GIMAC visible
+    r_wh = client.post("/answer", json={"transcript": "Quelles sont mes dernières opérations ?", "lang_hint": "fr", "context": WAVE_REAL_CTX})
+    spoken_wh = " ".join(a["action"].get("text", "") for a in r_wh.json()["actions"] if a["action"]["t"] == "speak").lower()
+    assert "gimac" in spoken_wh and "1.500f" in spoken_wh
+
+    # Matrice complète SAFINUM (7 écrans × 8 intentions)
+    nav_bar = [
+        {"node_id": "nav_home", "tag": "button", "text": "Accueil", "clickable": True, "bounds": [410, 750, 475, 795], "tone": "light"},
+        {"node_id": "nav_send", "tag": "button", "text": "Transfert", "clickable": True, "bounds": [490, 750, 560, 795], "tone": "light"},
+        {"node_id": "nav_pay", "tag": "button", "text": "Payer", "clickable": True, "bounds": [575, 750, 640, 795], "tone": "light"},
+        {"node_id": "nav_hist", "tag": "button", "text": "Historique", "clickable": True, "bounds": [650, 750, 725, 795], "tone": "light"},
+    ]
+    safinum_screens = {
+        "home": SAFINUM_HOME_CTX,
+        "transfer": {**SAFINUM_TRANSFER_CTX, "nodes": list(SAFINUM_TRANSFER_CTX["nodes"]) + nav_bar},
+        "pay_bill": {**SAFINUM_PAY_BILL_CTX, "nodes": list(SAFINUM_PAY_BILL_CTX["nodes"]) + nav_bar},
+        "pay_airtime": {**SAFINUM_PAY_AIRTIME_CTX, "nodes": list(SAFINUM_PAY_AIRTIME_CTX["nodes"]) + nav_bar},
+        "review": {**SAFINUM_REVIEW_CTX, "nodes": list(SAFINUM_REVIEW_CTX["nodes"]) + nav_bar},
+        "receipt": {**SAFINUM_RECEIPT_CTX, "nodes": list(SAFINUM_RECEIPT_CTX["nodes"]) + nav_bar},
+        "history": {**SAFINUM_HISTORY_CTX, "nodes": list(SAFINUM_HISTORY_CTX["nodes"]) + nav_bar},
+    }
+    safinum_intents = [
+        "Je dois faire quoi ici ?",
+        "Comment envoyer de l'argent ?",
+        "Comment payer une facture ENEO ?",
+        "Comment acheter du crédit téléphonique ?",
+        "Quel est mon solde ?",
+        "Quelles sont mes dernières opérations ?",
+        "Comment revenir à l'accueil ?",
+        "Combien coûtent les frais de transfert ?",
+    ]
+    for scr_name, ctx in safinum_screens.items():
+        for q in safinum_intents:
+            r = client.post("/answer", json={"transcript": q, "lang_hint": "fr", "context": ctx})
+            assert r.status_code == 200, f"SAFINUM {scr_name} / {q} -> HTTP {r.status_code}"
+            spoken = " ".join(a["action"].get("text", "") for a in r.json()["actions"] if a["action"]["t"] == "speak").lower()
+            assert "incapable" not in spoken and "hors contexte" not in spoken, f"SAFINUM {scr_name} / {q} -> {spoken}"
+
+    # Matrice Max it (home + transfer × intentions)
+    for scr_name, ctx in (("home", MAXIT_HOME_CTX), ("transfer", MAXIT_TRANSFER_CTX)):
+        for q in (
+            "Je dois faire quoi ici ?",
+            "Comment envoyer de l'argent ?",
+            "Comment acheter un forfait ?",
+            "Comment recharger du crédit ?",
+            "Comment annuler une transaction ?",
+            "C'est quoi mon solde ?",
+        ):
+            r = client.post("/answer", json={"transcript": q, "lang_hint": "fr", "context": ctx})
+            assert r.status_code == 200, f"Max it {scr_name} / {q} -> HTTP {r.status_code}"
+            spoken = " ".join(a["action"].get("text", "") for a in r.json()["actions"] if a["action"]["t"] == "speak").lower()
+            assert "incapable" not in spoken and "hors contexte" not in spoken, f"Max it {scr_name} / {q} -> {spoken}"
+

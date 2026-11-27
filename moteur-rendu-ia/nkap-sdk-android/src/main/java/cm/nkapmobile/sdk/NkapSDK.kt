@@ -110,7 +110,7 @@ class NkapSession(
         val pkg = ctx.appPackage.lowercase()
         val corpus = screenCorpus(ctx)
         val isWave = pkg.contains("wave") ||
-            listOf("hide balance", "enter a new number", "scan to send", "gimac transfer").any { corpus.contains(it) }
+            listOf("hide balance", "enter a new number", "scan to send", "gimac transfer", "eneo prepaid", "cam-water").any { corpus.contains(it) }
         if (isWave) {
             val hasHomeCue = listOf("hide balance", "show balance", "masquer le solde", "afficher le solde").any { corpus.contains(it) }
             val screen = when {
@@ -121,7 +121,10 @@ class NkapSession(
                 !hasHomeCue && (ctx.title.lowercase().contains("cardfullscreen") || corpus.contains("scan to pay")) -> "card_qr"
                 !hasHomeCue && listOf("lock vault", "transfer to vault", "withdraw from vault", "my vault", "mon coffre").any { corpus.contains(it) } -> "vault"
                 !hasHomeCue && listOf("reset secret code", "call support", "find nearby agents", "verify your limit").any { corpus.contains(it) } -> "settings"
-                !hasHomeCue && listOf("search by name", "rechercher par nom", "electricity", "eneo", "camwater", "canal+").any { corpus.contains(it) } -> "bills"
+                !hasHomeCue && listOf(
+                    "search by name", "rechercher par nom", "electricity", "utilities", "payments", "paiements",
+                    "eneo prepaid", "eneo postpaid", "eneo", "cam-water", "camwater", "canal+"
+                ).any { corpus.contains(it) } -> "bills"
                 !hasHomeCue && listOf("airtime", "rewards", "transport").any { corpus.contains(it) } -> "more"
                 else -> "home"
             }
@@ -132,7 +135,13 @@ class NkapSession(
             listOf("main account", "om loyalty", "my credits", "buy a bundle").any { corpus.contains(it) }
         if (isMaxIt) {
             val hasHome = listOf("main account", "my credits", "om loyalty").any { corpus.contains(it) }
-            val screen = if (!hasHome && listOf("enter amount", "montant a envoyer", "recipient").any { corpus.contains(it) }) "transfer" else "home"
+            val screen = when {
+                !hasHome && listOf("enter amount", "montant a envoyer", "recipient", "orange money transfer").any { corpus.contains(it) } -> "transfer"
+                !hasHome && listOf("internet bundles", "voice bundles", "forfaits internet", "choose a bundle").any { corpus.contains(it) } -> "bundle"
+                !hasHome && listOf("airtime amount", "recharger un numero", "top up number").any { corpus.contains(it) } -> "topup"
+                !hasHome && listOf("cancel a transaction", "transaction to cancel", "annulation de transfert").any { corpus.contains(it) } -> "cancel"
+                else -> "home"
+            }
             return "maxit" to screen
         }
 

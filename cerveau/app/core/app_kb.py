@@ -42,7 +42,7 @@ class AppPlaybookStore:
     def detect_playbook(self, screen_context: ScreenContext) -> dict[str, Any] | None:
         pkg = (screen_context.app.package if screen_context.app else "").lower()
         url = (screen_context.page.url if screen_context.page else "").lower()
-        corpus = _norm(" ".join((n.text or "") + " " + (n.content_desc or "") for n in screen_context.nodes[:80]))
+        corpus = _norm(" ".join((n.text or "") + " " + (n.content_desc or "") for n in screen_context.nodes[:240]))
 
         for pb in self.playbooks:
             for p in pb.get("match_packages", []):
@@ -62,10 +62,10 @@ class AppPlaybookStore:
         url = (screen_context.page.url if screen_context.page else "").lower()
         activity = (screen_context.app.activity if screen_context.app else "").lower()
         hint = _norm(screen_context.screen_hint)
-        corpus = _norm(" ".join((n.text or "") + " " + (n.content_desc or "") for n in screen_context.nodes[:80]))
+        corpus = _norm(" ".join((n.text or "") + " " + (n.content_desc or "") for n in screen_context.nodes[:240]))
         exact_texts = {
             _norm(n.text or n.content_desc)
-            for n in screen_context.nodes[:80]
+            for n in screen_context.nodes[:240]
             if (n.text or n.content_desc)
         }
 
@@ -180,6 +180,31 @@ class AppPlaybookStore:
                 return True
         return False
 
+    @staticmethod
+    def _is_transaction_row_text(txt_n: str) -> bool:
+        """Évite de confondre une ligne d'historique (ex. 'Transfert vers Achille Bello', 'Facture ENEO') avec un bouton de navigation."""
+        tx_prefixes = (
+            "transfert vers ",
+            "recu de ",
+            "facture ",
+            "credit ",
+            "bi lom a ",
+            "bi bi a ",
+            "loma na ",
+            "lomea ",
+            "kusa na ",
+            "moni mwa ",
+            "sawa la ",
+            "kalara ",
+            "kalati ",
+            "gimac transfer",
+            "payment to ",
+            "paid to ",
+            "sent to ",
+            "received from ",
+        )
+        return any(txt_n.startswith(pref) for pref in tx_prefixes)
+
     @classmethod
     def find_matching_node(
         cls,
@@ -195,22 +220,25 @@ class AppPlaybookStore:
             txt_n = _norm(n.text or n.content_desc)
             if not txt_n:
                 continue
+            is_btn = bool(n.clickable or n.tag in {"button", "a"})
             if prefer_button and cls._is_non_clickable_header(n, txt_n):
+                continue
+            if prefer_button and cls._is_transaction_row_text(txt_n):
                 continue
             for p in norm_pats:
                 if txt_n == p:
-                    score = 100 + (20 if (prefer_button and (n.clickable or n.tag in {"button", "a"})) else 0)
+                    score = 100 + (25 if (prefer_button and is_btn) else 0)
                     candidates.append((score, n))
                     break
-                # Un mot court unique (ex. "send", "bills") en mode bouton ne doit jamais matcher un titre composé ("send money")
-                if prefer_button and " " not in p and len(p) <= 7:
-                    if n.clickable or n.tag in {"button", "a"}:
-                        if txt_n.startswith(p + " ") and len(txt_n) <= len(p) + 18:
-                            candidates.append((72, n))
-                            break
+                # En mode bouton, un motif d'un seul mot (ex. "send", "bills", "transfert", "payer", "historique")
+                # ne doit JAMAIS matcher en sous-chaîne un texte non-cliquable ni une phrase longue.
+                if prefer_button and " " not in p:
+                    if is_btn and txt_n.startswith(p + " ") and len(txt_n) <= len(p) + 18:
+                        candidates.append((74, n))
+                        break
                     continue
                 if p in txt_n and len(txt_n) <= len(p) + 28:
-                    score = 60 + (15 if (prefer_button and (n.clickable or n.tag in {"button", "a"})) else 0)
+                    score = 60 + (25 if (prefer_button and is_btn) else 0)
                     candidates.append((score, n))
                     break
         if not candidates:

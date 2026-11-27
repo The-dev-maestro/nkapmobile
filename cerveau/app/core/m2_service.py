@@ -3066,7 +3066,7 @@ class M2Service:
         spoken = self._safe_text_for_harness(str(guide["spoken"]), screen_context, self.kb.terms, fallback=str(guide["spoken"]))
         sb.speak("playbook_guide", spoken, lang, 0)
 
-        usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+        usable = [n for n in screen_context.nodes[:260] if self._is_usable_node(n)]
         cursor_ms = 350
         marks_added = 0
         for h in guide.get("highlights", []):
@@ -3104,7 +3104,7 @@ class M2Service:
         spoken = self._safe_text_for_harness(str(sc.get("spoken") or ""), screen_context, self.kb.terms, fallback=str(sc.get("spoken") or ""))
         sb.speak("playbook_shortcut", spoken, lang, 0)
 
-        usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+        usable = [n for n in screen_context.nodes[:260] if self._is_usable_node(n)]
         highlights = sc.get("highlights")
         cursor_ms = 260
         if isinstance(highlights, list) and highlights:
@@ -3151,12 +3151,12 @@ class M2Service:
         return sb.actions
 
     def _build_history_summary_actions(
-        self, transcript: Transcript, screen_context: ScreenContext
+        self, transcript: Transcript, screen_context: ScreenContext, is_home: bool = False
     ) -> list[ActionMessage]:
-        """Résume de façon déterministe et sans hallucination les transactions réellement visibles sur l'écran Historique."""
+        """Résume de façon déterministe et sans hallucination les transactions réellement visibles sur Historique (ou Accueil)."""
         lang = transcript.lang or "fr"
         sb = _StreamBuilder(transcript, transcript.ts or 0)
-        usable = [n for n in screen_context.nodes[:120] if self._is_usable_node(n)]
+        usable = [n for n in screen_context.nodes[:260] if self._is_usable_node(n)]
         usable.sort(key=lambda n: (n.bounds[1] if len(n.bounds) == 4 else 9999, n.bounds[0] if len(n.bounds) == 4 else 9999))
 
         skip_words = {
@@ -3166,7 +3166,15 @@ class M2Service:
             "effectuee", "confirme", "en attente", "annulee", "annule", "echouee", "echoue",
             "di tombi bwam", "jenguele", "a bangi", "kem", "e maneya", "e vaban", "e ne a yange", "e nji bo",
             "ecouter", "wog", "senga", "deconnexion", "kui", "busa",
+            "hide balance", "show balance", "masquer le solde", "afficher le solde",
+            "solde disponible", "itan ineu", "moni ma pene", "available balance",
+            "send", "bills", "vault", "more", "settings", "payments", "parametres",
         }
+        balance_cues = (
+            "solde disponible", "itan ineu", "moni ma pene", "available balance",
+            "hide balance", "show balance", "masquer le solde", "afficher le solde",
+            "main account", "my credits",
+        )
         tx_rows: list[tuple[str, str, str]] = []
         seen_ids: set[str] = set()
         for amt_node in usable:
@@ -3179,23 +3187,36 @@ class M2Service:
             if len(amt_node.bounds) != 4:
                 continue
             ay = (amt_node.bounds[1] + amt_node.bounds[3]) / 2.0
-            # Cherche le libellé d'opération sur la même ligne visuelle (|Δy| <= 38px)
+            # Sur l'accueil (Wave / SAFINUM / Max it), ignore le gros solde du haut
+            if is_home:
+                near_balance = any(
+                    len(s.bounds) == 4
+                    and abs(((s.bounds[1] + s.bounds[3]) / 2.0) - ay) <= 75
+                    and any(bc in self._norm(s.text or s.content_desc) for bc in balance_cues)
+                    for s in usable
+                )
+                if near_balance or amt_node.bounds[1] < 320:
+                    continue
+            # Cherche le libellé d'opération sur la même ligne visuelle (|Δy| <= 42px)
             lbl_parts: list[str] = []
             for sib in usable:
                 if sib.node_id == amt_node.node_id or len(sib.bounds) != 4:
                     continue
                 sy = (sib.bounds[1] + sib.bounds[3]) / 2.0
-                if abs(sy - ay) > 38:
+                if abs(sy - ay) > 42:
                     continue
                 sib_txt = self._to_french_text(sib.text or "").strip()
                 sib_n = self._norm(sib_txt)
                 if not sib_n or sib_n in skip_words or extract_amounts(sib_txt):
                     continue
-                # Ignore les horodatages purs ("27/11 07:11") si un meilleur libellé existe
                 if re.match(r"^\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2})?$", sib_txt):
+                    continue
+                if re.match(r"^[a-z]{3}\s+\d{1,2},\s*\d{1,2}:\d{2}$", sib_n):
                     continue
                 if sib_txt not in lbl_parts:
                     lbl_parts.append(sib_txt)
+            if is_home and not lbl_parts:
+                continue
             label = lbl_parts[0] if lbl_parts else "Opération"
             if amt_node.node_id not in seen_ids:
                 seen_ids.add(amt_node.node_id)
@@ -3204,12 +3225,20 @@ class M2Service:
                 break
 
         if not tx_rows:
-            sb.speak(
-                "history_empty",
-                "Tu n'as encore aucune opération enregistrée pour le moment dans ton historique.",
-                lang,
-                0,
-            )
+            if is_home:
+                sb.speak(
+                    "history_empty_home",
+                    "Aucune opération récente n'est affichée sur cet écran pour le moment. Ouvre ton historique pour voir la liste complète.",
+                    lang,
+                    0,
+                )
+            else:
+                sb.speak(
+                    "history_empty",
+                    "Tu n'as encore aucune opération enregistrée pour le moment dans ton historique.",
+                    lang,
+                    0,
+                )
             sb.clear(5600)
             return sb.actions
 
@@ -3255,10 +3284,10 @@ class M2Service:
                     if len(self._turn_follow_ups) > 64:
                         self._turn_follow_ups.pop(next(iter(self._turn_follow_ups)))
                 return self._build_playbook_shortcut_actions(sc, transcript, screen_context)
-            if screen_key == "history" and any(
+            if screen_key in {"history", "home"} and any(
                 k in q_norm for k in ("dernieres operations", "mes operations", "historique", "transactions", "derniere operation", "derniere transaction")
             ):
-                return self._build_history_summary_actions(transcript, screen_context)
+                return self._build_history_summary_actions(transcript, screen_context, is_home=(screen_key == "home"))
 
         if self._is_out_of_scope_question(transcript.text, screen_context):
             return self._build_out_of_scope_actions(transcript, screen_context)

@@ -230,39 +230,60 @@ class NkapChatDrawer(
                     "C'est quoi les frais ?",
                     "Comment revenir en arrière ?",
                 )
-                "bills" -> "Wave · Factures" to listOf(
-                    "Je dois faire quoi ici ?",
-                    "Comment payer ENEO ou CAMWATER ?",
+                "bills" -> "Wave · Paiements" to listOf(
+                    "C'est quoi ENEO Prepaid vs Postpaid ?",
+                    "Comment payer CAM-WATER ou Canal+ ?",
+                    "Comment envoyer de l'argent ?",
                     "C'est quoi mon solde ?",
                 )
                 "vault" -> "Wave · Coffre" to listOf(
                     "Je dois faire quoi ici ?",
                     "Comment épargner ou retirer du coffre ?",
+                    "Comment envoyer de l'argent ?",
                     "C'est quoi mon solde ?",
                 )
                 "more" -> "Wave · Plus" to listOf(
                     "Je dois faire quoi ici ?",
+                    "Comment envoyer de l'argent ?",
                     "C'est quoi mon solde ?",
                 )
                 "settings" -> "Wave · Paramètres" to listOf(
                     "Je dois faire quoi ici ?",
                     "Comment changer mon code secret ?",
+                    "Comment envoyer de l'argent ?",
                     "C'est quoi mon solde ?",
                 )
                 "card_qr" -> "Wave · Mon QR code" to listOf(
                     "À quoi sert ce QR code ?",
+                    "Comment envoyer de l'argent ?",
                     "Comment revenir à l'accueil ?",
                 )
                 else -> "Wave · Accueil" to listOf(
                     "C'est quoi mon solde ?",
                     "Comment envoyer de l'argent ?",
+                    "Comment payer une facture ?",
                     "C'est quoi Vault ?",
-                    "À quoi sert le QR code ?",
                 )
             }
             "maxit" -> when (screenKey) {
                 "transfer" -> "Max it · Transfert" to listOf(
                     "Je dois faire quoi ici ?",
+                    "C'est quoi mon solde ?",
+                    "Comment acheter un forfait ?",
+                )
+                "bundle" -> "Max it · Forfaits" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment envoyer de l'argent ?",
+                    "C'est quoi mon solde ?",
+                )
+                "topup" -> "Max it · Recharge" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment envoyer de l'argent ?",
+                    "C'est quoi mon solde ?",
+                )
+                "cancel" -> "Max it · Annulation" to listOf(
+                    "Je dois faire quoi ici ?",
+                    "Comment envoyer de l'argent ?",
                     "C'est quoi mon solde ?",
                 )
                 else -> "Max it · Accueil" to listOf(

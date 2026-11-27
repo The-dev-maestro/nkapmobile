@@ -862,8 +862,10 @@
     const scanRoot = getScanRoot();
     const inSandbox = isSafinumSandbox();
 
+    let textNodeCount = 0;
+    let interactiveCount = 0;
     for (const el of (scanRoot || document.body).querySelectorAll("*")) {
-      if (nodes.length >= 200) break;
+      if (nodes.length >= 240) break;
       if (!isMainTarget(el)) continue;
       const tag = el.tagName.toLowerCase();
       if (tag === "textarea" || el.isContentEditable) continue;
@@ -874,6 +876,12 @@
         tag === "button" || tag === "a" || el.getAttribute("role") === "button";
       const atom = isTextAtom(el);
       if (!isInputOrSelect && !atom && !clickable) continue;
+      // Garantit que les boutons / onglets de navigation en bas de page ne sont jamais coupés par une longue liste d'historique
+      if (!clickable && !isInputOrSelect) {
+        if (textNodeCount >= 160) continue;
+      } else if (interactiveCount >= 80) {
+        continue;
+      }
       // Dans le simulateur, évite de dupliquer le <button> et son <span> enfant identique
       if (clickable && !atom && el.querySelector("span, p, div")) {
         const direct = directText(el);
@@ -940,6 +948,8 @@
         el.setAttribute("data-nkap-id", id);
       }
       const r = el.getBoundingClientRect();
+      if (clickable || isInputOrSelect) interactiveCount++;
+      else textNodeCount++;
       nodes.push({
         node_id: id,
         tag,
