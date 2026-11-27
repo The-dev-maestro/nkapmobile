@@ -921,27 +921,44 @@ window.NKAP_ASSISTANT = (() => {
 
     panelEl.innerHTML = "";
 
-    // 1. En-tête : Étape détectée + contrôles sobres (sans icônes) + Fermer
+    // 1. En-tête chaleureux Jarvis : indicateur vivant + titre + contrôles sobres
     const header = document.createElement("div");
     header.style.cssText =
       "display:flex;align-items:center;justify-content:space-between;gap:8px;" +
-      "padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);";
+      "padding-bottom:10px;border-bottom:1px solid rgba(245,183,0,0.18);";
 
+    const titleWrap = document.createElement("div");
+    titleWrap.style.cssText = "display:flex;align-items:center;gap:8px;min-width:0;";
+
+    const liveDot = document.createElement("span");
+    liveDot.style.cssText =
+      "width:9px;height:9px;border-radius:50%;flex-shrink:0;" +
+      "background:radial-gradient(circle,#FFF3C4,#F5B700);box-shadow:0 0 10px rgba(245,183,0,0.85);";
+
+    const titleCol = document.createElement("div");
+    titleCol.style.cssText = "display:flex;flex-direction:column;min-width:0;";
     const title = document.createElement("div");
-    title.textContent = STEP_TITLES[state.step] || "Assistant nkap";
+    title.textContent = STEP_TITLES[state.step] || "Assistant Nkap";
     title.style.cssText =
-      "font-size:12.5px;font-weight:700;color:#F5B700;letter-spacing:0.02em;white-space:nowrap;";
+      "font-size:13.5px;font-weight:700;color:#FDE68A;letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+    const subTitle = document.createElement("div");
+    subTitle.textContent = brainUrl ? "Copilote vivant · connecté" : "Copilote visuel · mode local";
+    subTitle.style.cssText = "font-size:10.5px;color:#A8A29E;";
+    titleCol.appendChild(title);
+    titleCol.appendChild(subTitle);
+    titleWrap.appendChild(liveDot);
+    titleWrap.appendChild(titleCol);
 
     const controls = document.createElement("div");
-    controls.style.cssText = "display:flex;align-items:center;gap:6px;flex-shrink:0;";
+    controls.style.cssText = "display:flex;align-items:center;gap:5px;flex-shrink:0;";
 
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.textContent = "Effacer";
     clearBtn.title = "Effacer les tracés";
     clearBtn.style.cssText =
-      "background:rgba(255,255,255,0.06);color:#94A3B8;border:1px solid rgba(255,255,255,0.12);" +
-      "border-radius:999px;padding:3px 9px;font-size:11.5px;cursor:pointer;font-family:inherit;";
+      "background:rgba(255,255,255,0.06);color:#D6D3D1;border:1px solid rgba(255,255,255,0.12);" +
+      "border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;";
     clearBtn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       cancelPendingSteps();
@@ -954,8 +971,8 @@ window.NKAP_ASSISTANT = (() => {
     muteBtn.textContent = audioEnabled ? "Voix" : "Muet";
     muteBtn.title = "Activer / couper la voix";
     muteBtn.style.cssText =
-      "background:rgba(255,255,255,0.08);color:#E2E8F0;border:1px solid rgba(255,255,255,0.14);" +
-      "border-radius:999px;padding:3px 9px;font-size:11.5px;cursor:pointer;font-family:inherit;";
+      "background:rgba(245,183,0,0.12);color:#FDE68A;border:1px solid rgba(245,183,0,0.32);" +
+      "border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;";
     muteBtn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       audioEnabled = !audioEnabled;
@@ -967,7 +984,7 @@ window.NKAP_ASSISTANT = (() => {
     closeBtn.type = "button";
     closeBtn.textContent = "×";
     closeBtn.style.cssText =
-      "background:transparent;border:none;color:#94A3B8;font-size:18px;line-height:1;cursor:pointer;padding:0 4px;";
+      "background:transparent;border:none;color:#A8A29E;font-size:19px;line-height:1;cursor:pointer;padding:0 4px;";
     closeBtn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       closePanel();
@@ -976,7 +993,7 @@ window.NKAP_ASSISTANT = (() => {
     controls.appendChild(clearBtn);
     controls.appendChild(muteBtn);
     controls.appendChild(closeBtn);
-    header.appendChild(title);
+    header.appendChild(titleWrap);
     header.appendChild(controls);
     panelEl.appendChild(header);
 
@@ -1022,20 +1039,23 @@ window.NKAP_ASSISTANT = (() => {
       chipsBox.appendChild(unseenChip);
     }
 
-    // 3. Chips des scénarios de l'écran actif : sur safinum.cm/sandbox/* avec cerveau M2 -> appel live /answer (montants réels) !
+    // 3. Chips des suggestions contextuelles (apparition échelonnée fluide)
     const useLiveSandboxBrain = !!(
       brainUrl &&
       typeof window.NKAP_IS_SAFINUM_SANDBOX === "function" &&
       window.NKAP_IS_SAFINUM_SANDBOX()
     );
     const screenScenarios = SCENARIOS_META[state.step] || SCENARIOS_META.home;
-    screenScenarios.forEach((sc) => {
+    screenScenarios.forEach((sc, idx) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "nkap-chip-btn";
-      btn.textContent = sc.label;
+      btn.style.animationDelay = `${idx * 45}ms`;
+      btn.innerHTML =
+        `<span style="width:6px;height:6px;border-radius:50%;background:#F5B700;flex-shrink:0;box-shadow:0 0 8px rgba(245,183,0,0.7);"></span>` +
+        `<span style="flex:1;">${sc.label}</span>`;
       btn.addEventListener("click", () => {
-        btn.style.transform = "scale(0.96)";
+        btn.style.transform = "scale(0.97)";
         btn.style.background = "rgba(245,183,0,0.28)";
         if (useLiveSandboxBrain) {
           askQuestion(sc.label, sc.id);
@@ -1047,19 +1067,41 @@ window.NKAP_ASSISTANT = (() => {
     });
     panelEl.appendChild(chipsBox);
 
-    // 4. Champ de chat + micro Push-to-Talk pour poser des questions au cerveau M2
+    // 3b. Mini-pilules d'éducation financière rapide
+    if (brainUrl) {
+      const conceptRow = document.createElement("div");
+      conceptRow.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;padding-top:2px;";
+      [
+        { label: "Microfinance ?", q: "C'est quoi une microfinance ?" },
+        { label: "Les frais ?", q: "C'est quoi les frais ?" },
+        { label: "Plafond ?", q: "C'est quoi un plafond ?" },
+      ].forEach((item) => {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "nkap-quick-pill";
+        pill.textContent = item.label;
+        pill.addEventListener("click", () => askQuestion(item.q));
+        conceptRow.appendChild(pill);
+      });
+      panelEl.appendChild(conceptRow);
+    }
+
+    // 4. Capsule de chat chaleureuse + bouton Micro SVG + Envoyer doré
     const chatForm = document.createElement("form");
     chatForm.style.cssText =
-      "display:flex;align-items:center;gap:6px;padding-top:8px;" +
-      "border-top:1px solid rgba(255,255,255,0.1);margin-top:2px;";
+      "display:flex;align-items:center;gap:6px;padding-top:10px;" +
+      "border-top:1px solid rgba(245,183,0,0.16);margin-top:2px;";
 
     const micBtn = document.createElement("button");
     micBtn.type = "button";
-    micBtn.textContent = "🎤";
     micBtn.title = "Parler au micro";
+    micBtn.innerHTML =
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">' +
+      '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
     micBtn.style.cssText =
-      "background:rgba(255,255,255,0.08);color:#F8FAFC;border:1px solid rgba(255,255,255,0.16);" +
-      "border-radius:10px;padding:6px 9px;font-size:13px;cursor:pointer;flex-shrink:0;";
+      "width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;" +
+      "background:rgba(245,183,0,0.12);color:#FDE68A;border:1px solid rgba(245,183,0,0.3);" +
+      "border-radius:11px;cursor:pointer;flex-shrink:0;transition:background 0.15s ease,transform 0.12s ease;";
     micBtn.addEventListener("click", (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -1068,26 +1110,31 @@ window.NKAP_ASSISTANT = (() => {
 
     const chatInput = document.createElement("input");
     chatInput.type = "text";
-    chatInput.placeholder = "Pose une question (écran ou concept)…";
+    chatInput.placeholder = "Demande-moi n'importe quoi…";
     chatInput.autocomplete = "off";
     chatInput.style.cssText =
-      "flex:1;min-width:0;background:rgba(255,255,255,0.06);color:#F8FAFC;" +
-      "border:1px solid rgba(255,255,255,0.14);border-radius:10px;" +
-      "padding:7px 10px;font-size:12.5px;font-family:inherit;outline:none;";
+      "flex:1;min-width:0;background:rgba(255,248,235,0.06);color:#FEF9EE;" +
+      "border:1px solid rgba(245,183,0,0.22);border-radius:11px;" +
+      "padding:8px 11px;font-size:12.5px;font-family:inherit;outline:none;transition:border-color 0.15s ease,box-shadow 0.15s ease;";
     chatInput.addEventListener("focus", () => {
-      chatInput.style.borderColor = "rgba(245,183,0,0.65)";
+      chatInput.style.borderColor = "rgba(245,183,0,0.75)";
+      chatInput.style.boxShadow = "0 0 0 3px rgba(245,183,0,0.14)";
     });
     chatInput.addEventListener("blur", () => {
-      chatInput.style.borderColor = "rgba(255,255,255,0.14)";
+      chatInput.style.borderColor = "rgba(245,183,0,0.22)";
+      chatInput.style.boxShadow = "none";
     });
 
     const sendBtn = document.createElement("button");
     sendBtn.type = "submit";
-    sendBtn.textContent = "Envoyer";
+    sendBtn.title = "Envoyer";
+    sendBtn.innerHTML =
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
     sendBtn.style.cssText =
-      "background:#F5B700;color:#0F172A;border:none;border-radius:10px;" +
-      "padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;" +
-      "font-family:inherit;flex-shrink:0;";
+      "width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;" +
+      "background:linear-gradient(135deg,#F5B700,#FF8C42);color:#140E07;border:none;border-radius:11px;" +
+      "cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(245,183,0,0.32);";
 
     chatForm.addEventListener("submit", (ev) => {
       ev.preventDefault();

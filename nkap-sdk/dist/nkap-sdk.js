@@ -1005,6 +1005,9 @@
     let statusPillEl = null;
     let bubbleEl = null;
     let panelEl = null;
+    let orbState = "idle"; // idle | thinking | speaking | listening
+    let orbRaf = null;
+    let orbRippleEl = null;
     let wordTimer = null;
     let raf = null;
     let activeCursorMarkId = null;
@@ -1061,6 +1064,10 @@
       style.textContent = `
         ${fontBlock}
         @keyframes nkapPopIn { 0%{opacity:0;transform:scale(0.94);} 100%{opacity:1;transform:scale(1);} }
+        @keyframes nkapSlideDown { 0%{opacity:0;transform:translateY(-16px) scale(0.96);} 100%{opacity:1;transform:translateY(0) scale(1);} }
+        @keyframes nkapChipIn { 0%{opacity:0;transform:translateY(-6px);} 100%{opacity:1;transform:translateY(0);} }
+        @keyframes nkapOrbBreath { 0%,100%{box-shadow:0 8px 26px rgba(245,183,0,0.28),0 0 0 1px rgba(255,196,77,0.35);} 50%{box-shadow:0 10px 34px rgba(255,152,48,0.44),0 0 0 2px rgba(245,183,0,0.58);} }
+        @keyframes nkapOrbRipple { 0%{transform:scale(1);opacity:0.62;} 100%{transform:scale(1.62);opacity:0;} }
         @keyframes nkapMarqueeDrag { 0%{transform:scale(0.08,0.08);opacity:0.4;} 100%{transform:scale(1,1);opacity:1;} }
         @keyframes nkapPulseWave { 0%,100%{transform:scaleY(0.45);} 50%{transform:scaleY(1.15);} }
         @keyframes nkapBarGrow { 0%{transform:scaleX(0);} 100%{transform:scaleX(1);} }
@@ -1068,6 +1075,12 @@
         .nkap-write-char.visible { opacity:1; }
         .nkap-word { display:inline-block;opacity:0;transform:translateY(3px);transition:opacity 0.13s ease-out,transform 0.13s ease-out;margin-right:0.28em; }
         .nkap-word.visible { opacity:1;transform:translateY(0); }
+        #nkap-bubble:hover { transform:scale(1.07); }
+        #nkap-bubble[data-state="speaking"] .nkap-orb-ring { animation:nkapOrbRipple 1.15s cubic-bezier(0.16,1,0.3,1) infinite; border-color:rgba(245,183,0,0.75); }
+        #nkap-bubble[data-state="speaking"] .nkap-orb-ring-2 { animation:nkapOrbRipple 1.15s 0.45s cubic-bezier(0.16,1,0.3,1) infinite; border-color:rgba(255,140,66,0.55); }
+        #nkap-bubble[data-state="thinking"] .nkap-orb-ring { animation:nkapOrbRipple 1.6s ease-out infinite; border-color:rgba(255,196,77,0.55); }
+        #nkap-bubble[data-state="listening"] .nkap-orb-ring { animation:nkapOrbRipple 0.95s ease-out infinite; border-color:rgba(255,92,119,0.8); }
+        #nkap-bubble[data-state="listening"] .nkap-orb-ring-2 { animation:nkapOrbRipple 0.95s 0.35s ease-out infinite; border-color:rgba(255,140,66,0.6); }
         .nkap-choice-btn {
           display:flex;align-items:center;gap:10px;width:100%;text-align:left;
           background:rgba(255,255,255,0.07);color:#F8FAFC;border:1.5px solid rgba(245,183,0,0.45);
@@ -1076,12 +1089,25 @@
         }
         .nkap-choice-btn:hover { background:rgba(245,183,0,0.22);transform:translateX(3px); }
         .nkap-chip-btn {
-          display:flex;align-items:center;gap:8px;width:100%;text-align:left;
-          background:rgba(255,255,255,0.06);color:#F8FAFC;border:1px solid rgba(255,255,255,0.12);
-          border-radius:11px;padding:8px 12px;font-family:'Andika',system-ui,sans-serif;font-size:13.5px;
-          cursor:pointer;transition:background 0.14s ease,border-color 0.14s ease,transform 0.12s ease;
+          display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+          background:linear-gradient(135deg,rgba(255,214,130,0.08),rgba(255,255,255,0.04));
+          color:#FEF3C7;border:1px solid rgba(245,183,0,0.2);
+          border-radius:12px;padding:9px 12px;font-family:'Andika',system-ui,sans-serif;font-size:13px;
+          cursor:pointer;transition:background 0.16s ease,border-color 0.16s ease,transform 0.14s ease,box-shadow 0.16s ease;
+          animation:nkapChipIn 0.24s cubic-bezier(0.22,1,0.36,1) both;
         }
-        .nkap-chip-btn:hover { background:rgba(245,183,0,0.16);border-color:rgba(245,183,0,0.55);transform:translateX(-2px); }
+        .nkap-chip-btn:hover {
+          background:linear-gradient(135deg,rgba(245,183,0,0.22),rgba(255,140,66,0.14));
+          border-color:rgba(245,183,0,0.62);transform:translateX(3px);
+          box-shadow:0 4px 16px rgba(245,183,0,0.16);
+        }
+        .nkap-quick-pill {
+          background:rgba(245,183,0,0.1);color:#FDE68A;border:1px solid rgba(245,183,0,0.28);
+          border-radius:999px;padding:4px 10px;font-size:11.5px;font-family:'Andika',system-ui,sans-serif;
+          cursor:pointer;transition:background 0.15s ease,border-color 0.15s ease,transform 0.12s ease;
+          white-space:nowrap;
+        }
+        .nkap-quick-pill:hover { background:rgba(245,183,0,0.24);border-color:rgba(245,183,0,0.68);transform:translateY(-1px); }
       `;
       document.head.appendChild(style);
     }
@@ -1169,17 +1195,35 @@
       if (cursorEl) cursorEl.style.opacity = "0";
     }
 
+    function setOrbState(mode) {
+      orbState = mode || "idle";
+      if (bubbleEl) {
+        bubbleEl.setAttribute("data-state", orbState);
+      }
+    }
+
     function setStatusPill(mode, labelText) {
       ensureLayers();
+      // Synchronise automatiquement la pulsation de l'orbe neuronal Jarvis avec l'état vocal/cerveau !
+      if (!mode) {
+        setOrbState("idle");
+      } else if (mode === "listening") {
+        setOrbState("listening");
+      } else if (labelText && /cerveau|réfléch|en cours/i.test(labelText)) {
+        setOrbState("thinking");
+      } else {
+        setOrbState("speaking");
+      }
       if (!statusPillEl) return;
       if (!mode) {
         statusPillEl.style.display = "none";
         statusPillEl.innerHTML = "";
         return;
       }
-      const accent = mode === "listening" ? "#FF3B5C" : "#F5B700";
+      const accent = mode === "listening" ? "#FF5C77" : "#F5B700";
       statusPillEl.style.display = "inline-flex";
       statusPillEl.innerHTML = `
+        <span style="width:7px;height:7px;border-radius:50%;background:${accent};box-shadow:0 0 10px ${accent};"></span>
         <span>${labelText || (mode === "listening" ? "Écoute…" : "Parle…")}</span>
         <span style="display:inline-flex;align-items:center;gap:2.5px;height:12px;">
           <span style="width:2.5px;height:10px;background:${accent};border-radius:2px;animation:nkapPulseWave 0.55s infinite ease-in-out;"></span>
@@ -1961,29 +2005,169 @@
           if (onTap) bubbleEl.__nkapTap = onTap;
           return bubbleEl;
         }
+        // Panneau Jarvis chaleureux qui glisse VERS LE BAS depuis l'orbe neuronal (ancré en haut à droite)
         panelEl = document.createElement("div");
         panelEl.id = "nkap-question-panel";
         panelEl.style.cssText =
-          "position:fixed;right:20px;bottom:90px;width:336px;background:rgba(12,17,28,0.94);" +
-          "backdrop-filter:blur(14px);border:1px solid rgba(245,183,0,0.35);border-radius:18px;" +
-          "padding:14px;color:#F8FAFC;font-family:'Andika',system-ui,sans-serif;box-shadow:0 20px 48px rgba(0,0,0,0.6);" +
-          "z-index:2147483647;display:none;flex-direction:column;gap:10px;pointer-events:auto;animation:nkapPopIn 0.14s ease-out both;";
+          "position:fixed;right:20px;top:150px;width:352px;max-width:calc(100vw - 32px);" +
+          "max-height:calc(100vh - 176px);overflow-y:auto;" +
+          "background:linear-gradient(160deg,rgba(26,20,15,0.95) 0%,rgba(12,17,30,0.96) 100%);" +
+          "backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);" +
+          "border:1px solid rgba(245,183,0,0.34);border-radius:20px;" +
+          "padding:15px 15px 14px;color:#FEF9EE;font-family:'Andika',system-ui,sans-serif;" +
+          "box-shadow:0 24px 60px rgba(0,0,0,0.62),0 0 32px rgba(245,183,0,0.12),inset 0 1px 0 rgba(255,220,130,0.24);" +
+          "z-index:2147483647;display:none;flex-direction:column;gap:11px;pointer-events:auto;" +
+          "transform-origin:top right;animation:nkapSlideDown 0.24s cubic-bezier(0.22,1,0.36,1) both;";
         document.documentElement.appendChild(panelEl);
 
+        // Orbe Neuronal Vivant (style Jarvis chaleureux ambre/or) ancré sous la barre du haut
         bubbleEl = document.createElement("div");
         bubbleEl.id = "nkap-bubble";
-        bubbleEl.innerHTML = '<span style="pointer-events:none;">nkap</span>';
-        bubbleEl.title = "Assistant Nkap — poser une question";
+        bubbleEl.setAttribute("data-state", orbState);
+        bubbleEl.title = "Nkap — clique pour ouvrir ton assistant";
         bubbleEl.style.cssText =
-          "position:fixed;right:20px;bottom:20px;width:60px;height:60px;border-radius:50%;" +
-          "background:#12233A;color:#F5B700;display:flex;align-items:center;justify-content:center;" +
-          "font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:16px;" +
-          "border:2.5px solid #F5B700;box-shadow:0 6px 20px rgba(0,0,0,0.45);z-index:2147483647;" +
-          "pointer-events:auto;cursor:pointer;user-select:none;transition:transform 0.14s ease;";
+          "position:fixed;right:22px;top:70px;width:68px;height:68px;border-radius:50%;" +
+          "background:radial-gradient(circle at 38% 32%, #2B1E10 0%, #121829 62%, #080C16 100%);" +
+          "display:flex;align-items:center;justify-content:center;" +
+          "border:1.5px solid rgba(245,183,0,0.65);" +
+          "animation:nkapOrbBreath 3.4s ease-in-out infinite;" +
+          "z-index:2147483647;pointer-events:auto;cursor:pointer;user-select:none;" +
+          "transition:transform 0.18s cubic-bezier(0.22,1,0.36,1);overflow:visible;";
+
+        // Ondes concentriques qui pulsent quand Nkap parle / écoute / réfléchit
+        const ring1 = document.createElement("span");
+        ring1.className = "nkap-orb-ring";
+        ring1.style.cssText =
+          "position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;pointer-events:none;";
+        const ring2 = document.createElement("span");
+        ring2.className = "nkap-orb-ring-2";
+        ring2.style.cssText =
+          "position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;pointer-events:none;";
+        bubbleEl.appendChild(ring1);
+        bubbleEl.appendChild(ring2);
+        orbRippleEl = ring1;
+
+        // Canvas 60fps : réseau de neurones dorés en orbite + filaments synaptiques + noyau solaire
+        const canvas = document.createElement("canvas");
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const size = 64;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        canvas.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;display:block;pointer-events:none;`;
+        bubbleEl.appendChild(canvas);
+
+        // Micro-pastille discrète "nkap" en bas de l'orbe
+        const tag = document.createElement("span");
+        tag.textContent = "nkap";
+        tag.style.cssText =
+          "position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);" +
+          "background:linear-gradient(135deg,#F5B700,#FF8C42);color:#140E07;" +
+          "font-family:'Andika',system-ui,sans-serif;font-weight:700;font-size:10px;letter-spacing:0.06em;" +
+          "padding:1px 7px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.45);pointer-events:none;";
+        bubbleEl.appendChild(tag);
+
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(dpr, dpr);
+          const N = 15;
+          const nodes = Array.from({ length: N }, (_, i) => {
+            const phi = Math.acos(1 - (2 * (i + 0.5)) / N);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+            return {
+              phi,
+              theta,
+              r: 14 + (i % 3) * 4.5,
+              speed: 0.45 + (i % 4) * 0.16,
+              phase: i * 0.7,
+            };
+          });
+
+          const drawOrb = (tMs) => {
+            if (!bubbleEl || !bubbleEl.isConnected) {
+              orbRaf = null;
+              return;
+            }
+            const t = tMs * 0.001;
+            const cx = size / 2;
+            const cy = size / 2;
+            ctx.clearRect(0, 0, size, size);
+
+            const isSpeak = orbState === "speaking";
+            const isListen = orbState === "listening";
+            const isThink = orbState === "thinking";
+            const speedMul = isSpeak ? 2.5 : isListen ? 2.1 : isThink ? 3.2 : 0.9;
+            const pulse = isSpeak
+              ? 1 + 0.18 * Math.sin(t * 9.5) + 0.08 * Math.sin(t * 17)
+              : isListen
+              ? 1 + 0.14 * Math.sin(t * 7.2)
+              : isThink
+              ? 1 + 0.1 * Math.sin(t * 5.5)
+              : 1 + 0.05 * Math.sin(t * 2.1);
+
+            const coreHue = isListen ? "255, 92, 119" : "245, 183, 0";
+            const warmHue = isListen ? "255, 155, 90" : "255, 146, 60";
+
+            // Halo central chaleureux (noyau solaire)
+            const coreGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 24 * pulse);
+            coreGrad.addColorStop(0, `rgba(255, 244, 200, ${isSpeak ? 0.92 : 0.68})`);
+            coreGrad.addColorStop(0.35, `rgba(${coreHue}, ${isSpeak ? 0.55 : 0.34})`);
+            coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+            ctx.fillStyle = coreGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 26 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Projection 3D des neurones en orbite
+            const pts = nodes.map((n) => {
+              const a = n.theta + t * n.speed * speedMul;
+              const b = n.phi + Math.sin(t * 0.7 + n.phase) * 0.22;
+              const rad = n.r * pulse;
+              const x3 = rad * Math.sin(b) * Math.cos(a);
+              const y3 = rad * Math.cos(b);
+              const z3 = rad * Math.sin(b) * Math.sin(a);
+              const scale = (z3 + 42) / 60;
+              return { x: cx + x3, y: cy + y3, z: z3, s: scale, p: n.phase };
+            });
+
+            // Filaments synaptiques entre neurones proches
+            ctx.lineWidth = isSpeak ? 1.15 : 0.85;
+            for (let i = 0; i < pts.length; i++) {
+              for (let j = i + 1; j < pts.length; j++) {
+                const dx = pts[i].x - pts[j].x;
+                const dy = pts[i].y - pts[j].y;
+                const dist = Math.hypot(dx, dy);
+                const maxD = isSpeak ? 26 : 22;
+                if (dist < maxD) {
+                  const alpha = (1 - dist / maxD) * (isSpeak ? 0.78 : isThink ? 0.66 : 0.46);
+                  ctx.strokeStyle = `rgba(${i % 2 === 0 ? coreHue : warmHue}, ${alpha.toFixed(2)})`;
+                  ctx.beginPath();
+                  ctx.moveTo(pts[i].x, pts[i].y);
+                  ctx.lineTo(pts[j].x, pts[j].y);
+                  ctx.stroke();
+                }
+              }
+            }
+
+            // Neurones lumineux (triés par profondeur z)
+            pts.sort((a, b) => a.z - b.z);
+            for (const p of pts) {
+              const glow = 0.55 + 0.45 * Math.sin(t * (isSpeak ? 8 : 3) + p.p);
+              const rNode = (1.6 + p.s * 1.4) * (isSpeak ? 1.12 : 1);
+              ctx.fillStyle = `rgba(255, 245, 210, ${(0.55 + glow * 0.45).toFixed(2)})`;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, rNode, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            orbRaf = requestAnimationFrame(drawOrb);
+          };
+          orbRaf = requestAnimationFrame(drawOrb);
+        }
+
         bubbleEl.__nkapTap = onTap || (() => {});
         bubbleEl.addEventListener("click", () => {
-          bubbleEl.style.transform = "scale(0.91)";
-          setTimeout(() => (bubbleEl.style.transform = "scale(1)"), 140);
+          bubbleEl.style.transform = "scale(0.9)";
+          setTimeout(() => (bubbleEl.style.transform = ""), 150);
           if (global.NKAP_ASSISTANT && global.NKAP_ASSISTANT.togglePanel) {
             global.NKAP_ASSISTANT.togglePanel(panelEl);
           } else {
@@ -1994,7 +2178,10 @@
         return bubbleEl;
       },
 
+      setOrbState,
+
       destroy() {
+        if (orbRaf) { cancelAnimationFrame(orbRaf); orbRaf = null; }
         api.clear();
         window.removeEventListener("scroll", repositionAll, true);
         window.removeEventListener("resize", repositionAll);
