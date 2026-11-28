@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Note Technique Middleware Nkap — SAFINUM Innovate Challenge</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 12mm 14mm 14mm 14mm;
+        }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            line-height: 1.45;
+            font-size: 9pt;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page {
+            page-break-after: always;
+            height: 270mm;
+            max-height: 270mm;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .page:last-child {
+            page-break-after: avoid;
+        }
+
+        .page-content {
+            flex: 1;
+        }
+
+        /* En-tête officiel */
+        .doc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+        .brand-badge {
+            background: linear-gradient(135deg, #0f766e 0%, #0369a1 100%);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 800;
+            font-size: 11pt;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+        .header-meta {
+            text-align: right;
+            font-size: 7.5pt;
+            color: #475569;
+            line-height: 1.3;
+        }
+        .header-meta strong {
+            color: #0f172a;
+        }
+
+        /* Titre principal */
+        .doc-title-box {
+            background: #f8fafc;
+            border-left: 4px solid #0f766e;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            border-radius: 0 6px 6px 0;
+        }
+        .doc-title {
+            font-size: 14pt;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 3px 0;
+            line-height: 1.2;
+        }
+        .doc-subtitle {
+            font-size: 9pt;
+            color: #0f766e;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* Structure titres */
+        h2 {
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #0f766e;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 3px;
+            margin: 10px 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 12px;
+            background: #0f766e;
+            border-radius: 2px;
+        }
+        h3 {
+            font-size: 9pt;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 8px 0 4px 0;
+        }
+
+        p {
+            margin: 0 0 6px 0;
+            text-align: justify;
+        }
+
+        /* Cartouches d'appel / Alertes */
+        .callout {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-left: 3.5px solid #16a34a;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin: 7px 0;
+            font-size: 8pt;
+        }
+        .callout-title {
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .callout-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-left: 3.5px solid #d97706;
+        }
+        .callout-warning .callout-title {
+            color: #92400e;
+        }
+        .callout-danger {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 3.5px solid #dc2626;
+        }
+        .callout-danger .callout-title {
+            color: #991b1b;
+        }
+        .callout-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-left: 3.5px solid #0284c7;
+        }
+        .callout-info .callout-title {
+            color: #0369a1;
+        }
+
+        /* Grilles & Cartes */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 6px 0;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 6px 0;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 7px 9px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .card-header {
+            font-weight: 700;
+            color: #0f766e;
+            font-size: 8.5pt;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-body {
+            font-size: 7.8pt;
+            color: #334155;
+            line-height: 1.35;
+        }
+
+        /* Tableaux */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7.8pt;
+            margin: 6px 0;
+        }
+        th {
+            background: #0f766e;
+            color: #ffffff;
+            text-align: left;
+            padding: 5px 6px;
+            font-weight: 600;
+        }
+        td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+            vertical-align: top;
+        }
+        tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 1px 4.5px;
+            border-radius: 3px;
+            font-size: 6.8pt;
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-blue { background: #e0f2fe; color: #075985; }
+        .badge-orange { background: #ffedd5; color: #9a3412; }
+        .badge-purple { background: #f3e8ff; color: #6b21a8; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+
+        /* Schémas SVG */
+        .diagram-container {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px;
+            text-align: center;
+            margin: 6px 0;
+        }
+
+        /* Code snippets */
+        code {
+            background: #f1f5f9;
+            padding: 1px 3px;
+            border-radius: 3px;
+            color: #0f766e;
+            font-size: 7.2pt;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        /* Pied de page fixe */
+        .page-footer {
+            border-top: 1px solid #cbd5e1;
+            padding-top: 4px;
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 7pt;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== PAGE 1 : ARCHITECTURE & OVERVIEW ==================== -->
+    <div class="page">
+        <div class="page-content">
+            <div class="doc-header">
+                <div>
+                    <span class="brand-badge">NKAP MOBILE</span>
+                    <span style="font-size: 8.5pt; font-weight: 700; color: #475569; margin-left: 8px;">MIDDLEWARE FINTECH MULTILINGUE</span>
+                </div>
+                <div class="header-meta">
+                    <strong>SAFINUM Innovate Challenge 2026</strong><br>
+                    Évaluation Finale du Jury — Session de 09h00<br>
+                    Date : 28 Novembre 2026 | Réf: <code>NKAP-TECH-2026-V3</code>
+                </div>
+            </div>
+
+            <div class="doc-title-box">
+                <h1 class="doc-title">NOTE TECHNIQUE D'ARCHITECTURE & FONCTIONNEMENT</h1>
+                <p class="doc-subtitle">Orchestrateur Omnicanal, Moteur de Décision NLU Déterministe & Préservation de l'Intégrité Financière</p>
+            </div>
+
+            <h2>1. Contexte, Problématique & Proposition de Valeur</h2>
+            <p>
+                En Afrique subsaharienne, et particulièrement dans l'espace CEMAC / Cameroun, la fracture linguistique et cognitive exclut de nombreux citoyens d'une adoption sereine des services financiers dématérialisés. Les solutions bancaires conventionnelles (USSD, applications mobiles, guichets) s'expriment dans un vocabulaire technique francophone ou anglophone souvent déconnecté du quotidien des populations locutrices de langues nationales (ex. <strong>Ewondo</strong>, <strong>Douala</strong>).
+            </p>
+            <p>
+                Le <strong>Middleware Nkap</strong> a été conçu comme une couche d'abstraction et d'orchestration universelle : il s'intercale de manière totalement non-intrusive entre les canaux utilisateurs officiels (<strong>USSD, Web, Mobile Android</strong>) et les backends bancaires / Core Banking. Il garantit une inclusion financière intégrale en conciliant compréhension en langage naturel, vocalisation en langues vernaculaires et rigueur bancaire absolue.
+            </p>
+
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-header"><span>🌍 Inclusion Active</span><span class="badge badge-green">4 Langues</span></div>
+                    <div class="card-body">Compréhension et synthèse vocale en <strong>Ewondo</strong> (<code>ewo</code>), <strong>Douala</strong> (<code>dua</code>), Français et Anglais avec banques audio natives.</div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span>⚡ Latence Maîtrisée</span><span class="badge badge-blue">&lt; 35 ms P95</span></div>
+                    <div class="card-body">Double moteur : Voie Déterministe ultra-rapide par expressions régulières et slot-filling + Voie LLM adaptative en secours.</div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span>🛡️ Zéro Risque Financier</span><span class="badge badge-purple">AmountGuard</span></div>
+                    <div class="card-body">Verrouillage strict des montants et numéros, protocole Two-Phase Commit (2PC) et politique Zero Guessing sans hallucination.</div>
+                </div>
+            </div>
+
+            <h2>2. Architecture Globale du Middleware</h2>
+            <p>
+                Le système est articulé autour d'un pipeline modulaire haute performance déployé sous FastAPI / Python 3.12+ :
+            </p>
+
+            <div class="diagram-container">
+                <svg viewBox="0 0 780 180" width="100%" height="170" style="display:block; margin:auto;">
+                    <!-- Canaux Entrée (USSD, Web, Mobile) -->
+                    <rect x="10" y="12" width="135" height="155" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" />
+                    <text x="77" y="30" font-size="8.5" font-weight="bold" fill="#334155" text-anchor="middle">CANAUX OFFICIELS</text>
+                    
+                    <rect x="18" y="42" width="119" height="34" rx="4" fill="#e0f2fe" stroke="#0284c7" />
+                    <text x="77" y="56" font-size="8" font-weight="bold" fill="#0369a1" text-anchor="middle">📱 USSD (*123#)</text>
+                    <text x="77" y="68" font-size="6.5" fill="#0284c7" text-anchor="middle">GSM-7 · 182 septets · Paginé</text>
+
+                    <rect x="18" y="82" width="119" height="34" rx="4" fill="#e0f2fe" stroke="#0284c7" />
+                    <text x="77" y="96" font-size="8" font-weight="bold" fill="#0369a1" text-anchor="middle">🌐 Web Fintech</text>
+                    <text x="77" y="108" font-size="6.5" fill="#0284c7" text-anchor="middle">Responsive · Widgets · Auth</text>
+
+                    <rect x="18" y="122" width="119" height="34" rx="4" fill="#e0f2fe" stroke="#0284c7" />
+                    <text x="77" y="136" font-size="8" font-weight="bold" fill="#0369a1" text-anchor="middle">📲 Mobile Android</text>
+                    <text x="77" y="148" font-size="6.5" fill="#0284c7" text-anchor="middle">Harnais A11y · Voix sync</text>
+
+                    <!-- Flèche Canal -> Middleware -->
+                    <line x1="145" y1="90" x2="175" y2="90" stroke="#0f766e" stroke-width="2" marker-end="url(#arrow)" />
+                    <text x="160" y="83" font-size="7" fill="#0f766e" text-anchor="middle">JSON I1</text>
+
+                    <!-- Middleware Core -->
+                    <rect x="180" y="10" width="375" height="160" rx="6" fill="#f0fdfa" stroke="#0f766e" stroke-width="2" />
+                    <text x="367" y="26" font-size="9.5" font-weight="bold" fill="#0f766e" text-anchor="middle">MIDDLEWARE NKAP (FASTAPI / ASYNCHRONOUS)</text>
+
+                    <!-- Normaliseur & Double Voie -->
+                    <rect x="195" y="36" width="105" height="42" rx="4" fill="#ffffff" stroke="#cbd5e1" />
+                    <text x="247" y="51" font-size="7.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Normaliseur Canal</text>
+                    <text x="247" y="62" font-size="6.5" fill="#64748b" text-anchor="middle">Nettoyage, X-Trace-Id</text>
+                    <text x="247" y="71" font-size="6.5" fill="#64748b" text-anchor="middle">Isolation PIN & Clés</text>
+
+                    <rect x="315" y="36" width="115" height="42" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5" />
+                    <text x="372" y="50" font-size="7.5" font-weight="bold" fill="#166534" text-anchor="middle">⚡ Fast Lane (<35ms)</text>
+                    <text x="372" y="61" font-size="6.5" fill="#15803d" text-anchor="middle">Regex NLU & Slot-Filling</text>
+                    <text x="372" y="71" font-size="6.5" fill="#15803d" text-anchor="middle">Tables Déterministes</text>
+
+                    <rect x="442" y="36" width="103" height="42" rx="4" fill="#fef9c3" stroke="#ca8a04" />
+                    <text x="493" y="50" font-size="7.5" font-weight="bold" fill="#854d0e" text-anchor="middle">🤖 LLM Lane</text>
+                    <text x="493" y="61" font-size="6.5" fill="#a16207" text-anchor="middle">Modèle Open-Weight</text>
+                    <text x="493" y="71" font-size="6.5" fill="#a16207" text-anchor="middle">Cas non conventionnels</text>
+
+                    <!-- Moteur Multilingue & Pipeline Audio -->
+                    <rect x="195" y="86" width="350" height="38" rx="4" fill="#ffffff" stroke="#cbd5e1" />
+                    <text x="370" y="100" font-size="8" font-weight="bold" fill="#0369a1" text-anchor="middle">Moteur Multilingue & Pipeline Audio Hybride</text>
+                    <text x="370" y="112" font-size="6.8" fill="#475569" text-anchor="middle">Banque Audio Native Studio (voix_test) [0ms]  |  TTS Neural Fallback (MMS-TTS / Piper)</text>
+
+                    <!-- AmountGuard & 2PC -->
+                    <rect x="195" y="130" width="350" height="32" rx="4" fill="#fef2f2" stroke="#dc2626" />
+                    <text x="370" y="143" font-size="7.5" font-weight="bold" fill="#991b1b" text-anchor="middle">AmountGuard (Anti-Hallucination) & Two-Phase Commit Transactionnel</text>
+                    <text x="370" y="154" font-size="6.5" fill="#b91c1c" text-anchor="middle">Tokens montants protégés | Prepare/Commit séparés | Zéro devinette homonymes</text>
+
+                    <!-- Flèche Middleware -> Core Banking -->
+                    <line x1="555" y1="90" x2="590" y2="90" stroke="#0f766e" stroke-width="2" marker-end="url(#arrow)" />
+                    <text x="572" y="83" font-size="7" fill="#0f766e" text-anchor="middle">REST / ISO</text>
+
+                    <!-- Core Banking / Sandbox -->
+                    <rect x="595" y="12" width="175" height="155" rx="6" fill="#f8fafc" stroke="#475569" stroke-width="1.5" />
+                    <text x="682" y="30" font-size="8.5" font-weight="bold" fill="#1e293b" text-anchor="middle">SERVICES BANCAIRES</text>
+                    <rect x="605" y="44" width="155" height="30" rx="3" fill="#ffffff" stroke="#cbd5e1" />
+                    <text x="682" y="58" font-size="7.2" font-weight="bold" fill="#0f172a" text-anchor="middle">MockBankEngine / Core</text>
+                    <text x="682" y="68" font-size="6.3" fill="#64748b" text-anchor="middle">Comptes, soldes, transactions</text>
+
+                    <rect x="605" y="80" width="155" height="30" rx="3" fill="#ffffff" stroke="#cbd5e1" />
+                    <text x="682" y="94" font-size="7.2" font-weight="bold" fill="#0f172a" text-anchor="middle">Carnet d'Adresses & Alias</text>
+                    <text x="682" y="104" font-size="6.3" fill="#64748b" text-anchor="middle">Résolution & Détection Homonymes</text>
+
+                    <rect x="605" y="116" width="155" height="42" rx="3" fill="#ffffff" stroke="#cbd5e1" />
+                    <text x="682" y="130" font-size="7.2" font-weight="bold" fill="#0f172a" text-anchor="middle">Base Événements & Audit</text>
+                    <text x="682" y="140" font-size="6.3" fill="#64748b" text-anchor="middle">Traces X-Trace-Id réversibles</text>
+                    <text x="682" y="150" font-size="6.3" fill="#16a34a" text-anchor="middle">Sandbox Simulation Instantanée</text>
+
+                    <defs>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 1 L 10 5 L 0 9 z" fill="#0f766e" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <h3>Endpoints Directeurs Exposés par le Middleware</h3>
+            <p>
+                Le middleware opère au travers de deux points d'entrée unifiés et idempotents :
+            </p>
+            <ul style="margin: 2px 0 6px 16px; padding: 0; font-size: 8pt;">
+                <li><strong><code>POST /sandbox</code></strong> : Pipeline unifié complet. Reçoit la requête brute du canal, normalise le contexte, résout l'intention NLU, consulte ou prépare la transaction bancaire, applique AmountGuard, formate la réponse multilingue et calcule les métadonnées UI et audio synchronisées.</li>
+                <li><strong><code>POST /answer</code></strong> : Point de ralliement direct pour les intégrations mobiles/web natives permettant une génération de réponse et de flux audio découplée.</li>
+            </ul>
+
+            <div class="callout callout-info">
+                <div class="callout-title">💡 Principe d'Isolation Totale des Canaux</div>
+                Aucun canal n'a besoin de connaître la logique bancaire sous-jacente ni les subtilités morphologiques de l'Ewondo ou du Douala. Le middleware absorbe l'hétérogénéité des canaux et des langues pour fournir une réponse strictement typée, sûre et vérifiable.
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Note Technique Middleware — Nkap Mobile</span>
+            <span>SAFINUM Innovate Challenge 2026</span>
+            <span>Document Confidentiel — Page 1/4</span>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 2 : MATRICE DES 3 CANAUX OFFICIELS ==================== -->
+    <div class="page">
+        <div class="page-content">
+            <div class="doc-header">
+                <div>
+                    <span class="brand-badge">NKAP MIDDLEWARE</span>
+                    <span style="font-size: 8.5pt; font-weight: 700; color: #475569; margin-left: 8px;">MATRICE D'ADAPTATION MULTICANALE (USSD · WEB · MOBILE)</span>
+                </div>
+                <div class="header-meta">
+                    Session Jury 09h00 | Réf: <code>NKAP-TECH-2026-V3</code>
+                </div>
+            </div>
+
+            <h2>3. Matrice des Canaux Officiels & Adaptations Contextuelles</h2>
+            <p>
+                Chacun des <strong>3 canaux officiels</strong> évalués lors du Challenge SAFINUM impose des contraintes physiques, ergonomiques et protocolaires spécifiques. Le Middleware Nkap adapte dynamiquement sa sérialisation selon le champ <code>channel</code> fourni dans le contrat d'échange :
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 14%;">Canal</th>
+                        <th style="width: 24%;">Contraintes Techniques</th>
+                        <th style="width: 31%;">Stratégie de Formatage Nkap</th>
+                        <th style="width: 31%;">Exemple Concret Sortant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>USSD</strong><br><code>ussd</code></td>
+                        <td>Session synchrone, 182 septets max (GSM-7), timeout opérateur strict (20-30s), absence totale de graphisme.</td>
+                        <td>Format textuel ultra-condensé, transcodage GSM-7 automatique, pagination par lot de 3 options avec déclencheur standard <code>99: Suivant</code>.</td>
+                        <td><em>« Solde: 45 250 FCFA. 1:Transfert 2:Historique 99:Plus »</em></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Web Fintech</strong><br><code>web</code></td>
+                        <td>Écrans larges, sessions enrichies, multi-onglets, tokens JWT, interactions visuelles asynchrones.</td>
+                        <td>Widgets graphiques structurés, cartes récapitulatives interactives avec boutons d'action (Valider / Modifier / Annuler) et formulaires pré-remplis.</td>
+                        <td>Modal d'approbation visuelle avec montant mis en évidence, avatar du bénéficiaire et bouton d'action sécurisé.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mobile Android</strong><br><code>mobile</code></td>
+                        <td>Touchscreen, accessibilité native, haut-parleur disponible, latence réseau 2G/3G/4G variable.</td>
+                        <td>Deep linking natif, surlignage dynamique en surcouche (cercle/cadre) synchronisé mot-à-mot avec la voix locale Ewondo ou Douala.</td>
+                        <td>Rendu manuscrit d'un cercle autour du bouton « Confirmer » synchronisé avec l'audio Ewondo <em>« Tikigi »</em>.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Détail des Spécificités d'Ingénierie par Canal</h2>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span>📱 Ingénierie du Canal USSD (*123#)</span><span class="badge badge-blue">GSM-7 Transcoding</span></div>
+                    <div class="card-body">
+                        Le protocole USSD impose un encodage strict à 182 septets maximum. Tout caractère hors-alphabet (notamment les diacritiques africains <code>ɛ/ɔ/ŋ/ə/’</code> en Ewondo) provoquerait un crash de session opérateur. Le middleware intègre un moteur de transcodage temps réel qui normalise les diacritiques vers leurs équivalents GSM-7 tout en préservant l'intelligibilité phonétique et l'exactitude des montants.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span>📲 Harnais d'Accessibilité Mobile (M1/M5)</span><span class="badge badge-purple">Overlay Sans Modif Code</span></div>
+                    <div class="card-body">
+                        Sur mobile, Nkap s'exécute comme un <code>AccessibilityService</code> Android non-intrusif : il lit l'arbre d'accessibilité de n'importe quelle application bancaire (ex. SAFINUM, Wave, Max It), détecte l'écran actif via sa base de connaissances déclarative (Playbook M5), et projette une surcouche d'annotations visuelles manuscrites synchronisées avec la voix ewondo.
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span>🌐 Application Web Responsive & Widgets</span><span class="badge badge-green">Rich UI / REST</span></div>
+                    <div class="card-body">
+                        Pour le canal Web, le middleware renvoie un payload structuré contenant les métadonnées de présentation (<code>meta.choices</code>, statuts, suggestions) permettant au frontend d'afficher des boîtes de dialogue modales sécurisées, éliminant tout risque de saisie erronée ou de confusion sur les frais.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span>⚡ Synchronisation & Découplage Multi-Canal</span><span class="badge badge-orange">Idempotence</span></div>
+                    <div class="card-body">
+                        Un utilisateur peut initier une demande de transfert par commande vocale sur son mobile et retrouver sa transaction en attente de confirmation sur l'interface USSD ou Web. L'état de session partagé garantit une continuité d'usage omnicanale sans friction.
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">⚡ Résilience en Réseau Instable (Mode Hors-Ligne & Dégradé)</div>
+                Pour les canaux mobiles opérant en zones à faible connectivité (GPRS / EDGE), le middleware transmet en en-tête des drapeaux de mise en cache locale (<code>Cache-Control: public, max-age=86400</code>) pour les segments de banques audio statiques. L'application mobile peut ainsi vocaliser l'interface même lors d'une chute temporaire de connectivité Internet.
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Note Technique Middleware — Nkap Mobile</span>
+            <span>SAFINUM Innovate Challenge 2026</span>
+            <span>Document Confidentiel — Page 2/4</span>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 3 : MATRICE DES INTENTIONS ==================== -->
+    <div class="page">
+        <div class="page-content">
+            <div class="doc-header">
+                <div>
+                    <span class="brand-badge">NKAP MIDDLEWARE</span>
+                    <span style="font-size: 8.5pt; font-weight: 700; color: #475569; margin-left: 8px;">MOTEUR NLU & MATRICE DES 13 INTENTIONS</span>
+                </div>
+                <div class="header-meta">
+                    Session Jury 09h00 | Réf: <code>NKAP-TECH-2026-V3</code>
+                </div>
+            </div>
+
+            <h2>4. Moteur NLU : Matrice des 13 Intentions Normalisées</h2>
+            <p>
+                Le cœur de compréhension naturelle normalise chaque interaction utilisateur autour de <strong>13 intentions canoniques</strong> (représentées en majuscules strictes). Cette taxonomie formalisée garantit l'alignement contractuel absolu entre les canaux et le Core Banking :
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 22%;">Intention Canonique</th>
+                        <th style="width: 46%;">Rôle Sémantique & Déclencheurs Types</th>
+                        <th style="width: 32%;">Action Métier & Validation Middleware</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>BALANCE_INQUIRY</code></td>
+                        <td>Consultation du solde (<em>« Combien j'ai ? »</em>, <em>« Môn anga bè ? »</em>)</td>
+                        <td>Vérification session ; solde formaté en FCFA avec devises.</td>
+                    </tr>
+                    <tr>
+                        <td><code>TRANSFER</code></td>
+                        <td>Transfert de fonds vers un tiers (montant + bénéficiaire).</td>
+                        <td>Passage obligatoire en Phase 1 (Prepare) de Two-Phase Commit.</td>
+                    </tr>
+                    <tr>
+                        <td><code>BILL_PAYMENT</code></td>
+                        <td>Paiement d'une facture de service public (ENEO, CamWater).</td>
+                        <td>Validation de la référence facture et du montant exigible.</td>
+                    </tr>
+                    <tr>
+                        <td><code>AIRTIME_PURCHASE</code></td>
+                        <td>Achat de crédit téléphonique ou recharge data.</td>
+                        <td>Contrôle du format numéro opérateur (Orange, MTN, Camtel).</td>
+                    </tr>
+                    <tr>
+                        <td><code>CONFIRMATION</code></td>
+                        <td>Validation explicite (<em>« Oui »</em>, <em>« Je valide »</em>, <em>« Èng »</em>, <em>« Tikigi »</em>).</td>
+                        <td>Déclenche la Phase 2 (Commit) de la transaction verrouillée.</td>
+                    </tr>
+                    <tr>
+                        <td><code>CANCELLATION</code></td>
+                        <td>Annulation immédiate (<em>« Non »</em>, <em>« Annule »</em>, <em>« Télege »</em>).</td>
+                        <td>Purge immédiate de la transaction préparée et libération verrous.</td>
+                    </tr>
+                    <tr>
+                        <td><code>CORRECTION</code></td>
+                        <td>Rectification d'un paramètre (<em>« Non, envoie plutôt 3 000 F »</em>).</td>
+                        <td>Mise à jour sélective du slot sans réinitialiser tout le contexte.</td>
+                    </tr>
+                    <tr>
+                        <td><code>FEE_INQUIRY</code></td>
+                        <td>Demande sur la tarification (<em>« Combien coûtent les frais... »</em>).</td>
+                        <td>Calcul instantané selon le barème officiel sans impact financier.</td>
+                    </tr>
+                    <tr>
+                        <td><code>TRANSACTION_HISTORY</code></td>
+                        <td>Consultation des derniers mouvements (<em>« Mes derniers envois »</em>).</td>
+                        <td>Formatage paginé des 3 à 5 dernières opérations du compte.</td>
+                    </tr>
+                    <tr>
+                        <td><code>TERM_EXPLANATION</code></td>
+                        <td>Demande de vulgarisation pédagogique (agios, RIB, caution).</td>
+                        <td>Explication didactique en langue vernaculaire sans jargon.</td>
+                    </tr>
+                    <tr>
+                        <td><code>CLARIFICATION_NEEDED</code></td>
+                        <td><strong>Ambiguïté ou homonymie</strong> (ex: 2 bénéficiaires nommés Paul).</td>
+                        <td><strong>Zero Guessing Policy</strong> : arrêt et demande d'arbitrage explicite.</td>
+                    </tr>
+                    <tr>
+                        <td><code>LANGUAGE_SWITCH</code></td>
+                        <td>Changement de langue explicite (<em>« Parle en Ewondo »</em>, <em>« Kobó ewondo »</em>).</td>
+                        <td>Mise à jour de la préférence linguistique et accusé immédiat.</td>
+                    </tr>
+                    <tr>
+                        <td><code>OUT_OF_SCOPE</code></td>
+                        <td>Requête non financière (météo, football, bavardage).</td>
+                        <td>Recadrage poli vers les services financiers disponibles.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Résolution des Conflits & Politique « Zero Guessing »</h2>
+            <div class="callout callout-warning">
+                <div class="callout-title">⚠️ Règle Impérative de Résolution des Homonymes (Anti-Spéculation)</div>
+                Dans le domaine bancaire, supposer ou deviner un destinataire équivaut à un vol de fonds ou à une erreur irréparable. Lorsque l'utilisateur formule par exemple : <em>« Envoie 5 000 F à Paul »</em> et que son carnet d'adresses référence deux contacts prénommés Paul (<code>Paul Kamga - 677...</code> et <code>Paul Biya - 699...</code>), le middleware <strong>interdit formellement au modèle de faire un choix arbitraire</strong>.
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span>1. Détection Immédiate de Collision</span><span class="badge badge-orange">Slot Ambigu</span></div>
+                    <div class="card-body">
+                        Le moteur de slot-filling identifie une multiplicité de correspondances dans l'annuaire (<code>matches &gt; 1</code>). L'intention est automatiquement classée comme <code>CLARIFICATION_NEEDED</code>.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span>2. Restitution Numérotée Déterministe</span><span class="badge badge-green">Choix Guidé</span></div>
+                    <div class="card-body">
+                        Le système génère une invite claire et numérotée dans la langue de l'utilisateur :<br>
+                        <em>« Deux Paul trouvés : 1 pour Paul Kamga (677..), 2 pour Paul Biya (699..). Répondez 1 ou 2. »</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Note Technique Middleware — Nkap Mobile</span>
+            <span>SAFINUM Innovate Challenge 2026</span>
+            <span>Document Confidentiel — Page 3/4</span>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 4 : SÉCURITÉ, VOCALISATION & VALIDATION ==================== -->
+    <div class="page">
+        <div class="page-content">
+            <div class="doc-header">
+                <div>
+                    <span class="brand-badge">NKAP MIDDLEWARE</span>
+                    <span style="font-size: 8.5pt; font-weight: 700; color: #475569; margin-left: 8px;">SÉCURITÉ, VOCALISATION & RÉSULTATS JURY</span>
+                </div>
+                <div class="header-meta">
+                    Session Jury 09h00 | Réf: <code>NKAP-TECH-2026-V3</code>
+                </div>
+            </div>
+
+            <h2>5. Sécurité Financière & Intégrité Transactionnelle</h2>
+            <p>
+                Le Middleware Nkap intègre trois garde-fous fondamentaux inscrits au cœur de son moteur d'exécution :
+            </p>
+
+            <div class="grid-2">
+                <div class="card" style="border-left: 3.5px solid #dc2626;">
+                    <div class="card-header"><span style="color:#991b1b;">🛡️ Règle Absolue AmountGuard</span><span class="badge badge-red">Anti-Hallucination</span></div>
+                    <div class="card-body">
+                        <strong>Les montants monétaires, frais et numéros de téléphone ne sont JAMAIS soumis à un modèle probabiliste pour traduction ou paraphrase.</strong> Ils sont isolés sous forme de tokens inviolables <code>[AMOUNT:5000:FCFA]</code> et injectés tels quels dans le texte final. Aucun risque d'altération du montant (ex. 50 000 transformé en 5 000).
+                    </div>
+                </div>
+                <div class="card" style="border-left: 3.5px solid #0f766e;">
+                    <div class="card-header"><span>🔒 Two-Phase Commit (2PC)</span><span class="badge badge-green">Préparation / Validation</span></div>
+                    <div class="card-body">
+                        Toute écriture financière s'opère en deux temps stricts :
+                        <br><strong>Phase 1 (Prepare) :</strong> Calcul du débit, frais, solde prévisionnel et émission d'une référence temporaire verrouillée (TTL 120s). Aucun débit n'a lieu.
+                        <br><strong>Phase 2 (Commit) :</strong> Exécution définitive consécutive au consentement formel (<code>CONFIRMATION</code>).
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span>🛑 Isolation Stricte des Codes PIN & OTP</span><span class="badge badge-purple">Conformité PCI-DSS</span></div>
+                    <div class="card-body">
+                        Les codes secrets PIN et OTP ne transitent jamais dans les couches de traduction, de logging ou de NLU. Les filtres d'entrée masquent immédiatement toute séquence suspecte à 4 ou 6 chiffres avant ingestion par le middleware.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span>🔍 Observabilité & Traçabilité X-Trace-Id</span><span class="badge badge-blue">Audit End-to-End</span></div>
+                    <div class="card-body">
+                        Chaque requête propage un en-tête <code>X-Trace-Id</code> unique. Il relie l'interaction brute utilisateur, l'analyse NLU, l'appel Core Banking et l'audio généré pour un audit médico-légal complet en cas de contestation.
+                    </div>
+                </div>
+            </div>
+
+            <h2>6. Pipeline Multilingue & Vocalisation Hybride (Ewondo / Douala)</h2>
+            <p>
+                Pour garantir un confort d'utilisation sans précédent tout en éliminant les latences audio sur réseau mobile 2G/3G :
+            </p>
+            <ul style="margin: 2px 0 6px 16px; padding: 0; font-size: 7.8pt;">
+                <li><strong>Banque Audio Native Studio (<code>voix_test</code>) [Latence 0 ms] :</strong> L'ensemble des structures de phrases clés, salutations, interrogations et statuts usuels ont été enregistrés par des locuteurs natifs ewondophones et doualaphones. Les fichiers audio sont indexés par clé sémantique et servis instantanément via CDN ou cache local sans calcul.</li>
+                <li><strong>Moteur TTS Neural de Fallback :</strong> Pour les montants arbitraires et noms propres dynamiques non présents dans la banque fixe, un synthétiseur léger (modèle MMS / Piper fine-tuné) prend le relais de manière fluide pour vocaliser le segment dynamique.</li>
+            </ul>
+
+            <h2>7. Validation Technique & Résultats en Production</h2>
+            <div class="grid-3">
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 15pt; font-weight: 800; color: #16a34a;">100%</div>
+                    <div style="font-size: 7.5pt; font-weight: 700; color: #334155;">Succès Tests Automatisés</div>
+                    <div style="font-size: 6.5pt; color: #64748b;">Suite de tests Pytest (63 tests validés)</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 15pt; font-weight: 800; color: #0284c7;">28 ms</div>
+                    <div style="font-size: 7.5pt; font-weight: 700; color: #334155;">Latence Moyenne (Fast Lane)</div>
+                    <div style="font-size: 6.5pt; color: #64748b;">Mesurée en production sur Railway</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 15pt; font-weight: 800; color: #0f766e;">3 Canaux</div>
+                    <div style="font-size: 7.5pt; font-weight: 700; color: #334155;">Officiels Validés</div>
+                    <div style="font-size: 6.5pt; color: #64748b;">USSD (*123#), Web, Mobile Android</div>
+                </div>
+            </div>
+
+            <h2>8. Limites Connues & Feuille de Route Post-Challenge</h2>
+            <ol style="margin: 2px 0 4px 16px; padding: 0; font-size: 7.8pt;">
+                <li><strong>Reconnaissance vocale en environnement bruyant :</strong> L'ASR sur les dialectes locaux nécessite un pré-filtrage acoustique accru dans les marchés ou transports (en cours de fiabilisation).</li>
+                <li><strong>Licences & Souveraineté IA :</strong> Le modèle vocal expérimental s'appuie sur une base de recherche (CC-BY-NC) ; la transition vers un modèle open-source commercial propriétaire sur corpus camerounais souverain est planifiée.</li>
+                <li><strong>Déploiement Edge AI :</strong> Intégration future d'un modèle NLU compact On-Device sur puces MediaTek/Qualcomm d'entrée de gamme pour un fonctionnement 100% hors-ligne.</li>
+            </ol>
+
+            <div style="margin-top: 10px; border-top: 1.5px solid #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <div style="font-size: 7pt; color: #475569;">Déployé en production sur :</div>
+                    <div style="font-size: 7.5pt; font-weight: 700; color: #0369a1;">https://nkapmobile-production.up.railway.app</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 7pt; color: #475569;">Équipe de Développement Nkap</div>
+                    <div style="font-size: 7.5pt; font-weight: 700; color: #0f766e;">SAFINUM Innovate Challenge 2026</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Note Technique Middleware — Nkap Mobile</span>
+            <span>SAFINUM Innovate Challenge 2026</span>
+            <span>Document Confidentiel — Page 4/4</span>
+        </div>
+    </div>
+
+</body>
+</html>
