@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import unicodedata
 from pathlib import Path
@@ -11,10 +12,39 @@ from typing import Any
 from app.sandbox.gsm7 import fit_gsm7
 
 TRANSLATIONS_DIR = Path(__file__).resolve().parent / "translations"
+ORTHOGRAPHY_STATE_FILE = TRANSLATIONS_DIR / ".orthography_mode"
 SUPPORTED_LANGS = {"ewo", "dua", "en", "fr"}
+ALLOWED_ORTHOGRAPHIES = {"aglc", "intuitive"}
 
-_DICT_CACHE: dict[str, dict[str, str]] = {}
-_UI_CACHE: dict[tuple[str, str, tuple[str, ...]], dict[str, Any]] = {}
+_DICT_CACHE: dict[tuple[str, str], dict[str, str]] = {}
+_UI_CACHE: dict[tuple[str, str, str, tuple[str, ...]], dict[str, Any]] = {}
+
+
+def get_orthography_mode() -> str:
+    """Retourne le mode d'écriture actif ('aglc' ou 'intuitive')."""
+    if ORTHOGRAPHY_STATE_FILE.exists():
+        try:
+            val = ORTHOGRAPHY_STATE_FILE.read_text(encoding="utf-8").strip().lower()
+            if val in ALLOWED_ORTHOGRAPHIES:
+                return val
+        except OSError:
+            pass
+    env_val = str(os.getenv("NKAP_ORTHOGRAPHY", "")).strip().lower()
+    if env_val in ALLOWED_ORTHOGRAPHIES:
+        return env_val
+    return "aglc"
+
+
+def set_orthography_mode(mode: str) -> str:
+    """Bascule le mode d'écriture ('aglc' ou 'intuitive') et vide les caches UI."""
+    norm_mode = str(mode or "").strip().lower()
+    if norm_mode not in ALLOWED_ORTHOGRAPHIES:
+        raise ValueError(f"Mode d'orthographe invalide: {mode!r} (attendu: aglc | intuitive)")
+    ORTHOGRAPHY_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ORTHOGRAPHY_STATE_FILE.write_text(norm_mode + "\n", encoding="utf-8")
+    _DICT_CACHE.clear()
+    _UI_CACHE.clear()
+    return norm_mode
 
 
 def _norm(text: str | None) -> str:
@@ -24,17 +54,23 @@ def _norm(text: str | None) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
-def load_dictionary(lang: str) -> dict[str, str] | None:
+def load_dictionary(lang: str, mode: str | None = None) -> dict[str, str] | None:
     code = (lang or "").strip().lower()
     if code not in {"ewo", "dua", "en"}:
         return None
-    if code in _DICT_CACHE:
-        return _DICT_CACHE[code]
-    path = TRANSLATIONS_DIR / f"{code}.json"
+    active_mode = (mode or get_orthography_mode()).strip().lower()
+    if active_mode not in ALLOWED_ORTHOGRAPHIES:
+        active_mode = "aglc"
+    cache_key = (code, active_mode)
+    if cache_key in _DICT_CACHE:
+        return _DICT_CACHE[cache_key]
+    path = TRANSLATIONS_DIR / f"{code}_intuitive.json" if active_mode == "intuitive" else TRANSLATIONS_DIR / f"{code}.json"
+    if not path.exists():
+        path = TRANSLATIONS_DIR / f"{code}.json"
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
-    _DICT_CACHE[code] = data
+    _DICT_CACHE[cache_key] = data
     return data
 
 
@@ -64,11 +100,12 @@ def translate_ui(payload: dict[str, Any]) -> dict[str, Any]:
             "strings": {k: str((v or {}).get("text", "")) for k, v in source.items()},
         }
 
-    cache_key = (requested, screen, tuple(sorted(source.keys())))
+    active_mode = get_orthography_mode()
+    cache_key = (requested, active_mode, screen, tuple(sorted(source.keys())))
     if cache_key in _UI_CACHE:
         return _UI_CACHE[cache_key]
 
-    dictionary = load_dictionary(requested)
+    dictionary = load_dictionary(requested, mode=active_mode)
     if dictionary is None:
         return {
             "language": "fr",
