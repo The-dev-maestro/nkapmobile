@@ -8,10 +8,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
-from app.sandbox.language import translate_ui
+from app.sandbox.language import (
+    ALLOWED_ORTHOGRAPHIES,
+    get_orthography_mode,
+    set_orthography_mode,
+    translate_ui,
+)
 from app.sandbox.ussd_flow import handle_channel_turn
 
 router = APIRouter(prefix="/sandbox", tags=["safinum-sandbox"])
@@ -25,7 +30,23 @@ async def sandbox_health() -> dict[str, Any]:
         "service": "nkap-safinum-middleware",
         "channels": ["ussd", "mobile", "web", "sms", "atm", "ivr"],
         "languages": ["ewo", "dua", "fr", "en"],
+        "orthography": get_orthography_mode(),
     }
+
+
+@router.get("/orthography")
+async def get_orthography() -> dict[str, Any]:
+    return {"mode": get_orthography_mode(), "allowed": sorted(ALLOWED_ORTHOGRAPHIES)}
+
+
+@router.post("/orthography")
+async def update_orthography(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    mode = str(body.get("mode") or "").strip().lower()
+    if mode not in ALLOWED_ORTHOGRAPHIES:
+        raise HTTPException(status_code=400, detail="mode must be 'aglc' or 'intuitive'")
+    applied = set_orthography_mode(mode)
+    return {"ok": True, "mode": applied}
 
 
 @router.post("")

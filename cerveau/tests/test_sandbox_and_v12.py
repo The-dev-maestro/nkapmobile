@@ -773,3 +773,46 @@ def test_harness_skips_redundant_notebook_on_single_target_and_uses_v12_gestures
     assert r_fee.status_code == 200
     t_fee = [a["action"]["t"] for a in r_fee.json()["actions"]]
     assert "notebook" not in t_fee and "highlight" in t_fee and "check" in t_fee
+
+
+def test_orthography_switch_cli_and_http():
+    from app.sandbox.language import get_orthography_mode, set_orthography_mode
+    from app.sandbox.orthography import main as ortho_cli
+
+    prev = get_orthography_mode()
+    try:
+        payload = {
+            "trace_id": "tr-ortho",
+            "channel": "web",
+            "type": "ui_translation",
+            "language": "ewo",
+            "source_language": "fr",
+            "screen": "home",
+            "strings": {
+                "home.balance_label": {"text": "Solde disponible"},
+                "shell.greeting": {"text": "Bonjour {name}"},
+            },
+        }
+        # 1. Mode AGLC via CLI
+        assert ortho_cli(["aglc"]) == 0
+        r_aglc = client.post("/sandbox", json=payload)
+        assert r_aglc.status_code == 200
+        assert r_aglc.json()["strings"]["home.balance_label"] == "Itáŋ inə́ á ŋkwáp"
+        assert r_aglc.json()["strings"]["shell.greeting"] == "Mbə̀mbə́ kírí {name}"
+
+        # 2. Mode Assonance / Intuitif via CLI
+        assert ortho_cli(["intuitive"]) == 0
+        r_int = client.post("/sandbox", json=payload)
+        assert r_int.status_code == 200
+        assert r_int.json()["strings"]["home.balance_label"] == "Itan ineu a nkwap"
+        assert r_int.json()["strings"]["shell.greeting"] == "{name} iyole dzoe Mbeumbe kiri"
+
+        # 3. Bascule via HTTP POST /sandbox/orthography
+        r_post = client.post("/sandbox/orthography", json={"mode": "aglc"})
+        assert r_post.status_code == 200
+        assert r_post.json()["mode"] == "aglc"
+        r_back = client.post("/sandbox", json=payload)
+        assert r_back.json()["strings"]["home.balance_label"] == "Itáŋ inə́ á ŋkwáp"
+    finally:
+        set_orthography_mode(prev)
+
