@@ -32,21 +32,26 @@ def _placeholders(text: str) -> list[str]:
 
 def test_translations_complete_and_placeholders_intact():
     en = json.loads((TRANSLATIONS_DIR / "en.json").read_text(encoding="utf-8"))
-    for lang in ("ewo", "dua"):
-        tr = json.loads((TRANSLATIONS_DIR / f"{lang}.json").read_text(encoding="utf-8"))
-        assert set(tr.keys()) == set(en.keys()), f"Clés manquantes ou en trop dans {lang}.json"
+    for fname in ("ewo", "ewo_intuitive", "dua", "dua_intuitive"):
+        tr = json.loads((TRANSLATIONS_DIR / f"{fname}.json").read_text(encoding="utf-8"))
+        assert set(tr.keys()) == set(en.keys()), f"Clés manquantes ou en trop dans {fname}.json"
         for key, en_val in en.items():
             val = tr[key]
-            assert isinstance(val, str) and val.strip(), f"Clé vide {lang}.{key}"
+            assert isinstance(val, str) and val.strip(), f"Clé vide {fname}.{key}"
             assert _placeholders(val) == _placeholders(en_val), (
-                f"Placeholders cassés sur {lang}.{key}: {val!r} vs {en_val!r}"
+                f"Placeholders cassés sur {fname}.{key}: {val!r} vs {en_val!r}"
             )
             if key.startswith("nav."):
-                assert len(val) <= 12, f"{lang}.{key} dépasse 12 car.: {val!r}"
+                assert len(val) <= 12, f"{fname}.{key} dépasse 12 car.: {val!r}"
             if key.startswith("tx.status."):
-                assert len(val) <= 16, f"{lang}.{key} dépasse 16 car.: {val!r}"
+                assert len(val) <= 16, f"{fname}.{key} dépasse 16 car.: {val!r}"
             if key.startswith("home.action_"):
-                assert len(val) <= 28, f"{lang}.{key} dépasse 28 car.: {val!r}"
+                assert len(val) <= 28, f"{fname}.{key} dépasse 28 car.: {val!r}"
+        # Vérifie qu'aucun placeholder IA non validé ne subsiste
+        assert tr["history.col_status"] == "Statut"
+        if fname.startswith("ewo"):
+            assert tr["error.GENERIC"] == "L'opération n'a pas pu aboutir. Réessayez."
+            assert tr["pay.tab_bill"] == "Facture"
 
 
 def test_sandbox_ui_translation_honest_and_respects_constraints():

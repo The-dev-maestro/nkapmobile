@@ -1,6 +1,6 @@
 {
     "balance_answer": {
-        "ewo": "Solde wɔ́g á {amount}.",
+        "ewo": "Ou beleu {amount} a nkwap.",
         "fr": "Votre solde est de {amount}."
     },
     "transfer_done": {
@@ -8,107 +8,107 @@
         "fr": "Transfert réussi de {amount}."
     },
     "fees_intro": {
-        "ewo": "Mbug y'akɔntɔn.",
+        "ewo": "Les frais sont le petit prix que la banque prend pour faire l'envoi. Vers un compte Safinum, c'est gratuit : zéro franc en plus.",
         "fr": "Les frais sont le petit prix que la banque prend pour faire l'envoi. Vers un compte Safinum, c'est gratuit : zéro franc en plus."
     },
     "fees_answer": {
-        "ewo": "Mbug y'akɔntɔn é né {amount}.",
+        "ewo": "Le montant exact de tes frais pour cet envoi est de {amount}, écrit juste ici.",
         "fr": "Le montant exact de tes frais pour cet envoi est de {amount}, écrit juste ici."
     },
     "fees_schedule": {
-        "ewo": "Compte Safinum Gratuit 0 FCFA Mobile Money 1,5 % Autre banque 2 %",
+        "ewo": "Vers compte Safinum Gratuit (0 FCFA) Vers Mobile Money 1,5 % du montant Vers autre banque 2 % du montant Tes frais ici Combien coûtent les frais ?",
         "fr": "Vers compte Safinum Gratuit (0 FCFA) Vers Mobile Money 1,5 % du montant Vers autre banque 2 % du montant Tes frais ici Combien coûtent les frais ?"
     },
     "remaining_intro": {
-        "ewo": "Ndɛn wɔ́g.",
+        "ewo": "Je pose le calcul sur ma feuille pour te montrer ce qu'il te restera.",
         "fr": "Je pose le calcul sur ma feuille pour te montrer ce qu'il te restera."
     },
     "remaining_answer": {
-        "ewo": "Ndɛn wɔ́g é nyéŋ {amount}.",
+        "ewo": "Ce montant de {amount} correspond exactement au solde après opération écrit ici.",
         "fr": "Ce montant de {amount} correspond exactement au solde après opération écrit ici."
     },
     "history_intro": {
-        "ewo": "Mebɔlɔ mɔ́g mé né vá.",
+        "ewo": "Voici tes dernières opérations.",
         "fr": "Voici tes dernières opérations."
     },
     "history_answer": {
-        "ewo": "Mebɔlɔ mɔ́g.",
+        "ewo": "Ton salaire reçu et son montant sont écrits sur cette ligne.",
         "fr": "Ton salaire reçu et son montant sont écrits sur cette ligne."
     },
     "beneficiary_intro": {
-        "ewo": "Bɛ́gɛ̌ dʒóé.",
+        "ewo": "Écris ou vérifie le nom du destinataire ici.",
         "fr": "Écris ou vérifie le nom du destinataire ici."
     },
     "beneficiary_answer": {
-        "ewo": "Bɛ́gɛ̌ dʒóé na nimero tɛlɛfɔ́n.",
+        "ewo": "Puis vérifie son numéro de téléphone juste en dessous.",
         "fr": "Puis vérifie son numéro de téléphone juste en dessous."
     },
     "warning_intro": {
-        "ewo": "Te ve ngɔ́.",
+        "ewo": "La banque affiche ce message jaune parce que tu n'as jamais envoyé d'argent à cette personne. Une fois validé, on ne peut plus annuler le transfert.",
         "fr": "La banque affiche ce message jaune parce que tu n'as jamais envoyé d'argent à cette personne. Une fois validé, on ne peut plus annuler le transfert."
     },
     "warning_answer": {
-        "ewo": "Bɛ́gɛ̌ nimero tɛlɛfɔ́n.",
+        "ewo": "Vérifie bien chaque chiffre du numéro ici avant de continuer.",
         "fr": "Vérifie bien chaque chiffre du numéro ici avant de continuer."
     },
     "check_continue_intro": {
-        "ewo": "Bɛ́gɛ̌ mben.",
+        "ewo": "Avant de passer au résumé, coche d'abord la case de vérification ici.",
         "fr": "Avant de passer au résumé, coche d'abord la case de vérification ici."
     },
     "check_continue_done": {
-        "ewo": "Bɔ́l vá.",
+        "ewo": "Puis appuie sur Continuer pour vérifier le récapitulatif.",
         "fr": "Puis appuie sur Continuer pour vérifier le récapitulatif."
     },
     "recap_amounts_intro": {
-        "ewo": "Mben ya mbug.",
+        "ewo": "Voici le résumé des montants avant de confirmer.",
         "fr": "Voici le résumé des montants avant de confirmer."
     },
     "recap_amounts_done": {
-        "ewo": "Mben é né vá.",
+        "ewo": "Le montant, les frais et le total débité sont écrits ici.",
         "fr": "Le montant, les frais et le total débité sont écrits ici."
     },
     "recap_recipient_intro": {
-        "ewo": "Dʒóé na nimero.",
+        "ewo": "Vérifie une dernière fois le nom et le téléphone du bénéficiaire.",
         "fr": "Vérifie une dernière fois le nom et le téléphone du bénéficiaire."
     },
     "recap_recipient_done": {
-        "ewo": "Modifier.",
+        "ewo": "S'il y a une erreur, appuie sur Modifier pour corriger.",
         "fr": "S'il y a une erreur, appuie sur Modifier pour corriger."
     },
     "confirm_intro": {
-        "ewo": "Bɛ́gɛ̌ mben, ô bɔ́l.",
+        "ewo": "Coche la case pour confirmer que tout est exact.",
         "fr": "Coche la case pour confirmer que tout est exact."
     },
     "confirm_answer": {
-        "ewo": "Bɔ́l vá.",
+        "ewo": "Puis appuie ici sur Confirmer le transfert pour envoyer définitivement l'argent.",
         "fr": "Puis appuie ici sur Confirmer le transfert pour envoyer définitivement l'argent."
     },
     "receipt_intro": {
-        "ewo": "Ngɔ́ é maneya.",
+        "ewo": "Ton transfert a été envoyé avec succès !",
         "fr": "Ton transfert a été envoyé avec succès !"
     },
     "receipt_answer": {
-        "ewo": "Ngɔ́ é maneya, ndɛn ô bɛsú.",
+        "ewo": "Voici la référence de ton reçu et le total envoyé comme preuve.",
         "fr": "Voici la référence de ton reçu et le total envoyé comme preuve."
     },
     "error_intro": {
-        "ewo": "Ékop é kuiya.",
+        "ewo": "Attention : la banque bloque l'envoi avec ce message rouge. Rien n'a été retiré de ton compte.",
         "fr": "Attention : la banque bloque l'envoi avec ce message rouge. Rien n'a été retiré de ton compte."
     },
     "error_answer": {
-        "ewo": "Ékop é kuiya, akɔntɔn wɔ́g á sɛ̌ bɛ́n.",
+        "ewo": "Lis le message rouge, corrige le montant ou l'information demandée, puis recommence.",
         "fr": "Lis le message rouge, corrige le montant ou l'information demandée, puis recommence."
     },
     "unseen_intro": {
-        "ewo": "Efíá é ne mfi.",
+        "ewo": "Attention ! Un nouveau message important vient d'apparaître à l'écran.",
         "fr": "Attention ! Un nouveau message important vient d'apparaître à l'écran."
     },
     "unseen_answer": {
-        "ewo": "Efíá é ne mfi é né vá.",
+        "ewo": "Lis bien cette consigne avant de poursuivre ton opération.",
         "fr": "Lis bien cette consigne avant de poursuivre ton opération."
     },
     "navigation_answer": {
-        "ewo": "Bɔ́l vá.",
+        "ewo": "Quand tout est bon, appuie sur ce bouton pour passer à l'étape suivante.",
         "fr": "Quand tout est bon, appuie sur ce bouton pour passer à l'étape suivante."
     }
 }

@@ -520,7 +520,7 @@ def _do_history(phone: str, bank: SafinumBankClient, lang: str, max_septets: int
         who = str(raw_who)[:12]
         lines.append(f"- {kind} {who} {amt} ({st})".replace("  ", " ").strip())
     declared = resolve_lang(lang)
-    header = {"ewo": "Itang mvet:", "dua": "Miango:", "en": "History:"}.get(declared, "Historique:")
+    header = {"ewo": "Ndouang:", "dua": "Miango:", "en": "History:"}.get(declared, "Historique:")
     return _reply(
         header + "\n" + "\n".join(lines),
         "TRANSACTION_HISTORY",

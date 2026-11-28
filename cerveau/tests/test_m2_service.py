@@ -50,7 +50,7 @@ def test_m2_service_handles_french_and_ewondo():
     transcript.lang = "ewo"
     actions_ewo = service.handle_turn(transcript, screen)
     speak_ewo = next(a for a in actions_ewo if a.action.t == "speak")
-    assert "Solde wɔ́g á 42 500 FCFA." in speak_ewo.action.text
+    assert "Ou beleu 42 500 FCFA a nkwap." in speak_ewo.action.text
 
     # 2. Test en Français
     transcript.lang = "fr"
