@@ -133,63 +133,105 @@ def translate_ui(payload: dict[str, Any]) -> dict[str, Any]:
 
 # ── Compréhension multilingue (Ewondo, Duala, Français, Anglais) ───────────
 
+def _has_word(norm_text: str, phrases: tuple[str, ...]) -> bool:
+    for p in phrases:
+        if re.search(rf"(?<!\w){re.escape(p)}(?!\w)", norm_text):
+            return True
+    return False
+
+
 def detect_language_switch(text: str) -> str | None:
     n = _norm(text)
-    switch_triggers = (
-        "langue", "language", "parle", "parler", "passe en", "passer en", "en ",
-        "switch", "change to", "kobo", "bato", "nkobo", "bwele", "tyende nkobo",
-        "tukwa bwambo", "wengisane eyeme", "wenginane bwambo", "eyeme", "bwambo",
-    )
+    if not n:
+        return None
     lang_map = {
         "ewo": ("ewondo", "ewo"),
         "dua": ("duala", "douala", "dua"),
         "fr": ("francais", "french", "fr"),
         "en": ("anglais", "english", "en"),
     }
-    has_trigger = any(t in n for t in switch_triggers)
+    # 1. Exact bare language name or code (ex: "ewondo", "duala", "fr", "en")
     for code, tokens in lang_map.items():
-        for tok in tokens:
-            if n == tok or (has_trigger and re.search(rf"\b{tok}\b", n)):
+        if n in tokens:
+            return code
+
+    # 2. Preposition + explicit language name (jamais "en <mot quelconque>" -> "en" !)
+    prep_match = re.search(
+        r"\b(?:en|in|to)\s+(ewondo|ewo|duala|douala|dua|francais|french|anglais|english)\b",
+        n,
+    )
+    if prep_match:
+        tok = prep_match.group(1)
+        for code, tokens in lang_map.items():
+            if tok in tokens:
                 return code
+
+    # 3. Explicit language-switch trigger + language token
+    switch_triggers = (
+        "langue", "language", "parle", "parler", "passe en", "passer en",
+        "switch", "change to", "kobo", "nkobo", "bwele", "tyende nkobo",
+        "tukwa bwambo", "wengisane eyeme", "wenginane bwambo", "eyeme", "bwambo",
+    )
+    if _has_word(n, switch_triggers):
+        for code, tokens in lang_map.items():
+            for tok in tokens:
+                # Évite que la préposition française "en" dans "passer en fulfulde" bascule en anglais
+                if tok == "en" and re.search(r"\b(?:passe|passer|parle|parler)\s+en\b", n):
+                    continue
+                if re.search(rf"\b{re.escape(tok)}\b", n):
+                    return code
     return None
 
 
-def detect_term_question(text: str) -> str | None:
+def detect_term_question(text: str, *, allow_bare: bool = True) -> str | None:
     n = _norm(text)
-    asks_def = any(
-        k in n
-        for k in (
+    if not n:
+        return None
+    asks_def = "?" in str(text or "") or _has_word(
+        n,
+        (
             "c'est quoi", "cest quoi", "veut dire", "signifie", "explique",
             "definition", "what is", "za ne", "nje ne", "e ne dze", "e ne za",
             "terme", "mot", "sens", "teleya mba",
-        )
+        ),
     )
-    if "microfinance" in n or "micro finance" in n or "micro-finance" in n:
-        return "microfinance"
-    if "plafond" in n or "limite" in n or "limit" in n or "nkuk" in n or "ndongo" in n or "jasame" in n or "mwasame" in n:
-        return "limit" if (asks_def or len(n.split()) <= 3) else None
-    if "beneficiaire" in n or "destinataire" in n or "beneficiary" in n or "mukusa" in n or "mukusedi" in n or "mukuse" in n or "mutombwedi" in n or "mutombwanedi" in n:
-        return "beneficiary" if (asks_def or len(n.split()) <= 3) else None
-    if asks_def and any(k in n for k in ("frais", "fee", "mbug", "mabala", "musen", "mususedi", "commission", "tarif")):
+    # Ne jamais détourner une commande d'action (ex: "modifier beneficiaire Franck", "envoyer a Paul Ndongo")
+    has_action_verb = _has_word(
+        n,
+        (
+            "modifier", "modifie", "corriger", "corrige", "changer", "change",
+            "envoyer", "envoie", "transferer", "transfert", "send", "lomo", "lom",
+            "loma", "payer", "pay", "annuler", "confirmer", "tyende", "tukwa",
+        ),
+    )
+    bare_ok = allow_bare and not has_action_verb and len(n.split()) <= 2
+
+    if _has_word(n, ("microfinance", "micro finance", "micro-finance")):
+        return "microfinance" if (asks_def or bare_ok) else None
+    if _has_word(n, ("plafond", "limite", "limit", "nkuk", "ndongo", "jasame", "mwasame")):
+        return "limit" if (asks_def or bare_ok) else None
+    if _has_word(n, ("beneficiaire", "destinataire", "beneficiary", "mukusa", "mukusedi", "mukuse", "mutombwedi", "mutombwanedi")):
+        return "beneficiary" if (asks_def or bare_ok) else None
+    if asks_def and _has_word(n, ("frais", "fee", "mbug", "mabala", "musen", "mususedi", "commission", "tarif")):
         return "fee"
-    if asks_def and any(k in n for k in ("epargne", "epargner", "saving")):
+    if asks_def and _has_word(n, ("epargne", "epargner", "saving", "savings")):
         return "epargne"
-    if asks_def and any(k in n for k in ("credit", "pret", "emprunt", "loan", "microcredit")):
+    if asks_def and _has_word(n, ("credit", "pret", "emprunt", "loan", "microcredit")):
         return "credit"
-    if asks_def and any(k in n for k in ("tontine", "njangi")):
+    if asks_def and _has_word(n, ("tontine", "njangi")):
         return "tontine"
-    if asks_def and any(k in n for k in ("mobile money", "momo", "orange money", "wallet")):
+    if asks_def and _has_word(n, ("mobile money", "momo", "orange money", "wallet")):
         return "mobile_money"
-    if asks_def and any(k in n for k in ("ussd", "code court")):
+    if asks_def and _has_word(n, ("ussd", "code court")):
         return "ussd"
-    if asks_def and any(k in n for k in ("code pin", "code secret", "pin")):
+    if asks_def and _has_word(n, ("code pin", "code secret", "pin")):
         return "pin"
     return None
 
 
 def parse_amount(text: str) -> int | None:
-    # Évite de confondre un numéro camerounais (6XXXXXXXX ou 2376XXXXXXXX) avec un montant
-    cleaned = re.sub(r"\b(?:237)?6\d{8}\b", " ", text or "")
+    # Évite de confondre un numéro camerounais (6XXXXXXXX, 6XX XX XX XX ou +237 6XX...) avec un montant
+    cleaned = re.sub(r"(?<!\d)(?:\+?237[\s.-]?)?6(?:[\s.-]?\d){8}(?!\d)", " ", text or "")
     matches = re.findall(r"\b\d[\d\s.]{0,9}\d\b|\b\d+\b", cleaned)
     for m in matches:
         digits = re.sub(r"\D+", "", m)
@@ -202,7 +244,7 @@ def parse_amount(text: str) -> int | None:
 
 def parse_phone(text: str) -> str | None:
     compact = re.sub(r"[\s.-]+", "", text or "")
-    m = re.search(r"(?:237)?(6\d{8})", compact)
+    m = re.search(r"(?<!\d)(?:\+?237)?(6\d{8})(?!\d)", compact)
     if m:
         return "237" + m.group(1)
     return None
@@ -210,13 +252,13 @@ def parse_phone(text: str) -> str | None:
 
 def detect_biller(text: str) -> str | None:
     n = _norm(text)
-    if any(k in n for k in ("eneo", "electricite", "courant", "lumiere", "mfie", "weya")):
+    if _has_word(n, ("eneo", "electricite", "courant", "lumiere", "mfie", "weya")):
         return "ENEO"
-    if any(k in n for k in ("camwater", "eau", "mendim", "medzim", "madiba", "water")):
+    if _has_word(n, ("camwater", "eau", "mendim", "medzim", "madiba", "water")):
         return "CAMWATER"
-    if any(k in n for k in ("canal", "tele", "tv")):
+    if _has_word(n, ("canal", "canal+", "tele", "tv")):
         return "CANAL"
-    if any(k in n for k in ("camtel", "internet", "wifi")):
+    if _has_word(n, ("camtel", "internet", "wifi")):
         return "CAMTEL"
     return None
 
@@ -225,25 +267,26 @@ def detect_intent_keyword(text: str) -> str | None:
     n = _norm(text)
     if not n:
         return None
-    if any(k in n for k in ("confirmer", "confirme", "oui", "valider", "ok", "yes", "yemban", "yi wa yebeu", "yebeu", "bamse", "mbamse", "na kasi", "ne medi")):
-        return "CONFIRM"
-    if any(k in n for k in ("annuler", "annule", "non", "stop", "cancel", "vaa", "dimi", "buka", "esele", "essele", "a bangi", "kem")):
-        return "CANCEL"
-    if any(k in n for k in ("corriger", "corrige", "modifier", "modifie", "changer", "change", "finalement", "plutot", "tyende", "tsenegue", "tukwa", "wengisane", "engele", "na wondi")):
+    # Priorité CORRECTION avant CONFIRM/CANCEL (ex: "non finalement 5000", "oui modifier 10000")
+    if _has_word(n, ("corriger", "corrige", "modifier", "modifie", "changer", "change", "finalement", "plutot", "tyende", "tsenegue", "tukwa", "wengisane", "engele", "na wondi", "edit")):
         return "CORRECTION"
-    if any(k in n for k in ("frais", "combien coute", "cout", "tarif", "fee", "mbug", "be frais", "mabala", "musen", "mususedi", "busise", "jombwa mbolo")):
+    if _has_word(n, ("confirmer", "confirme", "confirm", "oui", "valider", "valide", "ok", "yes", "yemban", "yi wa yebeu", "yebeu", "bamse", "mbamse", "na kasi", "ne medi")):
+        return "CONFIRM"
+    if _has_word(n, ("annuler", "annule", "non", "stop", "cancel", "vaa", "dimi", "buka", "esele", "essele", "a bangi", "kem")):
+        return "CANCEL"
+    if _has_word(n, ("frais", "combien coute", "cout", "tarif", "fee", "fees", "mbug", "be frais", "mabala", "musen", "mususedi", "busise", "jombwa mbolo")):
         return "FEE_INQUIRY"
-    if any(k in n for k in ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "ndouang", "me tang", "bebolo", "misongi", "misondi", "miango")):
+    if _has_word(n, ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "ndouang", "me tang", "bebolo", "misongi", "misondi", "miango")):
         return "TRANSACTION_HISTORY"
-    if any(k in n for k in ("credit", "airtime", "recharge", "unites", "kredi", "ikola", "wa couss ikola", "ebale", "djanda la mudi", "djanta musinga", "musinga", "londe la beboledi")):
+    if _has_word(n, ("credit", "airtime", "recharge", "recharger", "unites", "kredi", "ikola", "wa couss ikola", "ebale", "djanda la mudi", "djanta musinga", "musinga", "londe la beboledi")):
         return "AIRTIME_PURCHASE"
-    if any(k in n for k in ("facture", "bill", "eneo", "camwater", "canal", "camtel", "kalara", "kalati", "yaana facture", "sawa", "saweya", "musawedi", "na pula wasa", "dipapa la")):
+    if _has_word(n, ("facture", "factures", "bill", "bills", "eneo", "camwater", "canal", "camtel", "kalara", "kalati", "yaana facture", "sawa", "saweya", "musawedi", "na pula wasa", "dipapa la")):
         return "BILL_PAYMENT"
-    if any(k in n for k in ("retrait", "retirer", "withdraw", "gab", "atm", "nong moni", "vaagui", "busa moni", "kusa la moni", "sumua")):
+    if _has_word(n, ("retrait", "retirer", "withdraw", "withdrawal", "gab", "atm", "nong moni", "vaagui", "busa moni", "kusa la moni", "sumua")):
         return "WITHDRAWAL"
-    if any(k in n for k in ("envoyer", "envoie", "transfert", "transferer", "send", "lomo", "lom", "loma", "lomea", "tombise", "na ni tombele")):
+    if _has_word(n, ("envoyer", "envoie", "transfert", "transferer", "transfer", "send", "lomo", "lom", "loma", "lomea", "tombise", "na ni tombele")):
         return "TRANSFER"
-    if any(k in n for k in ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "ou beleu", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele", "nje ye etom yam", "edia", "bongo bene")):
+    if _has_word(n, ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "ou beleu", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele", "nje ye etom yam", "edia", "bongo bene")):
         return "BALANCE_INQUIRY"
     return None
 
@@ -310,6 +353,12 @@ PHRASES: dict[str, dict[str, str]] = {
         "dua": "Sawa {biller} {amount}. Mususedi {fee}, total {total}.\n1. Bamse\n2. Sumua\n3. Tukwa musongi",
         "fr": "Facture {biller} {amount}. Frais {fee}, total {total}.\n1. Confirmer\n2. Annuler\n3. Modifier montant",
         "en": "{biller} bill {amount}. Fee {fee}, total {total}.\n1. Confirm\n2. Cancel\n3. Edit amount",
+    },
+    "confirm_withdrawal": {
+        "ewo": "Nong moni GAB {amount}. Mbug {fee}, ntolan {total}.\n1. Yemban\n2. Vaa\n3. Tyende itan",
+        "dua": "Sumua o GAB {amount}. Mususedi {fee}, total {total}.\n1. Bamse\n2. Sumua\n3. Tukwa musongi",
+        "fr": "Retrait GAB {amount}. Frais {fee}, total {total}.\n1. Confirmer\n2. Annuler\n3. Modifier montant",
+        "en": "ATM withdrawal {amount}. Fee {fee}, total {total}.\n1. Confirm\n2. Cancel\n3. Edit amount",
     },
     "confirmed": {
         "ewo": "Mvet o boban mben! {amount} a {to}. Ref {ref}.",
@@ -421,7 +470,7 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "lang_switched": {
         "ewo": "Nkobo o tyendeban: Ewondo. {resume}",
-        "dua": "Na wengisane eyeme: Duala. To lambo di si bolone. {resume}",
+        "dua": "Na wengisane eyeme: Duala. {resume}",
         "fr": "Langue changee: Francais. {resume}",
         "en": "Language switched: English. {resume}",
     },

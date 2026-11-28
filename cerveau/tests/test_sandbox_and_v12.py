@@ -816,3 +816,290 @@ def test_orthography_switch_cli_and_http():
     finally:
         set_orthography_mode(prev)
 
+
+def test_ussd_multiworker_sqlite_and_stateless_replica_recovery(tmp_path, monkeypatch):
+    """Régression critique : les sessions USSD survivent entre workers distincts ET répliques stateless."""
+    from app.sandbox import ussd_flow
+    from app.sandbox.ussd_flow import SqliteSessionStore
+
+    db_file = tmp_path / "sessions.sqlite3"
+    worker1_store = SqliteSessionStore(db_file)
+    worker2_store = SqliteSessionStore(db_file)
+
+    bank = _mock_bank()
+
+    def _benef_lookup(q: str | None = None, phone: str | None = None):
+        ql = (q or "").lower()
+        all_b = [
+            {"name": "Blaise Mukete", "phone": "237621028428", "institution": "SAFINUM"},
+            {"name": "Blaise Tchami", "phone": "237652084938", "institution": "SAFINUM"},
+        ]
+        if ql == "blaise":
+            return True, 200, {"beneficiaries": all_b}
+        if ql == "blaise mukete":
+            # Simule même un backend qui ne matche pas l'espace -> fallback jetons + filtrage exact !
+            return True, 200, {"beneficiaries": []}
+        if ql == "mukete":
+            return True, 200, {"beneficiaries": [all_b[0]]}
+        return True, 200, {"beneficiaries": [b for b in all_b if ql in b["name"].lower()]}
+
+    bank.beneficiaries.side_effect = _benef_lookup
+    bank.create_transaction.return_value = (
+        True,
+        201,
+        {"id": "TRX-BLAISE-1", "amount": 5000, "fee": 50, "total": 5050, "to": "237652084938", "status": "pending"},
+    )
+    bank.confirm.return_value = (
+        True,
+        200,
+        {"id": "TRX-BLAISE-1", "amount": 5000, "to": "237652084938", "status": "confirmed"},
+    )
+
+    # 1. Alternance Worker 1 / Worker 2 sur le parcours exact des captures utilisateur
+    # Scénario A : saisie directe "Blaise Mukete" (en français et en ewondo) ne revient JAMAIS au menu !
+    for lang in ("fr", "ewo"):
+        sid = f"sess-full-{lang}"
+        monkeypatch.setattr(ussd_flow, "SESSIONS", worker1_store)
+        t1 = handle_channel_turn(
+            {"session_id": sid, "channel": "ussd", "phone": "237652148466", "language": lang, "input": {"text": "", "ussd_text": ""}},
+            bank_client=bank,
+        )
+        assert "1." in t1["response"]["text"]
+
+        monkeypatch.setattr(ussd_flow, "SESSIONS", worker2_store)
+        t2 = handle_channel_turn(
+            {"session_id": sid, "channel": "ussd", "phone": "237652148466", "language": lang, "input": {"text": "2", "ussd_text": "2"}},
+            bank_client=bank,
+        )
+        assert t2["interpretation"]["intent"] == "CLARIFICATION_NEEDED"
+
+        # Worker 1 reprend la main : doit demander le montant (et JAMAIS réafficher le menu principal !)
+        monkeypatch.setattr(ussd_flow, "SESSIONS", worker1_store)
+        t3 = handle_channel_turn(
+            {"session_id": sid, "channel": "ussd", "phone": "237652148466", "language": lang, "input": {"text": "Blaise Mukete", "ussd_text": "2*Blaise Mukete"}},
+            bank_client=bank,
+        )
+        assert "fcfa" in t3["response"]["text"].lower(), f"Attendu demande montant, reçu: {t3['response']['text']!r}"
+        assert "1. Mon solde" not in t3["response"]["text"] and "1. Itan" not in t3["response"]["text"]
+
+    # Scénario B : homonyme "Blaise" -> choix "2" (Blaise Tchami) -> "5000" -> confirmation "1" sur un AUTRE worker !
+    sid_b = "sess-confirm-multiworker"
+    monkeypatch.setattr(ussd_flow, "SESSIONS", worker1_store)
+    handle_channel_turn({"session_id": sid_b, "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "", "ussd_text": ""}}, bank_client=bank)
+    monkeypatch.setattr(ussd_flow, "SESSIONS", worker2_store)
+    handle_channel_turn({"session_id": sid_b, "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "2", "ussd_text": "2"}}, bank_client=bank)
+    monkeypatch.setattr(ussd_flow, "SESSIONS", worker1_store)
+    r_amb = handle_channel_turn({"session_id": sid_b, "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "Blaise", "ussd_text": "2*Blaise"}}, bank_client=bank)
+    assert "Blaise Mukete" in r_amb["response"]["text"] and "Blaise Tchami" in r_amb["response"]["text"]
+    monkeypatch.setattr(ussd_flow, "SESSIONS", worker2_store)
+    r_pick = handle_channel_turn({"session_id": sid_b, "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "2", "ussd_text": "2*Blaise*2"}}, bank_client=bank)
+    assert "montant" in r_pick["response"]["text"].lower()
+    monkeypatch.setattr(ussd_flow, "SESSIONS", worker1_store)
+    r_recap = handle_channel_turn({"session_id": sid_b, "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "5000", "ussd_text": "2*Blaise*2*5000"}}, bank_client=bank)
+    assert "Blaise Tchami" in r_recap["response"]["text"] and "5 000 FCFA" in r_recap["response"]["text"]
+    monkeypatch.setattr(ussd_flow, "SESSIONS", worker2_store)
+    r_conf = handle_channel_turn({"session_id": sid_b, "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "1", "ussd_text": "2*Blaise*2*5000*1"}}, bank_client=bank)
+    assert r_conf["interpretation"]["intent"] == "CONFIRM"
+    assert r_conf["transaction"]["status"] == "confirmed"
+    assert r_conf["response"]["end_session"] is True
+    bank.confirm.assert_called_with("TRX-BLAISE-1")
+
+    # 2. Scénario C : réplique totalement stateless (disque VIDE) au moment de la confirmation "1"
+    # Doit rejouer en lecture seule + retrouver TRX-BLAISE-1 via history() SANS jamais recréer un second POST /transactions !
+    replica_empty = SqliteSessionStore(tmp_path / "replica2.sqlite3")
+    monkeypatch.setattr(ussd_flow, "SESSIONS", replica_empty)
+    bank.create_transaction.reset_mock()
+    bank.confirm.reset_mock()
+    bank.history.return_value = (
+        True,
+        200,
+        {
+            "transactions": [
+                {"id": "TRX-BLAISE-1", "type": "transfer", "amount": 5000, "fee": 50, "total": 5050, "to": "237652084938", "status": "pending"}
+            ]
+        },
+    )
+    r_recov = handle_channel_turn(
+        {
+            "session_id": "sess-replica-lost",
+            "channel": "ussd",
+            "phone": "237652148466",
+            "language": "fr",
+            "input": {"text": "1", "ussd_text": "2*Blaise*2*5000*1"},
+        },
+        bank_client=bank,
+    )
+    assert r_recov["interpretation"]["intent"] == "CONFIRM"
+    assert r_recov["transaction"]["id"] == "TRX-BLAISE-1"
+    assert r_recov["transaction"]["status"] == "confirmed"
+    assert bank.create_transaction.call_count == 0
+    bank.confirm.assert_called_once_with("TRX-BLAISE-1")
+
+
+def test_ussd_name_collisions_parsing_and_all_flows():
+    """Audit complet USSD : collisions de noms camerounais, langue, terminologie, 7 menus, annulation, ATM et GSM-7."""
+    from app.sandbox.language import (
+        PHRASES,
+        detect_intent_keyword,
+        detect_language_switch,
+        detect_term_question,
+        parse_amount,
+        parse_phone,
+        render_phrase,
+    )
+
+    # 1. Zéro faux positif de mots-clés sur les noms camerounais courants
+    for safe_name in ("Louis", "Okala", "Mokom", "Kemogne", "Ndengue", "Ndongo", "Salome", "Gaetan", "Bille", "Blaise Mukete"):
+        assert detect_intent_keyword(safe_name) is None, f"Faux positif intent sur {safe_name!r}"
+        assert detect_language_switch(safe_name) is None, f"Faux positif langue sur {safe_name!r}"
+
+    # 2. "en " en français ne doit JAMAIS basculer en anglais !
+    assert detect_language_switch("envoyer 5000 en fcfa") is None
+    assert detect_language_switch("frais en fcfa") is None
+    assert detect_language_switch("passer en fulfulde") is None
+    assert detect_language_switch("passer en ewondo") == "ewo"
+    assert detect_language_switch("en duala") == "dua"
+    assert detect_language_switch("en anglais") == "en"
+    assert detect_language_switch("en") == "en"
+
+    # 3. Priorité CORRECTION avant CANCEL/CONFIRM et non-détournement par detect_term_question
+    assert detect_intent_keyword("non finalement 5000") == "CORRECTION"
+    assert detect_intent_keyword("modifier beneficiaire Franck") == "CORRECTION"
+    assert detect_term_question("modifier beneficiaire Franck") is None
+    assert detect_term_question("Paul Ndongo", allow_bare=False) is None
+    assert detect_term_question("c'est quoi un plafond ?") == "limit"
+
+    # 4. Parsing montant/téléphone avec espaces/tirets
+    assert parse_phone("+237 652 08 49 38") == "237652084938"
+    assert parse_phone("621028428000") is None  # 12 chiffres invalides
+    assert parse_amount("envoyer au 652 08 49 38") is None
+    assert parse_amount("envoyer 5000 au 652 08 49 38") == 5000
+    assert parse_amount("envoyer au 652-08-49-38") is None
+
+    # 5. Tous les gabarits PHRASES en 4 langues respectent GSM-7 strict <= 182 septets
+    sample_kw = {
+        "phone": "652148466",
+        "balance": "120 000 FCFA",
+        "amount": "500 000 FCFA",
+        "fee": "5 000 FCFA",
+        "total": "505 000 FCFA",
+        "to": "Jean-Baptiste Mukete",
+        "operator": "ORANGE",
+        "biller": "CAMWATER",
+        "ref": "TRX-2026-000123",
+        "choices": "1. Blaise Mukete (621028428)\n2. Blaise Tchami (652084938)",
+        "resume": "Nom ou numero du beneficiaire:",
+    }
+    for key, langs in PHRASES.items():
+        for lc in ("fr", "en", "ewo", "dua"):
+            assert lc in langs, f"Langue {lc} manquante pour PHRASES[{key!r}]"
+            rendered, declared = render_phrase(key, lc, max_septets=182, **sample_kw)
+            assert declared == lc
+            assert is_gsm7(rendered), f"Hors GSM-7 sur {key}.{lc}: {rendered!r}"
+            assert gsm7_length(rendered) <= 182, f"Dépassement 182 septets sur {key}.{lc}: {gsm7_length(rendered)}"
+
+    # 6. Flux complets : "je veux envoyer 5000 a Paul Ndongo", correction "modifier destinataire", annulation "sumua" en Duala,
+    #    retour menu "0", changement de langue en plein transfert (garde l'étape!), crédit, facture, termes, ATM.
+    SESSIONS.clear()
+    bank = _mock_bank()
+    bank.beneficiaries.return_value = (True, 200, {"beneficiaries": [{"name": "Paul Ndongo", "phone": "237699000010"}]})
+    bank.create_transaction.return_value = (
+        True,
+        201,
+        {"id": "TRX-NDONGO", "amount": 5000, "fee": 50, "total": 5050, "to": "237699000010", "status": "pending"},
+    )
+
+    # Phrase naturelle complète avec "je veux envoyer" + nom contenant "Ndongo"
+    r_nl = handle_channel_turn(
+        {"session_id": "s_nl", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "je veux envoyer 5000 a Paul Ndongo"}},
+        bank_client=bank,
+    )
+    assert r_nl["interpretation"]["intent"] == "TRANSFER"
+    assert "Paul Ndongo" in r_nl["response"]["text"]
+
+    # "modifier destinataire" (sans nom) -> demande le nouveau destinataire (PAS le montant!)
+    r_md = handle_channel_turn(
+        {"session_id": "s_nl", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "modifier destinataire"}},
+        bank_client=bank,
+    )
+    assert r_md["interpretation"]["intent"] == "CORRECTION"
+    assert "destinataire" in r_md["response"]["text"].lower()
+
+    # "annuler" pendant correction_beneficiary -> annule proprement TRX-NDONGO (ne cherche pas un bénéficiaire "annuler")
+    r_can = handle_channel_turn(
+        {"session_id": "s_nl", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "annuler"}},
+        bank_client=bank,
+    )
+    assert r_can["interpretation"]["intent"] == "CANCEL"
+    assert r_can["response"]["end_session"] is True
+    bank.cancel.assert_called_with("TRX-NDONGO")
+
+    # Annulation en Duala avec "sumua" sur l'écran de confirmation
+    SESSIONS.clear()
+    bank.cancel.reset_mock()
+    handle_channel_turn(
+        {"session_id": "s_dua_can", "channel": "ussd", "phone": "237652148466", "language": "dua", "input": {"text": "loma 5000 o Paul Ndongo"}},
+        bank_client=bank,
+    )
+    r_sumua = handle_channel_turn(
+        {"session_id": "s_dua_can", "channel": "ussd", "phone": "237652148466", "language": "dua", "input": {"text": "sumua"}},
+        bank_client=bank,
+    )
+    assert r_sumua["interpretation"]["intent"] == "CANCEL"
+    assert r_sumua["response"]["end_session"] is True
+    bank.cancel.assert_called_with("TRX-NDONGO")
+
+    # Changement de langue en plein transfert_to garde l'étape transfer_to et réaffiche l'invite en ewondo !
+    SESSIONS.clear()
+    handle_channel_turn({"session_id": "s_sw_mid", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "2"}}, bank_client=bank)
+    r_sw_mid = handle_channel_turn({"session_id": "s_sw_mid", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "passer en ewondo"}}, bank_client=bank)
+    assert r_sw_mid["interpretation"]["intent"] == "LANGUAGE_SWITCH"
+    assert r_sw_mid["interpretation"]["language"] == "ewo"
+    assert "dzo" in r_sw_mid["response"]["text"].lower()  # invite beneficiaire en ewondo, pas le menu !
+    r_after_sw = handle_channel_turn({"session_id": "s_sw_mid", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "Paul Ndongo"}}, bank_client=bank)
+    assert "fcfa" in r_after_sw["response"]["text"].lower()
+    # "0" retourne proprement au menu
+    r_back0 = handle_channel_turn({"session_id": "s_sw_mid", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "0"}}, bank_client=bank)
+    assert "1." in r_back0["response"]["text"] and "2." in r_back0["response"]["text"]
+
+    # Menus 4 (Historique), 5 (Crédit), 6 (Facture), 7 (Termes), ATM (Retrait)
+    SESSIONS.clear()
+    r_h = handle_channel_turn({"session_id": "s_h", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "4"}}, bank_client=bank)
+    assert r_h["interpretation"]["intent"] == "TRANSACTION_HISTORY" and r_h["response"]["end_session"] is True
+
+    bank.create_transaction.return_value = (
+        True,
+        201,
+        {"id": "TRX-AIR", "amount": 1000, "fee": 0, "total": 1000, "operator": "MTN", "to": "237652148466", "status": "pending"},
+    )
+    handle_channel_turn({"session_id": "s_air", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "5"}}, bank_client=bank)
+    handle_channel_turn({"session_id": "s_air", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "1"}}, bank_client=bank)
+    r_air = handle_channel_turn({"session_id": "s_air", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "1000"}}, bank_client=bank)
+    assert r_air["interpretation"]["intent"] == "AIRTIME_PURCHASE" and "MTN" in r_air["response"]["text"]
+
+    bank.create_transaction.return_value = (
+        True,
+        201,
+        {"id": "TRX-BILL", "amount": 15000, "fee": 100, "total": 15100, "biller": "ENEO", "status": "pending"},
+    )
+    handle_channel_turn({"session_id": "s_bill", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "6"}}, bank_client=bank)
+    handle_channel_turn({"session_id": "s_bill", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "1"}}, bank_client=bank)
+    r_bill = handle_channel_turn({"session_id": "s_bill", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "15000"}}, bank_client=bank)
+    assert r_bill["interpretation"]["intent"] == "BILL_PAYMENT" and "ENEO" in r_bill["response"]["text"]
+
+    handle_channel_turn({"session_id": "s_t", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "7"}}, bank_client=bank)
+    r_t_bad = handle_channel_turn({"session_id": "s_t", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "9"}}, bank_client=bank)
+    assert r_t_bad["interpretation"]["intent"] == "CLARIFICATION_NEEDED"
+    r_t_ok = handle_channel_turn({"session_id": "s_t", "channel": "ussd", "phone": "237652148466", "language": "fr", "input": {"text": "2"}}, bank_client=bank)
+    assert r_t_ok["interpretation"]["intent"] == "TERM_EXPLANATION" and "500 000 FCFA" in r_t_ok["response"]["text"]
+
+    bank.create_transaction.return_value = (
+        True,
+        201,
+        {"id": "TRX-ATM", "amount": 10000, "fee": 150, "total": 10150, "status": "pending"},
+    )
+    r_atm = handle_channel_turn({"session_id": "s_atm", "channel": "atm", "phone": "237652148466", "language": "fr", "input": {"text": "10000"}}, bank_client=bank)
+    assert "Retrait GAB 10 000 FCFA" in r_atm["response"]["text"]
+    assert "Modifier destinataire" not in r_atm["response"]["options"]
+
+
