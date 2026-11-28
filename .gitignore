@@ -31,6 +31,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+.orthography_mode
 
 # ── Service voix ──
 voix/models/
