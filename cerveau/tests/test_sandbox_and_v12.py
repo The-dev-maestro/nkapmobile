@@ -77,7 +77,7 @@ def test_sandbox_ui_translation_honest_and_respects_constraints():
     assert body["language"] == "ewo"
     assert len(body["strings"]["nav.home"]) <= 12
     assert "{missing}" in body["strings"]["error.INSUFFICIENT_FUNDS"]
-    assert body["strings"]["home.balance_label"] == "Itáŋ inə́ á ŋkwáp"
+    assert body["strings"]["home.balance_label"] == "Etáŋ enə́ á ŋkɔ́p"
 
     # Langue non supportée -> déclaration honnête "fr"
     unsupported = dict(payload, language="fub")
@@ -795,15 +795,21 @@ def test_orthography_switch_cli_and_http():
             "screen": "home",
             "strings": {
                 "home.balance_label": {"text": "Solde disponible"},
+                "home.account": {"text": "Compte {phone}"},
                 "shell.greeting": {"text": "Bonjour {name}"},
+                "receipt.success": {"text": "Opération réussie"},
+                "pay.tab_airtime": {"text": "Crédit"},
             },
         }
         # 1. Mode AGLC via CLI
         assert ortho_cli(["aglc"]) == 0
         r_aglc = client.post("/sandbox", json=payload)
         assert r_aglc.status_code == 200
-        assert r_aglc.json()["strings"]["home.balance_label"] == "Itáŋ inə́ á ŋkwáp"
-        assert r_aglc.json()["strings"]["shell.greeting"] == "Mbə̀mbə́ kírí {name}"
+        assert r_aglc.json()["strings"]["home.balance_label"] == "Etáŋ enə́ á ŋkɔ́p"
+        assert r_aglc.json()["strings"]["home.account"] == "Ŋkɔ́p {phone}"
+        assert r_aglc.json()["strings"]["shell.greeting"] == "Mbə̀mbə́ kídí {name}"
+        assert r_aglc.json()["strings"]["receipt.success"] == "Adzó á lôdɛn mbə́ŋ"
+        assert r_aglc.json()["strings"]["pay.tab_airtime"] == "Ekɔla"
 
         # 2. Mode Assonance / Intuitif via CLI
         assert ortho_cli(["intuitive"]) == 0
@@ -817,7 +823,7 @@ def test_orthography_switch_cli_and_http():
         assert r_post.status_code == 200
         assert r_post.json()["mode"] == "aglc"
         r_back = client.post("/sandbox", json=payload)
-        assert r_back.json()["strings"]["home.balance_label"] == "Itáŋ inə́ á ŋkwáp"
+        assert r_back.json()["strings"]["home.balance_label"] == "Etáŋ enə́ á ŋkɔ́p"
     finally:
         set_orthography_mode(prev)
 

@@ -24,8 +24,8 @@ window.NKAP_LEXICON = {
 
     // ── Écran 1 : Compte & Solde ──
     { fr: "Votre compte", en: "Your account", dua: "ekotèlè", ewo: "Nkwap woué", status: "validated", key: "your_account" },
-    { fr: "Bonjour, Amina", en: "Hello, Amina", dua: "Idiba bwam, Amina", ewo: "Mbə̀mbə́ kírí, Amina", status: "validated", key: "hello_amina" },
-    { fr: "Bonjour", en: "Hello", dua: "Idiba bwam", ewo: "Mbə̀mbə́ kírí", status: "validated", key: "hello" },
+    { fr: "Bonjour, Amina", en: "Hello, Amina", dua: "Idiba bwam, Amina", ewo: "Mbə̀mbə́ kídí, Amina", status: "validated", key: "hello_amina" },
+    { fr: "Bonjour", en: "Hello", dua: "Idiba bwam", ewo: "Mbə̀mbə́ kídí", status: "validated", key: "hello" },
     { fr: "Compte courant", en: "Current account", dua: "Kalata konti", ewo: null, status: "validated", key: "current_account" },
     { fr: "Solde disponible", en: "Available balance", dua: "Moni mu diya", ewo: "Itan ineu a nkwap", status: "validated", key: "balance_label" },
     { fr: "Consultez votre solde et lancez un transfert en toute sécurité.", en: "Check your balance and start a secure transfer.", dua: "Ombwa moni mu diya, na o lome na musango.", ewo: "Bebgeu itan o beleu ou lom moany voae.", status: "validated", key: "balance_hint" },

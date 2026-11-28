@@ -14,16 +14,10 @@
     "lomo moni",
     "loma moni",
     "mbembe kiri",
+    "mbembe kidi",
     "mbole",
     "misongi",
-    "bakuse moni",
-    "mbeumbe kiri",
-    "itan ineu a nkwap",
-    "yaana facture",
-    "wa couss ikola",
-    "itan ine a nkwap",
-    "yaan kalara",
-    "wa kus ikola"
+    "bakuse moni"
   ],
   "ui_translations": {
     "nda": "Accueil",
@@ -105,58 +99,7 @@
     "misongi mese": "Tout",
     "moni mu mingeye": "Entrants",
     "moni mu mabuse": "Sortants",
-    "to lambo": "Aucune opération pour le moment.",
-    "mesouan": "Accueil",
-    "ndouang": "Historique",
-    "yaane vae": "Payer",
-    "yaana facture": "Payer une facture",
-    "wa couss ikola": "Acheter du crédit",
-    "me tang mama messeu": "Mes opérations",
-    "yeneu liste isseu": "Tout voir",
-    "tang zing idzikig boban": "Aucune opération pour le moment.",
-    "za yaa a di": "Bénéficiaire",
-    "wa lom za": "Destinataire",
-    "nomba nkwal ngueu ki dzoe doue": "Numéro de téléphone ou nom",
-    "liste e bod ya wa lom moni": "Mes bénéficiaires",
-    "tang moni": "Montant",
-    "itan wa yi yaan": "Montant",
-    "tang ya": "Montant",
-    "be frais": "Frais",
-    "itang i tzigban": "Total débité",
-    "itang i ligui": "Solde après opération",
-    "toabo idzal wa yi na wa bo": "Choisir le service",
-    "ikola": "Crédit",
-    "dzalga e numba wa loue": "Numéro à recharger",
-    "dimi": "Annuler",
-    "keleu ossou": "Continuer",
-    "yi wa yebeu": "Confirmer",
-    "tsenegue numba ngueu tang": "Modifier",
-    "dougan ai mvous": "Retour",
-    "vog'lo": "Écouter",
-    "telegue nlang'an abimte": "Arrêter la lecture",
-    "angong": "Déconnexion",
-    "məsuan": "Accueil",
-    "mesuan": "Accueil",
-    "nduan": "Historique",
-    "yaan va": "Payer",
-    "yaan kalara": "Payer une facture",
-    "wa kus ikola": "Acheter du crédit",
-    "me tan mam mese": "Mes opérations",
-    "yene liste ise": "Tout voir",
-    "tan zin idzikig boban": "Aucune opération pour le moment.",
-    "nombo nkwal nge ki dzoe due": "Numéro de téléphone ou nom",
-    "tan moni": "Montant",
-    "tan ya": "Montant",
-    "itan i tsigban": "Total débité",
-    "itan i ligi": "Solde après opération",
-    "tobo idzal wa yi na wa bo": "Choisir le service",
-    "dzalga e nombo wa loe": "Numéro à recharger",
-    "yi wa yebe": "Confirmer",
-    "tsenege nombo nge tan": "Modifier",
-    "dugan ai mvus": "Retour",
-    "voglo": "Écouter",
-    "telege nlangan abim te": "Arrêter la lecture",
-    "angon": "Déconnexion"
+    "to lambo": "Aucune opération pour le moment."
   },
   "action_buttons": [
     "envoyer de l'argent",
@@ -213,32 +156,7 @@
     "nda",
     "lomo",
     "yaan",
-    "itang",
-    "mesouan",
-    "ndouang",
-    "yaana facture",
-    "wa couss ikola",
-    "me tang mama messeu",
-    "keleu ossou",
-    "yi wa yebeu",
-    "tsenegue numba ngueu tang",
-    "dimi",
-    "dougan ai mvous",
-    "vog'lo",
-    "ikola",
-    "yaane vae",
-    "yeneu liste isseu",
-    "mesuan",
-    "nduan",
-    "yaan kalara",
-    "wa kus ikola",
-    "me tan mam mese",
-    "yi wa yebe",
-    "tsenege nombo nge tan",
-    "dugan ai mvus",
-    "voglo",
-    "yaan va",
-    "yene liste ise"
+    "itang"
   ],
   "screen_detectors": [
     {
@@ -260,7 +178,9 @@
         "essele. moni mu si lomabe",
         "operation annulee. aucun montant",
         "adzo a loren mbeung",
-        "adzo a loren mben"
+        "adzo a loren mben",
+        "adzo a loden mben",
+        "mfemfe tan"
       ]
     },
     {
@@ -277,13 +197,7 @@
         "l'argent part des que vous confirmez",
         "moni a ke di a te wa yemban",
         "moni ma ma-ala dibokimene",
-        "timba la mbusa si titi",
-        "toneu bebeu ossussua eneu wa jii",
-        "itang i tzigban",
-        "moni a keu yi na wa yebeu",
-        "tone bebe osusua ene wa dzii",
-        "itan i tsigban",
-        "moni a ke yi na wa yebe"
+        "timba la mbusa si titi"
       ]
     },
     {
@@ -306,6 +220,7 @@
         "moni mudene : 500 000",
         "up to 500 000",
         "liste e bod ya wa lom moni",
+        "za yaa a di",
         "nomba nkwal ngueu ki dzoe doue",
         "tang te ya ke kui",
         "nombo nkwal nge ki dzoe due",
@@ -332,6 +247,15 @@
         [
           "entrants",
           "sortants"
+        ],
+        [
+          "nyu anyi",
+          "nyu a kui"
+        ],
+        [
+          "ase",
+          "nyu anyi",
+          "nyu a kui"
         ],
         [
           "recus",
@@ -370,6 +294,16 @@
         ],
         [
           "mos",
+          "operation",
+          "statut"
+        ],
+        [
+          "bun'a",
+          "miango",
+          "statut"
+        ],
+        [
+          "mos",
           "mvet",
           "ene"
         ],
@@ -382,13 +316,14 @@
       "not_text_any": [
         "solde disponible",
         "itan ineu",
+        "itan ine",
+        "etan ene",
         "moni ma pene",
         "available balance",
         "que voulez-vous faire",
         "za dzam wa yi bo",
         "nje o tondi bola",
-        "wa pula bola nje",
-        "dze wa yi naa wa bo"
+        "wa pula bola nje"
       ]
     },
     {
@@ -405,16 +340,13 @@
         "nombo woe nge mod mfe",
         "nimero ango nga moto mpepe",
         "numb'a ngo",
-        "dzalga e numba wa loue",
-        "mbe wa yenn",
-        "ingwe ngueu mfeu",
-        "dzalga e nombo wa loe",
-        "mbe wa yen",
-        "ingwe nge mfe"
+        "engwe nge mfe"
       ],
       "not_text_any": [
         "entrants",
         "sortants",
+        "nyu anyi",
+        "nyu a kui",
         "bi bi",
         "bi lom",
         "moni mu mingeye",
@@ -427,9 +359,8 @@
         "choisir le service",
         "tob isae",
         "pona ebolo",
-        "choose the service",
-        "toabo idzal wa yi na wa bo",
-        "tobo idzal wa yi na wa bo"
+        "tobo edzal wa yi na wa bo",
+        "choose the service"
       ],
       "exact_any": [
         "poso"
@@ -437,11 +368,16 @@
       "not_text_any": [
         "entrants",
         "sortants",
+        "nyu anyi",
+        "nyu a kui",
         "bi bi",
         "bi lom",
         "moni mu mingeye",
         "moni mu mabuse",
-        "solde disponible"
+        "solde disponible",
+        "itan ineu",
+        "itan ine",
+        "etan ene"
       ]
     },
     {
@@ -469,19 +405,12 @@
         [
           "bills",
           "airtime"
-        ],
-        [
-          "facture",
-          "ikola"
-        ],
-        [
-          "kalara",
-          "ikola"
         ]
       ],
       "not_text_any": [
         "solde disponible",
         "itan ineu",
+        "etan ene",
         "moni ma pene",
         "available balance",
         "entrants",
@@ -504,15 +433,13 @@
       "text_any": [
         "solde disponible",
         "itan ineu",
+        "etan ene",
         "moni ma pene",
         "available balance",
         "que voulez-vous faire",
         "za dzam wa yi bo",
         "nje o tondi bola",
-        "wa pula bola nje",
-        "dze wa yi naa wa bo",
-        "itan ineu a nkwap",
-        "itan ine a nkwap"
+        "wa pula bola nje"
       ]
     }
   ],
@@ -526,10 +453,9 @@
           "match": [
             "solde disponible",
             "itan ineu",
+            "etan ene",
             "moni ma pene",
-            "available balance",
-            "itan ineu a nkwap",
-            "itan ine a nkwap"
+            "available balance"
           ],
           "style": "frame",
           "label": "Solde",
@@ -553,9 +479,7 @@
             "yaan mfie ai kalara",
             "sawedi kalati",
             "sawa la moni",
-            "pay a bill",
-            "yaana facture",
-            "yaan kalara"
+            "pay a bill"
           ],
           "style": "frame",
           "label": "Factures",
@@ -565,12 +489,11 @@
           "match": [
             "acheter du credit",
             "kus kredi telefon",
+            "wa kus ekola",
             "ande kredi telefone",
             "djanda la mudi",
             "londe la beboledi",
-            "buy airtime",
-            "wa couss ikola",
-            "wa kus ikola"
+            "buy airtime"
           ],
           "style": "frame",
           "label": "Crédit",
@@ -583,14 +506,11 @@
             "bebolo bam",
             "dernieres operations",
             "itang o nga kene nong",
+            "etan o nga kene non",
             "bebolo ba sukan",
             "tout voir",
             "fombo mese",
-            "recent transactions",
-            "me tang mama messeu",
-            "yeneu liste isseu",
-            "me tan mam mese",
-            "yene liste ise"
+            "recent transactions"
           ],
           "style": "frame",
           "label": "Opérations",
@@ -609,8 +529,7 @@
             "mod a non moni",
             "mukusa",
             "mukusedi",
-            "beneficiary",
-            "za yaa a di"
+            "beneficiary"
           ],
           "style": "num",
           "step": 1,
@@ -622,12 +541,7 @@
             "montant",
             "itan",
             "moni",
-            "amount",
-            "tang moni",
-            "itan wa yi yaan",
-            "tang ya",
-            "tan moni",
-            "tan ya"
+            "amount"
           ],
           "style": "num",
           "step": 2,
@@ -639,8 +553,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -658,9 +571,7 @@
             "tob isae",
             "pona ebolo",
             "poso",
-            "choose the service",
-            "toabo idzal wa yi na wa bo",
-            "tobo idzal wa yi na wa bo"
+            "choose the service"
           ],
           "style": "num",
           "step": 1,
@@ -672,12 +583,7 @@
             "montant",
             "itan",
             "moni",
-            "amount",
-            "tang moni",
-            "itan wa yi yaan",
-            "tang ya",
-            "tan moni",
-            "tan ya"
+            "amount"
           ],
           "style": "num",
           "step": 2,
@@ -689,8 +595,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -708,9 +613,7 @@
             "nombo ya lomo kredi",
             "nimero ya kredi",
             "number",
-            "number to top up",
-            "dzalga e numba wa loue",
-            "dzalga e nombo wa loe"
+            "number to top up"
           ],
           "style": "num",
           "step": 1,
@@ -722,12 +625,7 @@
             "montant",
             "itan",
             "moni",
-            "amount",
-            "tang moni",
-            "itan wa yi yaan",
-            "tang ya",
-            "tan moni",
-            "tan ya"
+            "amount"
           ],
           "style": "num",
           "step": 2,
@@ -739,8 +637,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -770,9 +667,10 @@
           "match": [
             "credit",
             "kredi",
+            "ikola",
+            "ekola",
             "ebale",
-            "airtime",
-            "ikola"
+            "airtime"
           ],
           "style": "frame",
           "label": "Crédit",
@@ -783,8 +681,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -805,9 +702,7 @@
             "mukusa",
             "mukusedi",
             "mutombwedi",
-            "beneficiary",
-            "za yaa a di",
-            "wa lom za"
+            "beneficiary"
           ],
           "style": "highlight",
           "color": "yellow"
@@ -818,12 +713,7 @@
             "itan",
             "moni",
             "musongi",
-            "amount",
-            "tang moni",
-            "itan wa yi yaan",
-            "tang ya",
-            "tan moni",
-            "tan ya"
+            "amount"
           ],
           "style": "highlight",
           "color": "yellow"
@@ -835,8 +725,7 @@
             "mabala",
             "musen",
             "mususedi",
-            "fees",
-            "be frais"
+            "fees"
           ],
           "style": "highlight",
           "color": "yellow"
@@ -846,9 +735,7 @@
             "confirmer",
             "yemban",
             "bamse",
-            "confirm",
-            "yi wa yebeu",
-            "yi wa yebe"
+            "confirm"
           ],
           "style": "frame",
           "label": "Confirmer",
@@ -869,9 +756,7 @@
             "mukusa",
             "mukusedi",
             "mutombwedi",
-            "beneficiary",
-            "za yaa a di",
-            "wa lom za"
+            "beneficiary"
           ],
           "style": "highlight",
           "color": "yellow"
@@ -882,12 +767,7 @@
             "itan",
             "moni",
             "musongi",
-            "amount",
-            "tang moni",
-            "itan wa yi yaan",
-            "tang ya",
-            "tan moni",
-            "tan ya"
+            "amount"
           ],
           "style": "highlight",
           "color": "yellow"
@@ -899,8 +779,7 @@
             "mabala",
             "musen",
             "mususedi",
-            "fees",
-            "be frais"
+            "fees"
           ],
           "style": "highlight",
           "color": "yellow"
@@ -910,9 +789,7 @@
             "confirmer",
             "yemban",
             "bamse",
-            "confirm",
-            "yi wa yebeu",
-            "yi wa yebe"
+            "confirm"
           ],
           "style": "frame",
           "label": "Confirmer",
@@ -1050,11 +927,7 @@
         "payer",
         "yaan",
         "sawa",
-        "pay a bill",
-        "yaana facture",
-        "yaane vae",
-        "yaan kalara",
-        "yaan va"
+        "pay a bill"
       ],
       "style": "frame",
       "label": "Factures",
@@ -1073,8 +946,7 @@
         "airtime",
         "kredi",
         "djanda la mudi",
-        "ebale",
-        "ikola"
+        "ebale"
       ],
       "spoken": "Appuie ici sur Acheter du crédit pour recharger ton numéro ou celui d'un proche.",
       "target_match": [
@@ -1084,11 +956,7 @@
         "djanda la mudi",
         "payer",
         "yaan",
-        "buy airtime",
-        "wa couss ikola",
-        "yaane vae",
-        "wa kus ikola",
-        "yaan va"
+        "buy airtime"
       ],
       "style": "frame",
       "label": "Crédit",
@@ -1115,13 +983,7 @@
         "fombo mese",
         "ombwa mese",
         "historique",
-        "itang",
-        "me tang mama messeu",
-        "yeneu liste isseu",
-        "ndouang",
-        "me tan mam mese",
-        "yene liste ise",
-        "nduan"
+        "itang"
       ],
       "style": "frame",
       "label": "Historique",
@@ -1150,8 +1012,7 @@
             "mod a non moni",
             "mukusa",
             "mukusedi",
-            "beneficiary",
-            "za yaa a di"
+            "beneficiary"
           ],
           "style": "num",
           "step": 1,
@@ -1163,12 +1024,7 @@
             "montant",
             "itan",
             "moni",
-            "amount",
-            "tang moni",
-            "itan wa yi yaan",
-            "tang ya",
-            "tan moni",
-            "tan ya"
+            "amount"
           ],
           "style": "num",
           "step": 2,
@@ -1180,8 +1036,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -1214,8 +1069,7 @@
         "bot bam ba non moni",
         "bakusa bam",
         "bakuse moni",
-        "my beneficiaries",
-        "liste e bod ya wa lom moni"
+        "my beneficiaries"
       ],
       "style": "highlight",
       "color": "yellow"
@@ -1275,9 +1129,7 @@
             "tob isae",
             "pona ebolo",
             "poso",
-            "choose the service",
-            "toabo idzal wa yi na wa bo",
-            "tobo idzal wa yi na wa bo"
+            "choose the service"
           ],
           "style": "num",
           "step": 1,
@@ -1289,8 +1141,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -1314,16 +1165,14 @@
         "orange",
         "kredi",
         "ebale",
-        "djanda la mudi",
-        "ikola"
+        "djanda la mudi"
       ],
       "spoken": "Appuie sur l'onglet Crédit juste en haut pour passer à la recharge téléphonique.",
       "target_match": [
         "credit",
         "kredi",
         "ebale",
-        "airtime",
-        "ikola"
+        "airtime"
       ],
       "style": "frame",
       "label": "Crédit",
@@ -1346,8 +1195,7 @@
         "numero a recharger",
         "kredi",
         "ebale",
-        "djanda la mudi",
-        "ikola"
+        "djanda la mudi"
       ],
       "spoken": "Tu es déjà sur l'écran Crédit ! Tape le numéro à recharger (l'opérateur est détecté automatiquement), entre le montant puis appuie sur Continuer.",
       "highlights": [
@@ -1357,9 +1205,7 @@
             "nombo ya lomo kredi",
             "nimero ya kredi",
             "number",
-            "number to top up",
-            "dzalga e numba wa loue",
-            "dzalga e nombo wa loe"
+            "number to top up"
           ],
           "style": "num",
           "step": 1,
@@ -1371,8 +1217,7 @@
             "continuer",
             "kele obusu",
             "ala oboso",
-            "continue",
-            "keleu ossou"
+            "continue"
           ],
           "style": "frame",
           "label": "Continuer",
@@ -1422,18 +1267,14 @@
         "valider",
         "envoyer maintenant",
         "yemban",
-        "bamse",
-        "yi wa yebeu",
-        "yi wa yebe"
+        "bamse"
       ],
       "spoken": "Relis une dernière fois le bénéficiaire, le montant et les frais, puis appuie ici sur Confirmer : l'argent part dès que tu confirmes.",
       "target_match": [
         "confirmer",
         "yemban",
         "bamse",
-        "confirm",
-        "yi wa yebeu",
-        "yi wa yebe"
+        "confirm"
       ],
       "style": "frame",
       "label": "Confirmer",
@@ -1458,9 +1299,7 @@
         "confirmer",
         "yemban",
         "bamse",
-        "confirm",
-        "yi wa yebeu",
-        "yi wa yebe"
+        "confirm"
       ],
       "style": "frame",
       "label": "Confirmer",
@@ -1488,8 +1327,7 @@
         "vaa",
         "buka",
         "esele",
-        "cancel",
-        "dimi"
+        "cancel"
       ],
       "style": "frame",
       "label": "Annuler",
@@ -1508,18 +1346,14 @@
         "erreur",
         "me suis trompe",
         "tyende",
-        "tukwa",
-        "tsenegue numba ngueu tang",
-        "tsenege nombo nge tan"
+        "tukwa"
       ],
       "spoken": "Rien n'est encore débité : appuie ici sur Modifier pour revenir changer le montant ou le bénéficiaire.",
       "target_match": [
         "modifier",
         "tyende",
         "tukwa",
-        "edit",
-        "tsenegue numba ngueu tang",
-        "tsenege nombo nge tan"
+        "edit"
       ],
       "style": "frame",
       "label": "Modifier",
@@ -1543,8 +1377,7 @@
         "abandonner",
         "vaa",
         "buka",
-        "esele",
-        "dimi"
+        "esele"
       ],
       "spoken": "Appuie ici sur Annuler pour abandonner sans rien débiter de ton compte.",
       "target_match": [
@@ -1552,8 +1385,7 @@
         "vaa",
         "buka",
         "esele",
-        "cancel",
-        "dimi"
+        "cancel"
       ],
       "style": "frame",
       "label": "Annuler",
@@ -1627,9 +1459,7 @@
         "nda",
         "mboa",
         "botea",
-        "retour",
-        "mesouan",
-        "mesuan"
+        "retour"
       ],
       "style": "frame",
       "label": "Accueil",
@@ -1714,9 +1544,7 @@
         "itang",
         "bebolo",
         "misongi",
-        "history",
-        "ndouang",
-        "nduan"
+        "history"
       ],
       "style": "frame",
       "label": "Historique",
@@ -1768,9 +1596,7 @@
         "nda",
         "mboa",
         "botea",
-        "home",
-        "mesouan",
-        "mesuan"
+        "home"
       ],
       "style": "frame",
       "label": "Accueil",
@@ -1782,14 +1608,13 @@
         "target_cues": [
           "solde disponible",
           "itan ineu",
+          "etan ene",
           "moni ma pene",
           "available balance",
           "que voulez-vous faire",
           "za dzam wa yi bo",
           "nje o tondi bola",
-          "wa pula bola nje",
-          "itan ineu a nkwap",
-          "itan ine a nkwap"
+          "wa pula bola nje"
         ],
         "ttl_ms": 30000
       }
@@ -1822,8 +1647,7 @@
         "kredi",
         "ebale",
         "sawa la moni",
-        "djanda la mudi",
-        "ikola"
+        "djanda la mudi"
       ],
       "spoken": "Pour payer une facture ou acheter du crédit téléphonique, appuie sur l'onglet Payer : je te guiderai dès qu'on y arrive.",
       "target_match": [
@@ -1831,9 +1655,7 @@
         "yaan",
         "sawedi",
         "sawa",
-        "pay",
-        "yaane vae",
-        "yaan va"
+        "pay"
       ],
       "style": "frame",
       "label": "Payer",
@@ -1852,11 +1674,7 @@
           "choose the service",
           "numero a recharger",
           "nombo ya lomo kredi",
-          "nimero ya kredi",
-          "toabo idzal wa yi na wa bo",
-          "dzalga e numba wa loue",
-          "tobo idzal wa yi na wa bo",
-          "dzalga e nombo wa loe"
+          "nimero ya kredi"
         ],
         "ttl_ms": 30000
       }
@@ -1908,8 +1726,7 @@
           "nombo telefon nge dzoe",
           "number musinga to dina longo",
           "jusqu'a 500 000",
-          "akui 500 000",
-          "liste e bod ya wa lom moni"
+          "akui 500 000"
         ],
         "ttl_ms": 30000
       }
@@ -1953,9 +1770,7 @@
         "accueil",
         "nda",
         "mboa",
-        "botea",
-        "mesouan",
-        "mesuan"
+        "botea"
       ],
       "spoken": "Appuie ici sur Accueil pour revenir sur ton tableau de bord principal.",
       "target_match": [
@@ -1966,9 +1781,7 @@
         "botea",
         "terminer",
         "kwese",
-        "home",
-        "mesouan",
-        "mesuan"
+        "home"
       ],
       "style": "frame",
       "label": "Accueil",
@@ -2028,16 +1841,14 @@
         "haut parleur",
         "wog",
         "senga",
-        "lire l'ecran",
-        "vog'lo"
+        "lire l'ecran"
       ],
       "spoken": "Ce bouton lit à voix haute le contenu traduit de l'écran dans ta langue.",
       "target_match": [
         "ecouter",
         "wog",
         "senga",
-        "listen",
-        "vog'lo"
+        "listen"
       ],
       "style": "circle",
       "color": "yellow"

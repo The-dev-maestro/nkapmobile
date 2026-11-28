@@ -278,7 +278,7 @@ def detect_intent_keyword(text: str) -> str | None:
         return "FEE_INQUIRY"
     if _has_word(n, ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "ndouang", "me tang", "bebolo", "misongi", "misondi", "miango")):
         return "TRANSACTION_HISTORY"
-    if _has_word(n, ("credit", "airtime", "recharge", "recharger", "unites", "kredi", "ikola", "wa couss ikola", "ebale", "djanda la mudi", "djanta musinga", "musinga", "londe la beboledi")):
+    if _has_word(n, ("credit", "airtime", "recharge", "recharger", "unites", "kredi", "ikola", "ekola", "wa couss ikola", "wa kus ekola", "ebale", "djanda la mudi", "djanta musinga", "musinga", "londe la beboledi")):
         return "AIRTIME_PURCHASE"
     if _has_word(n, ("facture", "factures", "bill", "bills", "eneo", "camwater", "canal", "camtel", "kalara", "kalati", "yaana facture", "sawa", "saweya", "musawedi", "na pula wasa", "dipapa la")):
         return "BILL_PAYMENT"
@@ -286,7 +286,7 @@ def detect_intent_keyword(text: str) -> str | None:
         return "WITHDRAWAL"
     if _has_word(n, ("envoyer", "envoie", "transfert", "transferer", "transfer", "send", "lomo", "lom", "loma", "lomea", "tombise", "na ni tombele")):
         return "TRANSFER"
-    if _has_word(n, ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "ou beleu", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele", "nje ye etom yam", "edia", "bongo bene")):
+    if _has_word(n, ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "etan", "nkop", "ou beleu", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele", "nje ye etom yam", "edia", "bongo bene")):
         return "BALANCE_INQUIRY"
     return None
 

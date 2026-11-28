@@ -41,6 +41,7 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "ndabo a moni o mycco": "Banque en ligne",
     "nda moni a nkul": "Banque en ligne",
     "nkwap": "Banque en ligne",
+    "nkop": "Banque en ligne",
     "inye moani": "Banque en ligne",
     "konto ango": "Votre compte",
     "bol yi": "Votre compte",
@@ -51,13 +52,18 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "nden wog i bol": "Solde disponible",
     "itan ineu": "Solde disponible",
     "itan ineu a nkwap": "Solde disponible",
+    "etan ene": "Solde disponible",
+    "etan ene a nkop": "Solde disponible",
     "mesouan": "Accueil",
     "ndouang": "Historique",
     "yaana facture": "Payer une facture",
     "wa couss ikola": "Acheter du crédit",
+    "wa kus ekola": "Acheter du crédit",
     "me tang mama messeu": "Mes opérations",
     "yeneu liste isseu": "Tout voir",
+    "yene liste ese": "Tout voir",
     "tang zing idzikig boban": "Aucune opération pour le moment.",
+    "tan zin edzikig boban": "Aucune opération pour le moment.",
     "keleu ossou": "Continuer",
     "dougan ai mvous": "Retour",
     "dimi": "Annuler",
@@ -67,14 +73,19 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "liste e bod ya wa lom moni": "Mes bénéficiaires",
     "tang moni": "Montant",
     "ikola": "Crédit",
+    "ekola": "Crédit",
     "toabo idzal wa yi na wa bo": "Choisir le service",
+    "tobo edzal wa yi na wa bo": "Choisir le service",
     "dzalga e numba wa loue": "Numéro à recharger",
     "be frais": "Frais",
     "itang i tzigban": "Total débité",
+    "etan e tsigban": "Total débité",
     "itang i ligui": "Solde après opération",
+    "etan e ligi": "Solde après opération",
     "yi wa yebeu": "Confirmer",
     "tsenegue numba ngueu tang": "Modifier",
     "adzo a loren mbeung": "Opération réussie",
+    "adzo a loden mben": "Opération réussie",
     "main account": "Solde disponible",
     "available balance": "Solde disponible",
     "account balance": "Solde disponible",
@@ -174,6 +185,7 @@ LOCAL_LANG_TO_FR: dict[str, str] = {
     "bebolo ba sukan": "Transactions récentes",
     "mimboan mi ndon": "Transactions récentes",
     "itang o nga kene nong itang ou dzali": "Transactions récentes",
+    "etan o nga kene non etan o dzali": "Transactions récentes",
     "sawedi la mome-nyunga": "Paiement marchand",
     "yanan nkukum": "Paiement marchand",
     "maane": "Paiement marchand",
@@ -3278,11 +3290,11 @@ class M2Service:
             "di tombi bwam", "jenguele", "a bangi", "kem", "e maneya", "e vaban", "e ne a yange", "e nji bo",
             "ecouter", "wog", "senga", "deconnexion", "kui", "busa",
             "hide balance", "show balance", "masquer le solde", "afficher le solde",
-            "solde disponible", "itan ineu", "moni ma pene", "available balance",
+            "solde disponible", "itan ineu", "etan ene", "moni ma pene", "available balance",
             "send", "bills", "vault", "more", "settings", "payments", "parametres",
         }
         balance_cues = (
-            "solde disponible", "itan ineu", "moni ma pene", "available balance",
+            "solde disponible", "itan ineu", "etan ene", "moni ma pene", "available balance",
             "hide balance", "show balance", "masquer le solde", "afficher le solde",
             "main account", "my credits",
         )
@@ -3462,7 +3474,7 @@ class M2Service:
         is_concept = any(m.action.phrase_key == "concept_explanation" for m in actions) or self._is_concept_question(q_n)
         if is_concept:
             intent = "TERM_EXPLANATION"
-        elif any(k in q_n for k in ("solde", "reste", "disponible", "itan", "nden")):
+        elif any(k in q_n for k in ("solde", "reste", "disponible", "itan", "etan", "nden")):
             intent = "BALANCE_INQUIRY"
         elif any(k in q_n for k in ("frais", "combien coute", "mbug", "mabala")):
             intent = "FEE_INQUIRY"

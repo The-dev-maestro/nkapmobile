@@ -12,6 +12,14 @@ from app.core.contracts import ScreenContext, ScreenNode
 def _norm(value: str | None) -> str:
     decomposed = unicodedata.normalize("NFD", (value or "").lower())
     text = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    text = (
+        text.replace("ɔ", "o")
+        .replace("ɛ", "e")
+        .replace("ə", "e")
+        .replace("ŋ", "n")
+        .replace("ɓ", "b")
+        .replace("ɗ", "d")
+    )
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -189,7 +197,10 @@ class AppPlaybookStore:
             "facture ",
             "credit ",
             "bi lom a ",
+            "nlomo a ",
             "bi bi a ",
+            "ikola ",
+            "ekola ",
             "loma na ",
             "lomea ",
             "kusa na ",
