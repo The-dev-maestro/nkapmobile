@@ -281,6 +281,100 @@
     "ma-ala": "Sortants",
     "moni mu mabuse": "Sortants",
     "kusa la moni": "Retrait",
+    // ── Ewondo validé (Nsia + 2e export natif, modes AGLC et intuitif) ──
+    "mesouan": "Accueil",
+    "mesuan": "Accueil",
+    "ndouang": "Historique",
+    "nduan": "Historique",
+    "yaane vae": "Payer",
+    "yaan va": "Payer",
+    "yaana facture": "Payer une facture",
+    "wa couss ikola": "Acheter du crédit",
+    "wa kus ikola": "Acheter du crédit",
+    "wa kus ekola": "Acheter du crédit",
+    "me tang mama messeu": "Mes opérations",
+    "me tan mam mese": "Mes opérations",
+    "itan ineu a nkwap": "Solde disponible",
+    "itan ine a nkwap": "Solde disponible",
+    "etan ene a nkop": "Solde disponible",
+    "dze wa yi naa wa bo": "Que voulez-vous faire ?",
+    "dze wa yi naa wa bo ?": "Que voulez-vous faire ?",
+    "itang o nga kene nong itang ou dzali": "Dernières opérations",
+    "itan o nga kene non itan o dzali": "Dernières opérations",
+    "etan o nga kene non etan o dzali": "Dernières opérations",
+    "yeneu liste isseu": "Tout voir",
+    "yene liste ise": "Tout voir",
+    "yene liste ese": "Tout voir",
+    "tang zing idzikig boban": "Aucune opération pour le moment.",
+    "tan zin idzikig boban": "Aucune opération pour le moment.",
+    "tan zin edzikig boban": "Aucune opération pour le moment.",
+    "za yaa a di": "Bénéficiaire",
+    "wa lom za": "Destinataire",
+    "nomba nkwal ngueu ki dzoe doue": "Numéro de téléphone ou nom",
+    "nombo nkwal nge ki dzoe due": "Numéro de téléphone ou nom",
+    "liste e bod ya wa lom moni": "Mes bénéficiaires",
+    "tang moni": "Montant",
+    "tan moni": "Montant",
+    "tan": "Montant",
+    "tang ya": "Montant",
+    "tan ya": "Montant",
+    "itan wa yi yaan": "Montant",
+    "etan wa yi yaan": "Montant",
+    "be frais": "Frais",
+    "itang i tzigban": "Total débité",
+    "itan i tsigban": "Total débité",
+    "etan e tsigban": "Total débité",
+    "itang i ligui": "Solde après opération",
+    "itan i ligi": "Solde après opération",
+    "etan e ligi": "Solde après opération",
+    "ndje e peti": "Solde après opération",
+    "nje e peti": "Solde après opération",
+    "toabo idzal wa yi na wa bo": "Choisir le service",
+    "tobo idzal wa yi na wa bo": "Choisir le service",
+    "tobo edzal wa yi na wa bo": "Choisir le service",
+    "ikola": "Crédit",
+    "ekola": "Crédit",
+    "dzalga e numba wa loue": "Numéro à recharger",
+    "dzalga e nombo wa loe": "Numéro à recharger",
+    "ingwe ngueu mfeu": "Le vôtre ou celui d'un proche",
+    "ingwe nge mfe": "Le vôtre ou celui d'un proche",
+    "engwe nge mfe": "Le vôtre ou celui d'un proche",
+    "dimi": "Annuler",
+    "keleu ossou": "Continuer",
+    "yi wa yebeu": "Confirmer",
+    "yi wa yebe": "Confirmer",
+    "tsenegue numba ngueu tang": "Modifier",
+    "tsenege nombo nge tan": "Modifier",
+    "dougan ai mvous": "Retour",
+    "dugan ai mvus": "Retour",
+    "vog'lo": "Écouter",
+    "voglo": "Écouter",
+    "telegue nlang'an abimte": "Arrêter la lecture",
+    "telege nlangan abim te": "Arrêter la lecture",
+    "angong": "Déconnexion",
+    "angon": "Déconnexion",
+    "dzalgui": "Chargement",
+    "dzalgi": "Chargement",
+    "toneu bebeu ossussua eneu wa jii": "Vérifiez avant de confirmer",
+    "tone bebe osusua ene wa dzii": "Vérifiez avant de confirmer",
+    "moni a keu yi na wa yebeu": "L'argent part dès que vous confirmez.",
+    "moni a ke yi na wa yebe": "L'argent part dès que vous confirmez.",
+    "adzo a loren mbeung": "Opération réussie",
+    "adzo a loren mben": "Opération réussie",
+    "adzo a loden mben": "Opération réussie",
+    "mfemfe tan": "Nouveau solde",
+    "ase": "Tout",
+    "nyu anyi": "Entrants",
+    "nyu a kui": "Sortants",
+    "mos": "Date",
+    "mbia yange": "En attente",
+    "o ve nku": "Échouée",
+    "mfie": "Électricité (ENEO)",
+    "medzim camwater": "Eau (CAMWATER)",
+    "mendim camwater": "Eau (CAMWATER)",
+    "tele": "Télévision (Canal+)",
+    "internet ai telephone": "Internet et téléphonie",
+    "internet ai telefon": "Internet et téléphonie",
   };
 
   function sandboxPhraseToFr(rawText) {
@@ -289,16 +383,17 @@
     const n = norm(clean);
     if (SANDBOX_LOCAL_TO_FR[n]) return SANDBOX_LOCAL_TO_FR[n];
     let m;
-    if ((m = clean.match(/^Mbembe kiri\s+(.+)$/i))) return `Bonjour ${m[1]}`;
+    if ((m = n.match(/^mbembe k(?:ir|id)i\s+(.+)$/i))) return `Bonjour ${m[1]}`;
+    if ((m = n.match(/^(.+?)\s+iyole dzoe mbeumbe kiri$/i))) return `Bonjour ${m[1]}`;
     if ((m = clean.match(/^(?:Idiba bwam|Mbole)\s+(.+)$/i))) return `Bonjour ${m[1]}`;
-    if ((m = clean.match(/^(?:Nkwap|Konto|Bekotedi)\s+(\d[\d\s]+)$/i))) return `Compte ${m[1]}`;
-    if ((m = clean.match(/^(?:Bi lom a|Loma na|Lomea|Loma la betombedi)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
-    if ((m = clean.match(/^(?:Bi bi a|Kusa na|Moni mwa|Kusa la betombedi)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
-    if ((m = clean.match(/^(?:Kredi|Ekotedi mwa musinga|Londe la beboledi)\s+(.+)$/i))) return `Crédit ${m[1]}`;
-    if ((m = clean.match(/^(?:Kalara|Kalati|Sawa la)\s+(.+)$/i))) return `Facture ${m[1]}`;
-    if ((m = clean.match(/^(?:Mbug|Mabala|Musen|Mususedi)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
-    if ((m = clean.match(/^Miiyo\s*:\s*(.+)$/i))) return `Opérateur détecté : ${m[1]}`;
-    if ((m = clean.match(/^Moni mud[èe]n[èe]\s*:\s*(.+)$/i))) return `Jusqu'à ${m[1]} par opération`;
+    if ((m = n.match(/^(?:nkwap|nkop|konto|bekotedi)\s+(\d[\d\s]+)$/i))) return `Compte ${m[1]}`;
+    if ((m = n.match(/^(?:bi lom a|nlomo a|loma na|lomea|loma la betombedi)\s+(.+)$/i))) return `Transfert vers ${m[1]}`;
+    if ((m = n.match(/^(?:bi bi a|kusa na|moni mwa|kusa la betombedi)\s+(.+)$/i))) return `Reçu de ${m[1]}`;
+    if ((m = n.match(/^(?:kredi|ikola|ekola|ekotedi mwa musinga|londe la beboledi)\s+(.+)$/i))) return `Crédit ${m[1]}`;
+    if ((m = n.match(/^(?:kalara|kalati|sawa la)\s+(.+)$/i))) return `Facture ${m[1]}`;
+    if ((m = n.match(/^(?:be frais|mbug|mabala|musen|mususedi)\s*:\s*(.+)$/i))) return `Frais : ${m[1]}`;
+    if ((m = n.match(/^(?:miiyo|mbe wa yenn?)\s*:\s*(.+)$/i))) return `Opérateur détecté : ${m[1]}`;
+    if ((m = n.match(/^(?:moni mudene|tang? te ya ke kui)\s*:\s*(.+)$/i))) return `Jusqu'à ${m[1]} par opération`;
     if ((m = clean.match(/^Akui\s+(.+?)\s+a\s+mvet\s+wuo$/i))) return `Jusqu'à ${m[1]} par opération`;
     if ((m = clean.match(/^Tena\s+(.+?)\s+o\s+ebolo\s+ewo$/i))) return `Jusqu'à ${m[1]} par opération`;
     return clean;
@@ -311,8 +406,10 @@
       .replace(/\p{Diacritic}/gu, "")
       .toLowerCase()
       .replace(/[ɔ]/g, "o")
-      .replace(/[ɛ]/g, "e")
+      .replace(/[ɛə]/g, "e")
       .replace(/[ŋ]/g, "n")
+      .replace(/[ɓ]/g, "b")
+      .replace(/[ɗ]/g, "d")
       .replace(/а/g, "a")
       .replace(/е/g, "e")
       .replace(/о/g, "o")
@@ -500,44 +597,44 @@
 
     let step = "home";
 
-    // Étape 5 : Reçu / Confirmation (FR + EN + EWO + DUA)
+    // Étape 5 : Reçu / Confirmation (FR + EN + EWO + DUA, modes AGLC et intuitif)
     if (
-      /transfert confirme|transfert effectue|operation reussie|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|itan mfefe|epetele|(?:essele|sumua)\. moni mu si lomabe/.test(fullText)
+      /transfert confirme|transfert effectue|operation reussie|operation annulee\. aucun montant|operation a ete enregistree|nouveau transfert|nouveau solde|retour a l'accueil|transfer completed|transaction successful|new balance|your transfer has been sent successfully|new transfer|loma dibamsebe|ebolo ango e tilabe|timba o bekombo|loma dipepe|mvet o boban mben|ebolo e tilabe na bwam|adzo a lo[rd]en mbeu?ng?|mfemfe tan|itan mfefe|epetele|(?:essele|sumua)\. moni mu si lomabe/.test(fullText)
     ) {
       step = "receipt";
     }
-    // Étape 4 : Récapitulatif avant confirmation (FR + EN + EWO + DUA)
+    // Étape 4 : Récapitulatif avant confirmation (FR + EN + EWO + DUA, modes AGLC et intuitif)
     else if (
-      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|check before you confirm|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse|sele jombwa miango mese|musongi mu londi|timba la mbusa si titi/.test(fullText) ||
+      /confirmer le transfert|verifiez avant de confirmer|verifiez les informations avant de confirmer|je confirme que les informations|total debite.*modifier|confirm transfer|check the details before confirming|check before you confirm|i confirm the information above|total debited|ombwa myango mese|na bamse na myango|bamse loma|fombo ossussua eneu wa yemban|ombwa oboso ba bamse|sele jombwa miango mese|musongi mu londi|timba la mbusa si titi|toneu? bebeu? oss?uss?ua eneu? wa d?z?j?ii|[ie]tan[g]? [ie] t[sz]igban|moni a keu? yi na wa yebeu?|yi wa yebeu?|tsenegue? n[ou]mbo?a? n?gueu? tang?/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Confirmer le transfert") || window.NKAP_QUERY("Bamse loma")) && !window.NKAP_QUERY("Nom du bénéficiaire"))
     ) {
       step = isSafinumSandbox() ? "review" : "recap";
     }
-    // Transfert / Bénéficiaire (FR + EN + EWO + DUA)
+    // Transfert / Bénéficiaire (FR + EN + EWO + DUA, modes AGLC et intuitif)
     else if (
-      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero|mes beneficiaires|bot bam ba non moni|bakusa bam|bakuse moni|jusqu'a 500 000|akui 500 000|moni mudene/.test(fullText) ||
+      /nom du beneficiaire|renseignez les informations du destinataire|motif du transfert|j'ai verifie le nom et le numero|jai verifie le nom|beneficiary name|my beneficiaries|up to 500 000|enter the recipient details|transfer reason|i have verified the beneficiary|dina la mukusa|tila myango ma mukusa|nimero a telefone|na ombwe dina na nimero|mes beneficiaires|bot bam ba non moni|bakusa bam|bakuse moni|jusqu'a 500 000|akui 500 000|moni mudene|liste e bod ya wa lom moni|za yaa a di|nomb[ao] nkwal ng(?:ueu|e) ki dzoe d(?:ou|u)e|tang? te ya ke kui/.test(fullText) ||
       (window.NKAP_QUERY && (window.NKAP_QUERY("Nom du bénéficiaire") || window.NKAP_QUERY("Dina la mukusa") || window.NKAP_QUERY("Renseignez les informations du destinataire")))
     ) {
       step = isSafinumSandbox() ? "transfer" : "beneficiary";
     }
     // Historique des opérations (FR + EN + EWO + DUA) — AVANT Paiement pour éviter collision Facture/Crédit !
     else if (
-      !/solde disponible|itan ineu|moni ma pene|available balance|que voulez-vous faire|za dzam wa yi bo|wa pula bola nje/.test(fullText) &&
-      (/entrants.*sortants|sortants.*entrants|recus.*envoyes|bi bi.*bi lom|moni mu mingeye.*moni mu mabuse|incoming.*outgoing|historique des operations|itang mvet/.test(fullText))
+      !/solde disponible|[ie]tan [ie]neu?|moni ma pene|available balance|que voulez-vous faire|za dzam wa yi bo|wa pula bola nje|dze wa yi naa wa bo/.test(fullText) &&
+      (/entrants.*sortants|sortants.*entrants|recus.*envoyes|bi bi.*bi lom|nyu anyi.*nyu a kui|nyu a kui.*nyu anyi|moni mu mingeye.*moni mu mabuse|incoming.*outgoing|historique des operations|itang mvet/.test(fullText))
     ) {
       step = "history";
     }
     // Paiement Crédit téléphonique (FR + EN + EWO + DUA)
     else if (
-      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
-      (/numero a recharger|nombo ya lomo kredi|nimero ya kredi|number to top up|operateur detecte|nsaa a yenban|miiyo :|numb'a ngo/.test(fullText))
+      !/solde disponible|[ie]tan [ie]neu?|moni ma pene|available balance/.test(fullText) &&
+      (/numero a recharger|nombo ya lomo kredi|nimero ya kredi|number to top up|operateur detecte|nsaa a yenban|miiyo :|numb'a ngo|dzalga e n[ou]mb[ao] wa lo[ue]{1,2}|[ie]ngwe ng(?:ueu|e) mfeu?|mbe wa yenn?/.test(fullText))
     ) {
       step = "pay_airtime";
     }
     // Paiement Facture (FR + EN + EWO + DUA)
     else if (
-      !/solde disponible|itan ineu|moni ma pene|available balance/.test(fullText) &&
-      (/choisir le service|tob isae|pona ebolo|choose the service|\bposo\b/.test(fullText))
+      !/solde disponible|[ie]tan [ie]neu?|moni ma pene|available balance/.test(fullText) &&
+      (/choisir le service|tob isae|pona ebolo|choose the service|\bposo\b|toa?bo [ie]dzal wa yi na wa bo|[ie]tan wa yi yaan/.test(fullText))
     ) {
       step = "pay_bill";
     }
@@ -1074,8 +1171,8 @@
       isSafinumUssd()
         ? "(USSD détecté — orbe visuel flottant désactivé)"
         : isSafinumSandbox()
-        ? "(mode copilote SAFINUM sandbox, traduction DOM désactivée)"
-        : ""
+          ? "(mode copilote SAFINUM sandbox, traduction DOM désactivée)"
+          : ""
     );
   }
 
