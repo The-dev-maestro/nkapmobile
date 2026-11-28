@@ -3,7 +3,8 @@
 Ce dossier archive le corpus humain natif Ewondo validé par **Nsia** pour NkapMobile :
 
 - **`dataset-ewondo.json`** et **`dataset-ewondo.csv`** : export du collecteur (`nkap-ewondo-20261128-0116 (1).zip`, exporté le `2026-11-28T00:16:55Z`).
-- **Couverture** : `55 / 157` textes remplis (`A01`–`A55` hors `A15`/`A30`, plus `B03` `ussd.balance` et `C17` `WITHDRAWAL`), `0` audio enregistré pour le moment.
+- **Couverture (export 1 — Nsia)** : `55 / 157` textes remplis (`A01`–`A55` hors `A15`/`A30`, plus `B03` `ussd.balance` et `C17` `WITHDRAWAL`).
+- **`export-20261128-1050/`** : second export natif Ewondo (`nkap-ewondo-20261128-1050.zip`, `54 / 157` textes + **52 audios natifs `.webm`**), apportant les traductions complémentaires `A60` (`receipt.new_balance`), `A61` (`receipt.done`), `A63`–`A66` (`history.*`), `A68` (`history.col_amount`), `A71` (`tx.transfer_out`), `A77` (`tx.status.pending`) et `A78` (`tx.status.failed`).
 
 ## Intégration appliquée dans le projet
 1. **`cerveau/app/sandbox/translations/ewo.json`** : mise à jour prioritaire des 52 clés UI remplies par Nsia (en préservant les placeholders `{name}`, `{max}`, `{operator}`, `{amount}` requis par `translate_ui`).
