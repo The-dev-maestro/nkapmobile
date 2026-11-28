@@ -72,7 +72,7 @@ def test_sandbox_ui_translation_honest_and_respects_constraints():
     assert body["language"] == "ewo"
     assert len(body["strings"]["nav.home"]) <= 12
     assert "{missing}" in body["strings"]["error.INSUFFICIENT_FUNDS"]
-    assert body["strings"]["home.balance_label"] == "Itan ineu a nkwap"
+    assert body["strings"]["home.balance_label"] == "Itáŋ inə́ á ŋkwáp"
 
     # Langue non supportée -> déclaration honnête "fr"
     unsupported = dict(payload, language="fub")
@@ -562,12 +562,12 @@ def test_judicious_v12_visual_tools_and_sandbox_scenario_hardening(monkeypatch):
     assert detect_term_question("nkuk e ne dze ?") == "limit"
     dua = json.loads((TRANSLATIONS_DIR / "dua.json").read_text(encoding="utf-8"))
     assert dua["shell.greeting"] == "Idiba bwam {name}"
-    assert dua["review.fee"] == "Mususedi"
-    assert dua["history.title"] == "Miango"
+    assert dua["review.fee"] == "Mususɛdi"
+    assert dua["history.title"] == "Miaŋgo"
     assert dua["common.cancel"] == "Sumua"
     assert dua["common.continue"] == "Wa la ne"
     assert dua["receipt.reference"] == "Epasi"
-    assert dua["review.total"] == "Musongi mu londi"
+    assert dua["review.total"] == "Musɔŋgi mu londi"
 
     # 2. Correction via /update en place (garde la même référence TRX sans annulation parasite)
     SESSIONS.clear()
