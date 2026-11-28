@@ -72,7 +72,7 @@ def test_sandbox_ui_translation_honest_and_respects_constraints():
     assert body["language"] == "ewo"
     assert len(body["strings"]["nav.home"]) <= 12
     assert "{missing}" in body["strings"]["error.INSUFFICIENT_FUNDS"]
-    assert body["strings"]["home.balance_label"] == "Itan ineu"
+    assert body["strings"]["home.balance_label"] == "Itan ineu a nkwap"
 
     # Langue non supportée -> déclaration honnête "fr"
     unsupported = dict(payload, language="fub")

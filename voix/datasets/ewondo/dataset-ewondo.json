@@ -1,0 +1,1591 @@
+{
+  "project": "NkapMobile x SAFINUM 2026 — Ewondo",
+  "exported_at": "2026-11-28T00:16:55.032Z",
+  "stats": {
+    "texts_filled": 55,
+    "texts_total": 157,
+    "audios_recorded": 0
+  },
+  "translations_by_id": {
+    "A01": "Mesouan",
+    "A02": "Lomo",
+    "A03": "Yaan",
+    "A04": "Ndouang",
+    "A05": "{name}iyole dzoe  Mbeumbe kiri",
+    "A06": "Ewolo connexion",
+    "A07": "Angong",
+    "A08": "Dougan ai mvous",
+    "A09": "Keleu ossou",
+    "A10": "Dîmi",
+    "A11": "Dzalgui",
+    "A12": "Vog'lo",
+    "A13": "Telegué nlang'an abimté",
+    "A14": "Itan ineu a nkwap",
+    "A15": "",
+    "A16": "Dze wa yi naa wa bô",
+    "A17": "Lomo moni",
+    "A18": "Yaana facture",
+    "A19": "Wa couss ikola",
+    "A20": "Me tang mâma messeu",
+    "A21": "Itang o nga kène nong itang ou dzali",
+    "A22": "Yeneu liste isseu",
+    "A23": "Tang zing idzikig boban",
+    "A24": "Lomo moni",
+    "A25": "Za yaa a di",
+    "A26": "Nomba nkwal ngueu ki dzoe doué",
+    "A27": "Liste é bod ya wa lom moni",
+    "A28": "Tang moni",
+    "A29": "Tang té ya ke kui vé",
+    "A30": "",
+    "A31": "Yaane vae",
+    "A32": "Facture",
+    "A33": "Ikola",
+    "A34": "Toabo idzal wa yi na wa bo",
+    "A35": "Itan wa yi yaan",
+    "A36": "Dzalga e numba wa loué",
+    "A37": "Ingwé ngueu mfeu",
+    "A38": "MTN, Orange, Camtel",
+    "A39": "Mbé wá yenn",
+    "A40": "Mfiè",
+    "A41": "Medzim Camwater",
+    "A42": "Télé",
+    "A43": "Internet ai téléphone",
+    "A44": "Tôneu bebeu ossussua eneu wa jîi",
+    "A45": "Wa lom zá",
+    "A46": "Dzé wa yaan",
+    "A47": "Tang ya",
+    "A48": "Be frais",
+    "A49": "Itang i tzigban",
+    "A50": "Itang i ligui",
+    "A51": "Moni a keu yi na wa yebeu",
+    "A52": "Tsenegué numba ngueu tang",
+    "A53": "Yi wa yebeu",
+    "A54": "Adzo a lôren mbeung",
+    "A55": "Wa lom zá tang yà",
+    "A56": "",
+    "A57": "",
+    "A58": "",
+    "A59": "",
+    "A60": "",
+    "A61": "",
+    "A62": "",
+    "A63": "",
+    "A64": "",
+    "A65": "",
+    "A66": "",
+    "A67": "",
+    "A68": "",
+    "A69": "",
+    "A70": "",
+    "A71": "",
+    "A72": "",
+    "A73": "",
+    "A74": "",
+    "A75": "",
+    "A76": "",
+    "A77": "",
+    "A78": "",
+    "A79": "",
+    "A80": "",
+    "A81": "",
+    "A82": "",
+    "A83": "",
+    "A84": "",
+    "A85": "",
+    "A86": "",
+    "A87": "",
+    "A88": "",
+    "A89": "",
+    "B01": "",
+    "B02": "",
+    "B03": "Ou beleu {amount} a nkwap.",
+    "B04": "",
+    "B05": "",
+    "B06": "",
+    "B07": "",
+    "B08": "",
+    "B09": "",
+    "B10": "",
+    "B11": "",
+    "B12": "",
+    "B13": "",
+    "B14": "",
+    "B15": "",
+    "B16": "",
+    "B17": "",
+    "B18": "",
+    "B19": "",
+    "B20": "",
+    "B21": "",
+    "B22": "",
+    "C01": "",
+    "C02": "",
+    "C03": "",
+    "C04": "",
+    "C05": "",
+    "C06": "",
+    "C07": "",
+    "C08": "",
+    "C09": "",
+    "C10": "",
+    "C11": "",
+    "C12": "",
+    "C13": "",
+    "C14": "",
+    "C15": "",
+    "C16": "",
+    "C17": "Vaagui {amount} a nkwap woué.",
+    "C18": "",
+    "D01": "",
+    "D02": "",
+    "D03": "",
+    "D04": "",
+    "D05": "",
+    "D06": "",
+    "D07": "",
+    "D08": "",
+    "D09": "",
+    "D10": "",
+    "D11": "",
+    "D12": "",
+    "D13": "",
+    "D14": "",
+    "D15": "",
+    "D16": "",
+    "D17": "",
+    "D18": "",
+    "D19": "",
+    "D20": "",
+    "D21": "",
+    "D22": "",
+    "D23": "",
+    "D24": "",
+    "D25": "",
+    "D26": "",
+    "D27": "",
+    "D28": ""
+  },
+  "sandbox_mobile_web": {
+    "nav.home": "Mesouan",
+    "nav.transfer": "Lomo",
+    "nav.pay": "Yaan",
+    "nav.history": "Ndouang",
+    "shell.greeting": "{name}iyole dzoe  Mbeumbe kiri",
+    "shell.secure": "Ewolo connexion",
+    "shell.logout": "Angong",
+    "common.back": "Dougan ai mvous",
+    "common.continue": "Keleu ossou",
+    "common.cancel": "Dîmi",
+    "common.loading": "Dzalgui",
+    "common.listen": "Vog'lo",
+    "common.stop_listening": "Telegué nlang'an abimté",
+    "home.balance_label": "Itan ineu a nkwap",
+    "home.account": "",
+    "home.quick_actions": "Dze wa yi naa wa bô",
+    "home.action_transfer": "Lomo moni",
+    "home.action_bill": "Yaana facture",
+    "home.action_airtime": "Wa couss ikola",
+    "home.action_history": "Me tang mâma messeu",
+    "home.recent": "Itang o nga kène nong itang ou dzali",
+    "home.see_all": "Yeneu liste isseu",
+    "home.empty": "Tang zing idzikig boban",
+    "transfer.title": "Lomo moni",
+    "transfer.to_label": "Za yaa a di",
+    "transfer.to_hint": "Nomba nkwal ngueu ki dzoe doué",
+    "transfer.saved": "Liste é bod ya wa lom moni",
+    "transfer.amount_label": "Tang moni",
+    "transfer.amount_hint": "Tang té ya ke kui vé",
+    "transfer.fee_preview": "",
+    "pay.title": "Yaane vae",
+    "pay.tab_bill": "Facture",
+    "pay.tab_airtime": "Ikola",
+    "pay.biller_label": "Toabo idzal wa yi na wa bo",
+    "pay.amount_label": "Itan wa yi yaan",
+    "pay.phone_label": "Dzalga e numba wa loué",
+    "pay.phone_hint": "Ingwé ngueu mfeu",
+    "pay.operator_label": "MTN, Orange, Camtel",
+    "pay.operator_detected": "Mbé wá yenn",
+    "biller.ENEO": "Mfiè",
+    "biller.CAMWATER": "Medzim Camwater",
+    "biller.CANAL": "Télé",
+    "biller.CAMTEL": "Internet ai téléphone",
+    "review.title": "Tôneu bebeu ossussua eneu wa jîi",
+    "review.to": "Wa lom zá",
+    "review.service": "Dzé wa yaan",
+    "review.amount": "Tang ya",
+    "review.fee": "Be frais",
+    "review.total": "Itang i tzigban",
+    "review.balance_after": "Itang i ligui",
+    "review.warning": "Moni a keu yi na wa yebeu",
+    "review.edit": "Tsenegué numba ngueu tang",
+    "review.confirm": "Yi wa yebeu",
+    "receipt.success": "Adzo a lôren mbeung",
+    "receipt.transfer": "Wa lom zá tang yà",
+    "receipt.airtime": "",
+    "receipt.bill": "",
+    "receipt.cancelled": "",
+    "receipt.reference": "",
+    "receipt.new_balance": "",
+    "receipt.done": "",
+    "history.title": "",
+    "history.filter_all": "",
+    "history.filter_in": "",
+    "history.filter_out": "",
+    "history.col_date": "",
+    "history.col_label": "",
+    "history.col_amount": "",
+    "history.col_status": "",
+    "history.empty": "",
+    "tx.transfer_out": "",
+    "tx.transfer_in": "",
+    "tx.airtime": "",
+    "tx.bill": "",
+    "tx.withdrawal": "",
+    "tx.status.confirmed": "",
+    "tx.status.pending": "",
+    "tx.status.failed": "",
+    "tx.status.cancelled": "",
+    "help.fee": "",
+    "help.limit": "",
+    "help.beneficiary": "",
+    "error.INSUFFICIENT_FUNDS": "",
+    "error.LIMIT_EXCEEDED": "",
+    "error.INVALID_AMOUNT": "",
+    "error.UNKNOWN_BENEFICIARY": "",
+    "error.AMBIGUOUS_BENEFICIARY": "",
+    "error.UNKNOWN_BILLER": "",
+    "error.GENERIC": ""
+  },
+  "ussd": {
+    "ussd.welcome": "",
+    "ussd.invalid_choice": "",
+    "ussd.balance": "Ou beleu {amount} a nkwap.",
+    "ussd.ask_recipient": "",
+    "ussd.ask_amount": "",
+    "ussd.review_transfer": "",
+    "ussd.transfer_done": "",
+    "ussd.airtime_target": "",
+    "ussd.airtime_phone": "",
+    "ussd.airtime_amount": "",
+    "ussd.review_airtime": "",
+    "ussd.airtime_done": "",
+    "ussd.bill_choose": "",
+    "ussd.bill_done": "",
+    "ussd.confirm_prompt": "",
+    "ussd.cancelled": "",
+    "ussd.fees_answer": "",
+    "ussd.history_header": "",
+    "ussd.clarify_amount": "",
+    "ussd.clarify_benef": "",
+    "ussd.pending_notice": "",
+    "ussd.lang_switched": ""
+  },
+  "nlu_user_phrases": {
+    "BALANCE_INQUIRY (1)": "",
+    "BALANCE_INQUIRY (2)": "",
+    "TRANSFER (1)": "",
+    "TRANSFER (2)": "",
+    "FEE_INQUIRY": "",
+    "TRANSACTION_HISTORY": "",
+    "CORRECTION (1)": "",
+    "CORRECTION (2)": "",
+    "CONFIRM": "",
+    "CANCEL": "",
+    "AIRTIME_PURCHASE": "",
+    "BILL_PAYMENT": "",
+    "LANGUAGE_SWITCH": "",
+    "TERM_EXPLANATION (frais)": "",
+    "TERM_EXPLANATION (plafond)": "",
+    "TERM_EXPLANATION (bénéficiaire)": "",
+    "WITHDRAWAL": "Vaagui {amount} a nkwap woué.",
+    "HELP": ""
+  },
+  "assistant_voice": {
+    "greet_hello": "",
+    "ask_what": "",
+    "didnt_understand": "",
+    "balance_intro": "",
+    "balance_done": "",
+    "history_intro": "",
+    "frais_explain": "",
+    "fees_total": "",
+    "transfer_continue": "",
+    "transfer_benef": "",
+    "alerte_nouveau": "",
+    "verify_digits": "",
+    "recap_intro": "",
+    "recap_edit": "",
+    "recap_confirm": "",
+    "receipt_success": "",
+    "receipt_cancel": "",
+    "err_solde": "",
+    "err_plafond": "",
+    "err_ambiguous": "",
+    "err_security": "",
+    "err_network": "",
+    "unseen_msg": "",
+    "def_frais": "",
+    "def_plafond": "",
+    "def_benef": "",
+    "lang_switch_ok": "",
+    "ok_done": ""
+  },
+  "items": [
+    {
+      "id": "A01",
+      "part": 1,
+      "key": "nav.home",
+      "fr": "Accueil",
+      "ewondo": "Mesouan",
+      "audio_file": null
+    },
+    {
+      "id": "A02",
+      "part": 1,
+      "key": "nav.transfer",
+      "fr": "Envoyer",
+      "ewondo": "Lomo",
+      "audio_file": null
+    },
+    {
+      "id": "A03",
+      "part": 1,
+      "key": "nav.pay",
+      "fr": "Payer",
+      "ewondo": "Yaan",
+      "audio_file": null
+    },
+    {
+      "id": "A04",
+      "part": 1,
+      "key": "nav.history",
+      "fr": "Historique",
+      "ewondo": "Ndouang",
+      "audio_file": null
+    },
+    {
+      "id": "A05",
+      "part": 1,
+      "key": "shell.greeting",
+      "fr": "Bonjour {name}",
+      "ewondo": "{name}iyole dzoe  Mbeumbe kiri",
+      "audio_file": null
+    },
+    {
+      "id": "A06",
+      "part": 1,
+      "key": "shell.secure",
+      "fr": "Connexion sécurisée",
+      "ewondo": "Ewolo connexion",
+      "audio_file": null
+    },
+    {
+      "id": "A07",
+      "part": 1,
+      "key": "shell.logout",
+      "fr": "Déconnexion",
+      "ewondo": "Angong",
+      "audio_file": null
+    },
+    {
+      "id": "A08",
+      "part": 1,
+      "key": "common.back",
+      "fr": "Retour",
+      "ewondo": "Dougan ai mvous",
+      "audio_file": null
+    },
+    {
+      "id": "A09",
+      "part": 1,
+      "key": "common.continue",
+      "fr": "Continuer",
+      "ewondo": "Keleu ossou",
+      "audio_file": null
+    },
+    {
+      "id": "A10",
+      "part": 1,
+      "key": "common.cancel",
+      "fr": "Annuler",
+      "ewondo": "Dîmi",
+      "audio_file": null
+    },
+    {
+      "id": "A11",
+      "part": 1,
+      "key": "common.loading",
+      "fr": "Chargement",
+      "ewondo": "Dzalgui",
+      "audio_file": null
+    },
+    {
+      "id": "A12",
+      "part": 1,
+      "key": "common.listen",
+      "fr": "Écouter",
+      "ewondo": "Vog'lo",
+      "audio_file": null
+    },
+    {
+      "id": "A13",
+      "part": 1,
+      "key": "common.stop_listening",
+      "fr": "Arrêter la lecture",
+      "ewondo": "Telegué nlang'an abimté",
+      "audio_file": null
+    },
+    {
+      "id": "A14",
+      "part": 1,
+      "key": "home.balance_label",
+      "fr": "Solde disponible",
+      "ewondo": "Itan ineu a nkwap",
+      "audio_file": null
+    },
+    {
+      "id": "A15",
+      "part": 1,
+      "key": "home.account",
+      "fr": "Compte {phone}",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A16",
+      "part": 1,
+      "key": "home.quick_actions",
+      "fr": "Que voulez-vous faire ?",
+      "ewondo": "Dze wa yi naa wa bô",
+      "audio_file": null
+    },
+    {
+      "id": "A17",
+      "part": 1,
+      "key": "home.action_transfer",
+      "fr": "Envoyer de l'argent",
+      "ewondo": "Lomo moni",
+      "audio_file": null
+    },
+    {
+      "id": "A18",
+      "part": 1,
+      "key": "home.action_bill",
+      "fr": "Payer une facture",
+      "ewondo": "Yaana facture",
+      "audio_file": null
+    },
+    {
+      "id": "A19",
+      "part": 1,
+      "key": "home.action_airtime",
+      "fr": "Acheter du crédit",
+      "ewondo": "Wa couss ikola",
+      "audio_file": null
+    },
+    {
+      "id": "A20",
+      "part": 1,
+      "key": "home.action_history",
+      "fr": "Mes opérations",
+      "ewondo": "Me tang mâma messeu",
+      "audio_file": null
+    },
+    {
+      "id": "A21",
+      "part": 1,
+      "key": "home.recent",
+      "fr": "Dernières opérations",
+      "ewondo": "Itang o nga kène nong itang ou dzali",
+      "audio_file": null
+    },
+    {
+      "id": "A22",
+      "part": 1,
+      "key": "home.see_all",
+      "fr": "Tout voir",
+      "ewondo": "Yeneu liste isseu",
+      "audio_file": null
+    },
+    {
+      "id": "A23",
+      "part": 1,
+      "key": "home.empty",
+      "fr": "Aucune opération pour le moment.",
+      "ewondo": "Tang zing idzikig boban",
+      "audio_file": null
+    },
+    {
+      "id": "A24",
+      "part": 1,
+      "key": "transfer.title",
+      "fr": "Envoyer de l'argent",
+      "ewondo": "Lomo moni",
+      "audio_file": null
+    },
+    {
+      "id": "A25",
+      "part": 1,
+      "key": "transfer.to_label",
+      "fr": "Bénéficiaire",
+      "ewondo": "Za yaa a di",
+      "audio_file": null
+    },
+    {
+      "id": "A26",
+      "part": 1,
+      "key": "transfer.to_hint",
+      "fr": "Numéro de téléphone ou nom",
+      "ewondo": "Nomba nkwal ngueu ki dzoe doué",
+      "audio_file": null
+    },
+    {
+      "id": "A27",
+      "part": 1,
+      "key": "transfer.saved",
+      "fr": "Mes bénéficiaires",
+      "ewondo": "Liste é bod ya wa lom moni",
+      "audio_file": null
+    },
+    {
+      "id": "A28",
+      "part": 1,
+      "key": "transfer.amount_label",
+      "fr": "Montant",
+      "ewondo": "Tang moni",
+      "audio_file": null
+    },
+    {
+      "id": "A29",
+      "part": 1,
+      "key": "transfer.amount_hint",
+      "fr": "Jusqu'à {max} par opération",
+      "ewondo": "Tang té ya ke kui vé",
+      "audio_file": null
+    },
+    {
+      "id": "A30",
+      "part": 1,
+      "key": "transfer.fee_preview",
+      "fr": "Frais : {fee}",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A31",
+      "part": 1,
+      "key": "pay.title",
+      "fr": "Payer",
+      "ewondo": "Yaane vae",
+      "audio_file": null
+    },
+    {
+      "id": "A32",
+      "part": 1,
+      "key": "pay.tab_bill",
+      "fr": "Factures",
+      "ewondo": "Facture",
+      "audio_file": null
+    },
+    {
+      "id": "A33",
+      "part": 1,
+      "key": "pay.tab_airtime",
+      "fr": "Crédit",
+      "ewondo": "Ikola",
+      "audio_file": null
+    },
+    {
+      "id": "A34",
+      "part": 1,
+      "key": "pay.biller_label",
+      "fr": "Choisir le service",
+      "ewondo": "Toabo idzal wa yi na wa bo",
+      "audio_file": null
+    },
+    {
+      "id": "A35",
+      "part": 1,
+      "key": "pay.amount_label",
+      "fr": "Montant",
+      "ewondo": "Itan wa yi yaan",
+      "audio_file": null
+    },
+    {
+      "id": "A36",
+      "part": 1,
+      "key": "pay.phone_label",
+      "fr": "Numéro à recharger",
+      "ewondo": "Dzalga e numba wa loué",
+      "audio_file": null
+    },
+    {
+      "id": "A37",
+      "part": 1,
+      "key": "pay.phone_hint",
+      "fr": "Le vôtre ou celui d'un proche",
+      "ewondo": "Ingwé ngueu mfeu",
+      "audio_file": null
+    },
+    {
+      "id": "A38",
+      "part": 1,
+      "key": "pay.operator_label",
+      "fr": "Opérateur",
+      "ewondo": "MTN, Orange, Camtel",
+      "audio_file": null
+    },
+    {
+      "id": "A39",
+      "part": 1,
+      "key": "pay.operator_detected",
+      "fr": "Opérateur détecté : {operator}",
+      "ewondo": "Mbé wá yenn",
+      "audio_file": null
+    },
+    {
+      "id": "A40",
+      "part": 1,
+      "key": "biller.ENEO",
+      "fr": "Électricité",
+      "ewondo": "Mfiè",
+      "audio_file": null
+    },
+    {
+      "id": "A41",
+      "part": 1,
+      "key": "biller.CAMWATER",
+      "fr": "Eau",
+      "ewondo": "Medzim Camwater",
+      "audio_file": null
+    },
+    {
+      "id": "A42",
+      "part": 1,
+      "key": "biller.CANAL",
+      "fr": "Télévision",
+      "ewondo": "Télé",
+      "audio_file": null
+    },
+    {
+      "id": "A43",
+      "part": 1,
+      "key": "biller.CAMTEL",
+      "fr": "Internet et téléphonie",
+      "ewondo": "Internet ai téléphone",
+      "audio_file": null
+    },
+    {
+      "id": "A44",
+      "part": 1,
+      "key": "review.title",
+      "fr": "Vérifiez avant de confirmer",
+      "ewondo": "Tôneu bebeu ossussua eneu wa jîi",
+      "audio_file": null
+    },
+    {
+      "id": "A45",
+      "part": 1,
+      "key": "review.to",
+      "fr": "Destinataire",
+      "ewondo": "Wa lom zá",
+      "audio_file": null
+    },
+    {
+      "id": "A46",
+      "part": 1,
+      "key": "review.service",
+      "fr": "Service",
+      "ewondo": "Dzé wa yaan",
+      "audio_file": null
+    },
+    {
+      "id": "A47",
+      "part": 1,
+      "key": "review.amount",
+      "fr": "Montant",
+      "ewondo": "Tang ya",
+      "audio_file": null
+    },
+    {
+      "id": "A48",
+      "part": 1,
+      "key": "review.fee",
+      "fr": "Frais",
+      "ewondo": "Be frais",
+      "audio_file": null
+    },
+    {
+      "id": "A49",
+      "part": 1,
+      "key": "review.total",
+      "fr": "Total débité",
+      "ewondo": "Itang i tzigban",
+      "audio_file": null
+    },
+    {
+      "id": "A50",
+      "part": 1,
+      "key": "review.balance_after",
+      "fr": "Solde après opération",
+      "ewondo": "Itang i ligui",
+      "audio_file": null
+    },
+    {
+      "id": "A51",
+      "part": 1,
+      "key": "review.warning",
+      "fr": "L'argent part dès que vous confirmez.",
+      "ewondo": "Moni a keu yi na wa yebeu",
+      "audio_file": null
+    },
+    {
+      "id": "A52",
+      "part": 1,
+      "key": "review.edit",
+      "fr": "Modifier",
+      "ewondo": "Tsenegué numba ngueu tang",
+      "audio_file": null
+    },
+    {
+      "id": "A53",
+      "part": 1,
+      "key": "review.confirm",
+      "fr": "Confirmer",
+      "ewondo": "Yi wa yebeu",
+      "audio_file": null
+    },
+    {
+      "id": "A54",
+      "part": 1,
+      "key": "receipt.success",
+      "fr": "Opération réussie",
+      "ewondo": "Adzo a lôren mbeung",
+      "audio_file": null
+    },
+    {
+      "id": "A55",
+      "part": 1,
+      "key": "receipt.transfer",
+      "fr": "{amount} envoyé à {name}.",
+      "ewondo": "Wa lom zá tang yà",
+      "audio_file": null
+    },
+    {
+      "id": "A56",
+      "part": 1,
+      "key": "receipt.airtime",
+      "fr": "Crédit {operator} de {amount} envoyé au {phone}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A57",
+      "part": 1,
+      "key": "receipt.bill",
+      "fr": "Facture {biller} de {amount} payée.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A58",
+      "part": 1,
+      "key": "receipt.cancelled",
+      "fr": "Opération annulée. Aucun montant débité.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A59",
+      "part": 1,
+      "key": "receipt.reference",
+      "fr": "Référence",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A60",
+      "part": 1,
+      "key": "receipt.new_balance",
+      "fr": "Nouveau solde",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A61",
+      "part": 1,
+      "key": "receipt.done",
+      "fr": "Terminer",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A62",
+      "part": 1,
+      "key": "history.title",
+      "fr": "Historique",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A63",
+      "part": 1,
+      "key": "history.filter_all",
+      "fr": "Tout",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A64",
+      "part": 1,
+      "key": "history.filter_in",
+      "fr": "Entrants",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A65",
+      "part": 1,
+      "key": "history.filter_out",
+      "fr": "Sortants",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A66",
+      "part": 1,
+      "key": "history.col_date",
+      "fr": "Date",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A67",
+      "part": 1,
+      "key": "history.col_label",
+      "fr": "Opération",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A68",
+      "part": 1,
+      "key": "history.col_amount",
+      "fr": "Montant",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A69",
+      "part": 1,
+      "key": "history.col_status",
+      "fr": "Statut",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A70",
+      "part": 1,
+      "key": "history.empty",
+      "fr": "Aucune opération pour le moment.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A71",
+      "part": 1,
+      "key": "tx.transfer_out",
+      "fr": "Envoi à {name}",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A72",
+      "part": 1,
+      "key": "tx.transfer_in",
+      "fr": "Reçu de {name}",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A73",
+      "part": 1,
+      "key": "tx.airtime",
+      "fr": "Crédit {operator}",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A74",
+      "part": 1,
+      "key": "tx.bill",
+      "fr": "Facture {biller}",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A75",
+      "part": 1,
+      "key": "tx.withdrawal",
+      "fr": "Retrait",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A76",
+      "part": 1,
+      "key": "tx.status.confirmed",
+      "fr": "Effectuée",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A77",
+      "part": 1,
+      "key": "tx.status.pending",
+      "fr": "En attente",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A78",
+      "part": 1,
+      "key": "tx.status.failed",
+      "fr": "Échouée",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A79",
+      "part": 1,
+      "key": "tx.status.cancelled",
+      "fr": "Annulée",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A80",
+      "part": 1,
+      "key": "help.fee",
+      "fr": "Les frais sont la petite somme que la banque retient pour faire l'opération.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A81",
+      "part": 1,
+      "key": "help.limit",
+      "fr": "Le plafond est la somme maximale que vous pouvez envoyer en une seule fois.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A82",
+      "part": 1,
+      "key": "help.beneficiary",
+      "fr": "Le bénéficiaire est la personne qui va recevoir l'argent.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A83",
+      "part": 1,
+      "key": "error.INSUFFICIENT_FUNDS",
+      "fr": "Solde insuffisant : il vous manque {missing}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A84",
+      "part": 1,
+      "key": "error.LIMIT_EXCEEDED",
+      "fr": "Montant trop élevé : le plafond est de {max} par opération.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A85",
+      "part": 1,
+      "key": "error.INVALID_AMOUNT",
+      "fr": "Montant invalide. Entrez un nombre entier.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A86",
+      "part": 1,
+      "key": "error.UNKNOWN_BENEFICIARY",
+      "fr": "Bénéficiaire introuvable. Vérifiez le numéro ou le nom.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A87",
+      "part": 1,
+      "key": "error.AMBIGUOUS_BENEFICIARY",
+      "fr": "Plusieurs bénéficiaires portent ce nom. Choisissez le bon.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A88",
+      "part": 1,
+      "key": "error.UNKNOWN_BILLER",
+      "fr": "Service inconnu. Choisissez dans la liste.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "A89",
+      "part": 1,
+      "key": "error.GENERIC",
+      "fr": "L'opération n'a pas pu aboutir. Réessayez.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B01",
+      "part": 2,
+      "key": "ussd.welcome",
+      "fr": "Safinum. Choisissez : 1. Mon solde / 2. Envoyer argent / 3. Credit / 4. Factures / 5. Historique / 6. Langue",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B02",
+      "part": 2,
+      "key": "ussd.invalid_choice",
+      "fr": "Choix invalide. Reessayez.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B03",
+      "part": 2,
+      "key": "ussd.balance",
+      "fr": "Votre solde est de {amount}.",
+      "ewondo": "Ou beleu {amount} a nkwap.",
+      "audio_file": null
+    },
+    {
+      "id": "B04",
+      "part": 2,
+      "key": "ussd.ask_recipient",
+      "fr": "Numero ou nom du beneficiaire :",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B05",
+      "part": 2,
+      "key": "ussd.ask_amount",
+      "fr": "Montant a envoyer (FCFA) :",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B06",
+      "part": 2,
+      "key": "ussd.review_transfer",
+      "fr": "Envoi de {amount} a {name}. Frais {fee}, total {total}. 1. Confirmer / 2. Modifier / 3. Annuler",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B07",
+      "part": 2,
+      "key": "ussd.transfer_done",
+      "fr": "{amount} envoye a {name}. Ref {ref}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B08",
+      "part": 2,
+      "key": "ussd.airtime_target",
+      "fr": "Credit pour : 1. Mon numero / 2. Un autre numero",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B09",
+      "part": 2,
+      "key": "ussd.airtime_phone",
+      "fr": "Numero a recharger (9 chiffres) :",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B10",
+      "part": 2,
+      "key": "ussd.airtime_amount",
+      "fr": "Montant du credit (FCFA) :",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B11",
+      "part": 2,
+      "key": "ussd.review_airtime",
+      "fr": "Credit {operator} de {amount} pour {phone}. Frais {fee}, total {total}. 1. Confirmer / 2. Annuler",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B12",
+      "part": 2,
+      "key": "ussd.airtime_done",
+      "fr": "Credit de {amount} envoye au {phone}. Ref {ref}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B13",
+      "part": 2,
+      "key": "ussd.bill_choose",
+      "fr": "Facture : 1. ENEO / 2. CAMWATER / 3. Canal+ / 4. CAMTEL",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B14",
+      "part": 2,
+      "key": "ussd.bill_done",
+      "fr": "Facture {biller} de {amount} payee. Ref {ref}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B15",
+      "part": 2,
+      "key": "ussd.confirm_prompt",
+      "fr": "Repondez 1 pour confirmer ou 2 pour annuler.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B16",
+      "part": 2,
+      "key": "ussd.cancelled",
+      "fr": "Operation annulee. Aucun montant debite.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B17",
+      "part": 2,
+      "key": "ussd.fees_answer",
+      "fr": "Pour {amount}, les frais sont de {fee}, total {total}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B18",
+      "part": 2,
+      "key": "ussd.history_header",
+      "fr": "Dernieres operations :",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B19",
+      "part": 2,
+      "key": "ussd.clarify_amount",
+      "fr": "Quel montant voulez-vous envoyer ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B20",
+      "part": 2,
+      "key": "ussd.clarify_benef",
+      "fr": "Plusieurs personnes portent ce nom. Choisissez le numero :",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B21",
+      "part": 2,
+      "key": "ussd.pending_notice",
+      "fr": "Vous avez deja une operation en attente (Ref {ref}). 1. Confirmer / 2. Annuler",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "B22",
+      "part": 2,
+      "key": "ussd.lang_switched",
+      "fr": "Langue changee. Votre operation en cours continue.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C01",
+      "part": 3,
+      "key": "BALANCE_INQUIRY (1)",
+      "fr": "Combien d'argent il me reste sur mon compte ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C02",
+      "part": 3,
+      "key": "BALANCE_INQUIRY (2)",
+      "fr": "Je veux voir mon argent.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C03",
+      "part": 3,
+      "key": "TRANSFER (1)",
+      "fr": "Je veux envoyer {amount} à {name}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C04",
+      "part": 3,
+      "key": "TRANSFER (2)",
+      "fr": "Envoie de l'argent à quelqu'un.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C05",
+      "part": 3,
+      "key": "FEE_INQUIRY",
+      "fr": "Combien coûtent les frais pour envoyer {amount} ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C06",
+      "part": 3,
+      "key": "TRANSACTION_HISTORY",
+      "fr": "Montre-moi mes dernières opérations.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C07",
+      "part": 3,
+      "key": "CORRECTION (1)",
+      "fr": "Attends, change le montant, mets plutôt {amount}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C08",
+      "part": 3,
+      "key": "CORRECTION (2)",
+      "fr": "Non, je me suis trompé de personne, change le bénéficiaire.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C09",
+      "part": 3,
+      "key": "CONFIRM",
+      "fr": "Oui, je confirme, envoie l'argent.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C10",
+      "part": 3,
+      "key": "CANCEL",
+      "fr": "Non, annule tout, n'envoie pas.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C11",
+      "part": 3,
+      "key": "AIRTIME_PURCHASE",
+      "fr": "Je veux acheter {amount} de crédit téléphonique.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C12",
+      "part": 3,
+      "key": "BILL_PAYMENT",
+      "fr": "Je veux payer ma facture {biller} de {amount}.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C13",
+      "part": 3,
+      "key": "LANGUAGE_SWITCH",
+      "fr": "Je veux continuer en français / dans ma langue.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C14",
+      "part": 3,
+      "key": "TERM_EXPLANATION (frais)",
+      "fr": "Ça veut dire quoi « frais » ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C15",
+      "part": 3,
+      "key": "TERM_EXPLANATION (plafond)",
+      "fr": "Ça veut dire quoi « plafond » ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C16",
+      "part": 3,
+      "key": "TERM_EXPLANATION (bénéficiaire)",
+      "fr": "Ça veut dire quoi « bénéficiaire » ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "C17",
+      "part": 3,
+      "key": "WITHDRAWAL",
+      "fr": "Retire {amount} de mon compte.",
+      "ewondo": "Vaagui {amount} a nkwap woué.",
+      "audio_file": null
+    },
+    {
+      "id": "C18",
+      "part": 3,
+      "key": "HELP",
+      "fr": "Aide-moi à comprendre cet écran.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D01",
+      "part": 4,
+      "key": "greet_hello",
+      "fr": "Bonjour ! Je suis Nkap, ton guide bancaire.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D02",
+      "part": 4,
+      "key": "ask_what",
+      "fr": "Que veux-tu faire aujourd'hui ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D03",
+      "part": 4,
+      "key": "didnt_understand",
+      "fr": "Je n'ai pas bien compris. Peux-tu répéter ?",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D04",
+      "part": 4,
+      "key": "balance_intro",
+      "fr": "Je t'explique ton solde. L'argent disponible sur ton compte est écrit ici.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D05",
+      "part": 4,
+      "key": "balance_done",
+      "fr": "Tu peux maintenant envoyer de l'argent, payer une facture ou voir tes dernières opérations.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D06",
+      "part": 4,
+      "key": "history_intro",
+      "fr": "Voici tes dernières opérations : l'argent reçu et l'argent envoyé sont écrits ici.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D07",
+      "part": 4,
+      "key": "frais_explain",
+      "fr": "Les frais sont la petite somme que la banque prend pour faire l'envoi. Le montant exact de tes frais est écrit ici.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D08",
+      "part": 4,
+      "key": "fees_total",
+      "fr": "Je te montre le calcul : ton argent avant, ce qui sort au total, et ce qu'il te restera après.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D09",
+      "part": 4,
+      "key": "transfer_continue",
+      "fr": "Vérifie bien le montant à envoyer, puis appuie sur Continuer.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D10",
+      "part": 4,
+      "key": "transfer_benef",
+      "fr": "Écris ou vérifie le nom de la personne qui reçoit, et son numéro de téléphone juste en dessous.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D11",
+      "part": 4,
+      "key": "alerte_nouveau",
+      "fr": "Attention : tu n'as jamais envoyé d'argent à cette personne. Une fois validé, on ne peut plus annuler.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D12",
+      "part": 4,
+      "key": "verify_digits",
+      "fr": "Relis bien chaque chiffre du numéro de téléphone avant de continuer.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D13",
+      "part": 4,
+      "key": "recap_intro",
+      "fr": "Voici le résumé avant d'envoyer : le montant, les frais et le total débité sont écrits ici.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D14",
+      "part": 4,
+      "key": "recap_edit",
+      "fr": "S'il y a une erreur ou si tu changes d'avis, appuie sur Modifier : les frais seront recalculés.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D15",
+      "part": 4,
+      "key": "recap_confirm",
+      "fr": "Si tout est exact, appuie sur Confirmer pour envoyer définitivement l'argent.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D16",
+      "part": 4,
+      "key": "receipt_success",
+      "fr": "C'est fait ! Ton transfert a été envoyé avec succès. Voici la référence de ton reçu comme preuve.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D17",
+      "part": 4,
+      "key": "receipt_cancel",
+      "fr": "L'opération est annulée. Aucun franc n'a été retiré de ton compte.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D18",
+      "part": 4,
+      "key": "err_solde",
+      "fr": "Attention : il n'y a pas assez d'argent sur ton compte pour cet envoi. Aucun franc n'a été retiré.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D19",
+      "part": 4,
+      "key": "err_plafond",
+      "fr": "Attention : ce montant dépasse la limite maximale autorisée pour une seule opération.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D20",
+      "part": 4,
+      "key": "err_ambiguous",
+      "fr": "Je ne veux pas deviner : précise-moi exactement le montant ou la bonne personne dans la liste.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D21",
+      "part": 4,
+      "key": "err_security",
+      "fr": "Attention : la banque affiche une alerte de sécurité. Ne donne jamais ton code secret à personne.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D22",
+      "part": 4,
+      "key": "err_network",
+      "fr": "Attention : le réseau ne répond pas pour l'instant. Ton argent n'est pas parti, réessaie dans un moment.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D23",
+      "part": 4,
+      "key": "unseen_msg",
+      "fr": "Attention ! Un nouveau message important vient d'apparaître à l'écran. Lis-le bien avant de continuer.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D24",
+      "part": 4,
+      "key": "def_frais",
+      "fr": "Les frais, c'est le petit montant que la banque retient pour exécuter ton transfert ou ton paiement.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D25",
+      "part": 4,
+      "key": "def_plafond",
+      "fr": "Le plafond, c'est le maximum d'argent que tu as le droit d'envoyer en une seule fois pour te protéger.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D26",
+      "part": 4,
+      "key": "def_benef",
+      "fr": "Le bénéficiaire, c'est simplement la personne qui va recevoir l'argent que tu envoies.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D27",
+      "part": 4,
+      "key": "lang_switch_ok",
+      "fr": "J'ai changé la langue sur place. Ton opération en cours n'est pas perdue, tu peux continuer.",
+      "ewondo": "",
+      "audio_file": null
+    },
+    {
+      "id": "D28",
+      "part": 4,
+      "key": "ok_done",
+      "fr": "C'est terminé, tout s'est bien passé. Si tu as besoin d'aide, appuie sur le bouton Nkap.",
+      "ewondo": "",
+      "audio_file": null
+    }
+  ]
+}

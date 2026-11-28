@@ -175,7 +175,7 @@ def detect_biller(text: str) -> str | None:
     n = _norm(text)
     if any(k in n for k in ("eneo", "electricite", "courant", "lumiere", "mfie", "weya")):
         return "ENEO"
-    if any(k in n for k in ("camwater", "eau", "mendim", "madiba", "water")):
+    if any(k in n for k in ("camwater", "eau", "mendim", "medzim", "madiba", "water")):
         return "CAMWATER"
     if any(k in n for k in ("canal", "tele", "tv")):
         return "CANAL"
@@ -188,25 +188,25 @@ def detect_intent_keyword(text: str) -> str | None:
     n = _norm(text)
     if not n:
         return None
-    if any(k in n for k in ("confirmer", "confirme", "oui", "valider", "ok", "yes", "yemban", "bamse", "mbamse", "na kasi", "ne medi")):
+    if any(k in n for k in ("confirmer", "confirme", "oui", "valider", "ok", "yes", "yemban", "yi wa yebeu", "yebeu", "bamse", "mbamse", "na kasi", "ne medi")):
         return "CONFIRM"
-    if any(k in n for k in ("annuler", "annule", "non", "stop", "cancel", "vaa", "buka", "esele", "essele", "a bangi", "kem")):
+    if any(k in n for k in ("annuler", "annule", "non", "stop", "cancel", "vaa", "dimi", "buka", "esele", "essele", "a bangi", "kem")):
         return "CANCEL"
-    if any(k in n for k in ("corriger", "corrige", "modifier", "modifie", "changer", "change", "finalement", "plutot", "tyende", "tukwa", "wengisane", "engele", "na wondi")):
+    if any(k in n for k in ("corriger", "corrige", "modifier", "modifie", "changer", "change", "finalement", "plutot", "tyende", "tsenegue", "tukwa", "wengisane", "engele", "na wondi")):
         return "CORRECTION"
-    if any(k in n for k in ("frais", "combien coute", "cout", "tarif", "fee", "mbug", "mabala", "musen", "mususedi", "busise", "jombwa mbolo")):
+    if any(k in n for k in ("frais", "combien coute", "cout", "tarif", "fee", "mbug", "be frais", "mabala", "musen", "mususedi", "busise", "jombwa mbolo")):
         return "FEE_INQUIRY"
-    if any(k in n for k in ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "bebolo", "misongi", "misondi", "miango")):
+    if any(k in n for k in ("historique", "dernieres operations", "transactions", "operations", "history", "itang", "ndouang", "me tang", "bebolo", "misongi", "misondi", "miango")):
         return "TRANSACTION_HISTORY"
-    if any(k in n for k in ("credit", "airtime", "recharge", "unites", "kredi", "ebale", "djanda la mudi", "djanta musinga", "musinga", "londe la beboledi")):
+    if any(k in n for k in ("credit", "airtime", "recharge", "unites", "kredi", "ikola", "wa couss ikola", "ebale", "djanda la mudi", "djanta musinga", "musinga", "londe la beboledi")):
         return "AIRTIME_PURCHASE"
-    if any(k in n for k in ("facture", "bill", "eneo", "camwater", "canal", "camtel", "kalara", "kalati", "sawa", "saweya", "musawedi", "na pula wasa", "dipapa la")):
+    if any(k in n for k in ("facture", "bill", "eneo", "camwater", "canal", "camtel", "kalara", "kalati", "yaana facture", "sawa", "saweya", "musawedi", "na pula wasa", "dipapa la")):
         return "BILL_PAYMENT"
-    if any(k in n for k in ("retrait", "retirer", "withdraw", "gab", "atm", "nong moni", "busa moni", "kusa la moni", "sumua")):
+    if any(k in n for k in ("retrait", "retirer", "withdraw", "gab", "atm", "nong moni", "vaagui", "busa moni", "kusa la moni", "sumua")):
         return "WITHDRAWAL"
     if any(k in n for k in ("envoyer", "envoie", "transfert", "transferer", "send", "lomo", "lom", "loma", "lomea", "tombise", "na ni tombele")):
         return "TRANSFER"
-    if any(k in n for k in ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele", "nje ye etom yam", "edia", "bongo bene")):
+    if any(k in n for k in ("solde", "combien j'ai", "combien il me reste", "mon argent", "balance", "itan", "ou beleu", "nden", "moni ma pene", "moni ma dia", "ekotedi", "nje e peti", "moni mu peti", "epetele", "nje ye etom yam", "edia", "bongo bene")):
         return "BALANCE_INQUIRY"
     return None
 
@@ -215,13 +215,13 @@ def detect_intent_keyword(text: str) -> str | None:
 
 PHRASES: dict[str, dict[str, str]] = {
     "menu": {
-        "ewo": "Safinum (Ewondo):\n1. Itan ineu\n2. Lomo moni\n3. Mbug\n4. Itang mvet\n5. Kredi\n6. Kalara\n7. Aide termes",
+        "ewo": "Safinum (Ewondo):\n1. Itan ineu a nkwap\n2. Lomo moni\n3. Be frais\n4. Ndouang\n5. Ikola\n6. Yaana facture\n7. Aide termes",
         "dua": "Idiba bwam! Safinum (Duala):\n1. Edia\n2. Loma moni\n3. Mususedi\n4. Miango\n5. Ebale\n6. Sawa diyo\n7. Jongwane",
         "fr": "Safinum:\n1. Mon solde\n2. Transfert\n3. Frais\n4. Historique\n5. Credit\n6. Facture\n7. Termes",
         "en": "Safinum:\n1. Balance\n2. Transfer\n3. Fees\n4. History\n5. Airtime\n6. Bills\n7. Terms",
     },
     "balance": {
-        "ewo": "Itan ineu a nkwap {phone}: {balance}.",
+        "ewo": "Ou beleu {balance} a nkwap ({phone}).",
         "dua": "Moni mu peti ({phone}): {balance}.",
         "fr": "Votre solde ({phone}) est de {balance}.",
         "en": "Your balance ({phone}) is {balance}.",
